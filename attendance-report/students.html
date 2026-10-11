@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>학생 관리</title>
+<style>
+  :root { --line:#e5e2da; --ink:#1f2328; --muted:#6b7280; --green:#1f7a70; --bg:#faf9f6; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
+  header { padding:16px 20px; border-bottom:1px solid var(--line); background:#fff; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+  h1 { margin:0; font-size:19px; } nav a { font-size:13px; color:var(--muted); text-decoration:none; margin-left:12px; }
+  main { max-width:960px; margin:0 auto; padding:20px; }
+  .bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  button { padding:8px 14px; border:1px solid var(--green); background:var(--green); color:#fff; border-radius:8px; cursor:pointer; font-size:14px; }
+  button.ghost { background:#fff; color:var(--green); }
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); font-size:14px; }
+  th { background:#f3f1ec; font-size:13px; color:var(--muted); }
+  tr:hover td { background:#faf9f6; cursor:pointer; }
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; padding:16px; }
+  .overlay.on { display:flex; }
+  .panel { background:#fff; border-radius:14px; padding:20px; width:100%; max-width:480px; max-height:92vh; overflow:auto; }
+  label { display:block; font-size:13px; font-weight:600; margin:10px 0 4px; }
+  input, select, textarea { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; font-family:inherit; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .days { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+  .days label { text-align:center; margin:0 0 2px; }
+  .actions { display:flex; gap:8px; margin-top:16px; }
+  .err { color:#cf6a4a; font-size:13px; }
+  .muted { color:var(--muted); font-size:12px; }
+</style>
+<script src="/config.js"></script>
+</head>
+<body>
+<header>
+  <h1><span data-academy></span> 👥 학생 관리</h1>
+  <nav><a href="/board.html">현황판</a><a href="/daily.html">데일리 리포트</a><a href="/kiosk.html">키오스크</a><a href="/books.html">교재</a><a href="/report.html">월말평가서</a></nav>
+</header>
+<main>
+  <div class="bar">
+    <button id="add">+ 학생 추가</button>
+    <button class="ghost" id="bulkBtn">붙여넣기 일괄등록</button>
+  </div>
+  <div id="msg" class="err"></div>
+  <div style="overflow-x:auto">
+  <table><thead><tr><th>이름</th><th>학생ID</th><th>학년</th><th>PIN</th><th>담당</th><th>등원시간</th><th>연락처</th></tr></thead>
+  <tbody id="rows"></tbody></table>
+  </div>
+</main>
+
+<div class="overlay" id="overlay"><div class="panel">
+  <h2 id="title" style="margin:0 0 6px;font-size:18px">학생</h2>
+  <div class="row2">
+    <div><label>이름 *</label><input id="f_name"></div>
+    <div><label>학생ID <span class="muted">(노션 이관용, 선택)</span></label><input id="f_code" placeholder="예: nauta01"></div>
+  </div>
+  <div class="row2">
+    <div><label>학년</label><input id="f_grade" placeholder="중2"></div>
+    <div><label>출결 PIN</label><input id="f_pin" inputmode="numeric" placeholder="4자리"></div>
+  </div>
+  <div class="row2">
+    <div><label>담당 선생님</label><input id="f_teacher"></div>
+    <div><label>재원상태</label><select id="f_status"><option value="재원">재원</option><option value="퇴원">퇴원</option></select></div>
+  </div>
+  <div class="row2">
+    <div><label>학부모 연락처</label><input id="f_phone" placeholder="01000000000"></div>
+    <div><label>수업시간(분)</label><input id="f_min" inputmode="numeric" placeholder="120"></div>
+  </div>
+  <label>요일별 등원시간 (없는 날은 비움)</label>
+  <div class="days">
+    <div><label>월</label><input data-day="월" placeholder="17:00"></div>
+    <div><label>화</label><input data-day="화"></div>
+    <div><label>수</label><input data-day="수"></div>
+    <div><label>목</label><input data-day="목"></div>
+    <div><label>금</label><input data-day="금"></div>
+  </div>
+  <label>교재</label>
+  <div class="row2"><input data-book="문법" placeholder="문법 교재"><input data-book="리딩" placeholder="리딩 교재"></div>
+  <input data-book="단어" placeholder="단어 교재" style="margin-top:8px">
+  <div class="actions">
+    <button id="save">저장</button>
+    <button class="ghost" id="del" style="border-color:#cf6a4a;color:#cf6a4a">삭제</button>
+    <button class="ghost" id="close">닫기</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="bulkOverlay"><div class="panel">
+  <h2 style="margin:0 0 6px;font-size:18px">붙여넣기 일괄등록</h2>
+  <p class="muted">엑셀/시트에서 <b>이름 / PIN / 학년 / 담당 / 연락처</b> 열을 복사해 붙여넣으세요 (탭 구분, 한 줄 = 한 명).</p>
+  <textarea id="bulkText" rows="8" placeholder="김민준&#9;1111&#9;중2&#9;이선생&#9;01000000001"></textarea>
+  <div class="actions"><button id="bulkSave">등록</button><button class="ghost" id="bulkClose">닫기</button></div>
+</div></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let editing = null;
+async function api(p){ const r=await fetch("/api/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"실패"); return d; }
+function esc(s){ return (s ?? "").replace(/[&<>]/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+async function load(){
+  $("#msg").textContent="";
+  const r = await fetch("/api/attendance?action=students"); const d = await r.json();
+  if(!r.ok){ $("#msg").textContent=d.error; return; }
+  const body = $("#rows"); body.innerHTML="";
+  const DAYORD = ["월","화","수","목","금","토","일"];
+  for(const s of d.students){
+    // 요일별 등원시간: "월 17:00 · 수 17:00 · 금 17:00"
+    const times = DAYORD.filter(d0 => (s.schedule||{})[d0]).map(d0 => `${d0} ${s.schedule[d0]}`).join(" · ");
+    const quit = s.status && s.status !== "재원" ? ' <span style="font-size:11px;color:#cf6a4a">(퇴원)</span>' : "";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><b>${esc(s.name)}</b>${quit}</td><td>${esc(s.student_code||"")}</td><td>${esc(s.grade||"")}</td><td>${esc(s.pin||"")}</td><td>${esc(s.teacher||"")}</td><td style="white-space:nowrap">${esc(times)||'<span style="color:#9aa">-</span>'}</td><td>${esc(s.phone||"")}</td>`;
+    tr.onclick = () => openForm(s);
+    body.appendChild(tr);
+  }
+}
+
+function openForm(s){
+  editing = s || null;
+  $("#title").textContent = s ? "학생 수정" : "학생 추가";
+  $("#f_name").value=s?.name||""; $("#f_code").value=s?.student_code||""; $("#f_grade").value=s?.grade||""; $("#f_pin").value=s?.pin||"";
+  $("#f_teacher").value=s?.teacher||""; $("#f_status").value=s?.status||"재원"; $("#f_phone").value=s?.phone||""; $("#f_min").value=s?.class_minutes||"";
+  document.querySelectorAll("[data-day]").forEach(i=> i.value=(s?.schedule||{})[i.dataset.day]||"");
+  document.querySelectorAll("[data-book]").forEach(i=> i.value=(s?.books||{})[i.dataset.book]||"");
+  $("#del").style.display = s ? "" : "none";
+  $("#overlay").classList.add("on");
+}
+$("#add").onclick = () => openForm(null);
+$("#close").onclick = () => $("#overlay").classList.remove("on");
+$("#save").onclick = async () => {
+  const schedule={}; document.querySelectorAll("[data-day]").forEach(i=>{ if(i.value.trim()) schedule[i.dataset.day]=i.value.trim(); });
+  const books={}; document.querySelectorAll("[data-book]").forEach(i=>{ if(i.value.trim()) books[i.dataset.book]=i.value.trim(); });
+  const student = { id:editing?.id, name:$("#f_name").value.trim(), student_code:$("#f_code").value.trim(),
+    grade:$("#f_grade").value.trim(), pin:$("#f_pin").value.trim(), teacher:$("#f_teacher").value.trim(),
+    status:$("#f_status").value, phone:$("#f_phone").value.trim(), class_minutes:$("#f_min").value.trim(), schedule, books };
+  try{ await api({action:"save-student", student}); $("#overlay").classList.remove("on"); load(); }catch(e){ alert(e.message); }
+};
+$("#del").onclick = async () => {
+  if(!editing || !confirm(`${editing.name} 학생을 삭제할까요?`)) return;
+  try{ await api({action:"delete-student", id:editing.id}); $("#overlay").classList.remove("on"); load(); }catch(e){ alert(e.message); }
+};
+$("#bulkBtn").onclick = () => $("#bulkOverlay").classList.add("on");
+$("#bulkClose").onclick = () => $("#bulkOverlay").classList.remove("on");
+$("#bulkSave").onclick = async () => {
+  const rows = $("#bulkText").value.trim().split("\n").map(line=>{
+    const [name,pin,grade,teacher,phone] = line.split("\t").map(x=>(x||"").trim());
+    return { name, pin, grade, teacher, phone };
+  }).filter(r=>r.name);
+  if(!rows.length) return alert("붙여넣은 내용이 없어요.");
+  try{ const d=await api({action:"bulk-students", rows}); $("#bulkOverlay").classList.remove("on"); $("#bulkText").value=""; alert(`${d.count}명 등록됐어요.`); load(); }catch(e){ alert(e.message); }
+};
+load();
+</script>
+</body>
+</html>
