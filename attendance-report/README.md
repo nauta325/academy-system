@@ -35,6 +35,8 @@
 
 ### 1. 이 템플릿 복제 — GitHub **Use this template**
 
+템플릿 저장소: **https://github.com/nauta325/academy-system**
+
 ### 2. Supabase
 1. 새 프로젝트 생성 → **SQL Editor** 에 `sql/setup.sql` 전체 붙여넣기 → **Run**
    (테이블 6개 + 샘플 학생/기록/과제가 한 번에 생성)
