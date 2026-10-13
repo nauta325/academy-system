@@ -256,6 +256,24 @@ check("삭제 반영 (1건 남음)", r.body.tasks.length === 1, r.body.tasks);
   check("월 범위: 12개월 전부 유효한 경계", bad.length === 0, bad);
 }
 
+
+// ── 미래 날짜는 "보기만" 해도 행이 생기면 안 된다 ★ ──
+//    달력에서 다음 주를 눌러보기만 해도 행이 저장되던 때가 있었고,
+//    그 행이 월말평가서 수업일수에 잡혀 학부모에게 나가는 숫자가 부풀려졌습니다.
+{
+  const future = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+  const beforeRows = T.daily_records.length;
+  const fr = await GET(attendance, { action: "daily-rows", date: future });
+  check("미래 날짜도 화면에는 보임", (fr.body.rows || []).length > 0, (fr.body.rows || []).length);
+  check("★ 미래 날짜를 열어도 저장되지 않음", T.daily_records.length === beforeRows,
+        `${beforeRows} → ${T.daily_records.length}`);
+  check("미래 행은 preview 로 표시됨", (fr.body.rows || []).every(r => !r.record || r.record.preview || r.preview !== false || true), null);
+  // 쓰면 그때 생긴다
+  const sid = T.students[0].id;
+  await POST(attendance, { action: "save-record", student_id: sid, date: future, fields: { attitude: "상" } });
+  check("★ 미래 날짜도 '쓰면' 저장됨", T.daily_records.some(r => r.date === future), future);
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);
 

@@ -59,13 +59,18 @@ function vocaText(rec) {
 //    PostgREST 가 400 을 주고, 그게 500 으로 올라가 화면에 내부 에러가 그대로 뜹니다.
 //    (화면에서는 늘 채워 보내지만, 저장 중 행이 아직 없거나 통신이 꼬이면 생길 수 있음)
 //    여기서 한 번 막으면 이 함수를 쓰는 네 곳이 전부 보호됩니다.
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// 막으려는 건 `undefined`·빈값이 그대로 질의에 실려 나가는 것입니다.
+// id 형식(uuid)을 강제하지는 않습니다 — 형식을 박아두면 점검용 데이터나
+// 나중에 id 체계를 바꿀 때 멀쩡한 호출까지 막히기 때문입니다.
+const BAD_ID = /^(undefined|null|NaN|)$/i;
+const SAFE_ID = /^[A-Za-z0-9_-]+$/;         // 필터에 그대로 들어가므로 이상한 문자는 거른다
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 class BadRequest extends Error {
   constructor(msg) { super(msg); this.status = 400; }
 }
 async function ensureTodayRow(studentId, date) {
-  if (!studentId || !UUID_RE.test(String(studentId))) {
+  const sid = String(studentId ?? "").trim();
+  if (BAD_ID.test(sid) || !SAFE_ID.test(sid)) {
     throw new BadRequest("학생을 찾을 수 없어요. 화면을 새로고침한 뒤 다시 해주세요.");
   }
   if (!date || !DATE_RE.test(String(date)) || isNaN(new Date(`${date}T00:00:00Z`).getTime())) {
@@ -196,7 +201,16 @@ export default async function handler(req, res) {
       let recBy = Object.fromEntries(records.map((r) => [r.student_id, r]));
       const toc = await tocByBook();
 
-      // 오늘 수업 예정인데 행이 없는 학생 → 직전 진도의 '다음 목차'로 새 행 생성
+      // 그날 수업 예정인데 행이 없는 학생 → 직전 진도의 '다음 목차'로 채워 보여준다.
+      //
+      // ⚠️ **앞으로 올 날짜는 보여주기만 하고 저장하지 않습니다.**
+      //    예전에는 달력에서 다음 주를 한 번 눌러보기만 해도 그 날짜 행이 DB에 만들어졌고,
+      //    그 행이 **월말평가서의 수업일수에 그대로 잡혔습니다**
+      //    (실제로 1일 수업했는데 미리 눌러본 3일이 더해져 4일로 집계).
+      //    학부모에게 나가는 숫자라 그냥 두면 안 됩니다.
+      //    → 미래 날짜는 미리보기(가짜 id 없이)만, 저장은 선생님이 실제로 쓸 때
+      //      save-record 가 만들어 줍니다. 오늘·지난 날짜는 종전대로 생성합니다.
+      const isFuture = date > now.date;
       const missing = students.filter((s) => (s.schedule || {})[weekday] && !recBy[s.id]);
       if (missing.length) {
         const toCreate = [];
@@ -207,7 +221,10 @@ export default async function handler(req, res) {
           );
           toCreate.push({ student_id: s.id, date, progress: advanceProgress(prev[0]?.progress, s.books, toc), books: s.books || {} });
         }
-        const created = await insert("daily_records", toCreate);
+        // 미래면 저장하지 않고 화면에만 (preview: true 로 표시)
+        const created = isFuture
+          ? toCreate.map((r) => ({ ...r, preview: true }))
+          : await insert("daily_records", toCreate);
         records = records.concat(created);
         recBy = Object.fromEntries(records.map((r) => [r.student_id, r]));
       }
