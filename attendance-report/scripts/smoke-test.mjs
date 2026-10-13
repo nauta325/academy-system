@@ -331,6 +331,94 @@ check("삭제 반영 (1건 남음)", r.body.tasks.length === 1, r.body.tasks);
   check("prev(직전 1회)도 그대로 유지됨", !!row?.prev?.date, row?.prev);
 }
 
+// ── 🔁 재시 안내 카톡 큐 ★ ──
+//    단어테스트를 '불통과'로 저장하면 서버가 큐(retest_sent='미전송')에 올립니다.
+//    선생님이 "재시 보내기" 를 따로 기억하지 않아도 되게 — 운영의 `단어카톡` 과 같은 규칙.
+{
+  const sid = T.students[0].id;
+  const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const rowOf = () => T.daily_records.find((x) => x.student_id === sid && x.date === day);
+
+  await POST(attendance, { action: "save-record", student_id: sid, date: day, fields: { voca_test: "불통과", voca_score: "11/20" } });
+  check("★ 불통과 저장 → 큐에 올라감", rowOf()?.retest_sent === "미전송", rowOf());
+
+  let q = await POST(attendance, { action: "send-retest", date: day, dryRun: true });
+  check("재시 미리보기 200", q.code === 200, q.body);
+  const mine = (q.body.results || []).find((x) => x.student_id === sid);
+  check("★ 미리보기에 그 학생이 있음", !!mine, q.body.results);
+  check("단어교재·유닛·점수가 채워짐", mine?.book === "능률 보카 기본" && mine?.unit !== "-" && mine?.score === "11/20", mine);
+  check("담당이 다른 학생은 안 들어감", (q.body.results || []).every((x) => x.student_id !== "s2"), q.body.results?.map((x) => x.name));
+
+  // 통과로 고치면 큐에서 내려와야 한다 — 안 내려오면 엉뚱한 학부모에게 재시 안내가 갑니다
+  await POST(attendance, { action: "save-record", student_id: sid, date: day, fields: { voca_test: "통과" } });
+  check("★ 통과로 고치면 큐에서 내려옴", !rowOf()?.retest_sent, rowOf()?.retest_sent);
+  q = await POST(attendance, { action: "send-retest", date: day, dryRun: true });
+  check("내려온 학생은 미리보기에 없음", (q.body.results || []).every((x) => x.student_id !== sid), q.body.results);
+
+  // 노션에서 옮겨와 큐를 안 거친 행('미통과')도 놓치지 않아야 한다
+  rowOf().retest_sent = null; rowOf().voca_test = "미통과";
+  q = await POST(attendance, { action: "send-retest", date: day, dryRun: true });
+  check("★ '미통과' 표기(이관 데이터)도 잡힘", (q.body.results || []).some((x) => x.student_id === sid), q.body.results);
+
+  // 이미 보낸 행은 두 번 보내지 않는다
+  rowOf().retest_sent = "전송";
+  await POST(attendance, { action: "save-record", student_id: sid, date: day, fields: { voca_test: "불통과" } });
+  check("★ 이미 '전송' 인 행은 큐로 되돌리지 않음", rowOf()?.retest_sent === "전송", rowOf()?.retest_sent);
+  q = await POST(attendance, { action: "send-retest", date: day, dryRun: true });
+  check("이미 보낸 학생은 미리보기에 없음", (q.body.results || []).every((x) => x.student_id !== sid), q.body.results);
+  rowOf().retest_sent = null;
+
+  // daily-rows 가 상태를 내려줘야 화면이 버튼 개수를 셀 수 있다
+  const dr = await GET(attendance, { action: "daily-rows", date: day });
+  const row2 = (dr.body.rows || []).find((x) => x.student_id === sid);
+  check("★ daily-rows 가 retest_sent 를 내려줌", "retest_sent" in (row2?.record || {}), row2?.record);
+}
+
+// ── 📋 학생 카드 (student-history) ★ ──
+//    daily.html 의 📜 최근 수업은 오늘 행 안에서 8회까지. "3달 어디서 멈췄나" 는 이걸로 봅니다.
+{
+  const sid = T.students[0].id;
+  let h = await GET(attendance, { action: "student-history", student_id: sid, days: 90 });
+  check("학생 카드 200", h.code === 200, h.body);
+  check("★ 학생 정보가 옴", h.body?.student?.name === "김민준", h.body?.student);
+  check("★ 수업 기록이 옴", Array.isArray(h.body?.rows) && h.body.rows.length >= 4, h.body?.rows?.length);
+  check("최신 날짜가 앞에 옴", h.body.rows[0].date >= h.body.rows[1].date, h.body.rows.slice(0, 2).map((x) => x.date));
+  check("★ 과목 목록이 옴 (과목을 코드에 박지 않음)", (h.body?.subjects || []).includes("문법"), h.body?.subjects);
+  check("진도가 함께 옴", !!h.body.rows.find((x) => x.progress?.문법), h.body.rows[0]?.progress);
+  check("단어테스트 결과·점수가 함께 옴", h.body.rows.some((x) => x.voca_test), h.body.rows.map((x) => x.voca_test));
+  check("지적사항·학부모 전달도 옴", h.body.rows.every((x) => "note" in x && "parent_note" in x), Object.keys(h.body.rows[0] || {}));
+
+  // 기간 밖(100일 전) 기록은 들어오지 않아야 한다
+  const old = new Date(Date.now() - 100 * 864e5 + 9 * 3600e3).toISOString().slice(0, 10);
+  T.daily_records.push({ id: "rold", student_id: sid, date: old, progress: { 문법: { code: "Unit 9", title: "옛것" } } });
+  h = await GET(attendance, { action: "student-history", student_id: sid, days: 90 });
+  check("★ 기간(90일) 밖 기록은 안 들어옴", !h.body.rows.some((x) => x.date === old), old);
+
+  // 과제가 날짜별로 집계돼야 한다 (표의 ✓/✗ 칸)
+  const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  T.tasks.push(
+    { id: "tk1", student_id: sid, date: day, kind: "집",  title: "워크북 p.1", done: true },
+    { id: "tk2", student_id: sid, date: day, kind: "집",  title: "워크북 p.2", done: false },
+  );
+  h = await GET(attendance, { action: "student-history", student_id: sid, days: 30 });
+  const r0 = h.body.rows.find((x) => x.date === day);
+  const titles = (r0?.tasks?.items || []).map((x) => x.title);
+  check("★ 날짜별 과제가 ✓/✗ 로 집계됨",
+    r0?.tasks?.done + r0?.tasks?.undone === (r0?.tasks?.items || []).length && r0?.tasks?.done >= 1 && r0?.tasks?.undone >= 1, r0?.tasks);
+  check("과제 목록도 함께 옴", titles.includes("워크북 p.1") && titles.includes("워크북 p.2"), titles);
+
+  // 잘못된 입력은 400 (500 스택이 화면에 뜨면 안 됨)
+  h = await GET(attendance, { action: "student-history", student_id: "undefined", days: 30 });
+  check("★ student_id 가 비면 400", h.code === 400 && typeof h.body?.error === "string", h.body);
+  // 형식은 맞지만 없는 id → 404 (한글 같은 이상한 문자가 섞이면 그 전에 400)
+  h = await GET(attendance, { action: "student-history", student_id: "no-such-id" });
+  check("없는 학생은 404", h.code === 404, h.body);
+  h = await GET(attendance, { action: "student-history", student_id: "학생;drop" });
+  check("★ 이상한 문자가 섞인 id 는 400 (질의에 그대로 안 실림)", h.code === 400, h.body);
+  h = await GET(attendance, { action: "student-history", student_id: sid, days: 12345 });
+  check("엉뚱한 기간은 기본 30일로", h.body?.days === 30, h.body?.days);
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);
 

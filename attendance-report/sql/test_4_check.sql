@@ -4,11 +4,11 @@
 -- ============================================================
 
 -- (1) 오늘 현황 — 상태·시간·진도 한눈에
-select s.name, s.schedule->>substr('일월화수목금토', extract(dow from current_date)::int+1, 1) as 오늘예정,
+select s.name, s.schedule->>substr('일월화수목금토', extract(dow from (now() at time zone 'Asia/Seoul')::date)::int+1, 1) as 오늘예정,
        d.check_in 등원, d.check_out 하원, d.lateness, d.attitude 태도, d.homework 과제,
        d.voca_test 단어, d.voca_score 점수, d.progress 진도, d.parent_note 추가사항, d.report_sent 리포트카톡
 from students s
-left join daily_records d on d.student_id = s.id and d.date = current_date
+left join daily_records d on d.student_id = s.id and d.date = (now() at time zone 'Asia/Seoul')::date
 where s.status = '재원'
 order by s.name;
 

@@ -10,6 +10,7 @@
 - **월말평가서** `report.html`+`api/report.js` — 통계 집계 + Claude로 평가서 생성 → 학부모는 토큰 링크(`parent.html`)로 열람
 - **선생님앱** `teacher.html` — 내 담당 학생만 현황판 + 과제 내주기(오늘 진도로 자동 채우기) + 체크 현황
 - **학생앱** `student.html`+`api/student.js` — 학생이 폰으로 로그인(학생ID+출결PIN) → 오늘 과제 체크 · 내 진도 · 최근 수업기록 · 월말평가서
+- **학생 카드** `student_card.html`+`api/attendance.js`(`student-history`) — 한 학생의 지난 진도·테스트·과제를 1주/1달/3달로 (과목별 흐름 + 날짜별 표)
 - (받침) 키오스크 PIN 등하원 / 교재 목차 → 진도 자동 전환 / 새벽 cron 행 생성
 
 ## 건드리면 안 되는 것 (★)
@@ -31,6 +32,8 @@
 - 평가서 어투·모델 → `lib/claude.js` (`reportGuideline()` = 실사용 지침, `MODEL`)
 - 월말 통계 집계 → `api/report.js` 의 `computePlanner()` / `displayStats()`
 - 데일리 리포트 행/저장/발송 → `api/attendance.js` 의 `daily-rows`·`save-record`·`send-daily`
+- 학생 카드 화면 → `student_card.html` / 데이터 → `api/attendance.js` 의 `student-history`
+- 재시 안내 카톡 → `api/attendance.js` 의 `send-retest` · 큐 규칙은 `retestQueueValue()`(save-record 가 자동 호출)
 - 학생앱 화면·문구 → `student.html` / 학생앱이 주는 데이터 → `api/student.js`
 - 선생님앱 화면 → `teacher.html` / 과제 내주기·현황 → `api/attendance.js` 의 `save-tasks`·`tasks`
 - 담당 선생님 범위 → 학생DB의 `teacher` 칸. API는 `&teacher=이선생` 을 붙이면 그 선생님 것만
@@ -44,8 +47,8 @@
 ## 알림톡(솔라피) — 메이크 없이 Vercel에서 직접
 `lib/solapi.js` 가 HMAC 서명 + send-many 호출을 담당. 미설정이면 조용히 skip(다른 기능 영향 없음).
 
-발송 지점: 등원(`checkin`) · **하원(키오스크 `checkin` 두 번째 터치 — 현황판 `checkout`은 발송 안 함)** · 미등원(`notify-absent`, 수동) · 데일리 리포트(`send-daily`) · 월말평가서(report.js `send`).
-템플릿 ID는 환경변수 `TPL_CHECKIN`/`TPL_CHECKOUT`/`TPL_LATE`/`TPL_DAILY`/`TPL_REPORT`.
+발송 지점: 등원(`checkin`) · **하원(키오스크 `checkin` 두 번째 터치 — 현황판 `checkout`은 발송 안 함)** · 미등원(`notify-absent`, 수동) · 데일리 리포트(`send-daily`) · **재시 안내(`send-retest`, 수동)** · 월말평가서(report.js `send`).
+템플릿 ID는 환경변수 `TPL_CHECKIN`/`TPL_CHECKOUT`/`TPL_LATE`/`TPL_DAILY`/`TPL_REPORT`/`TPL_RETEST`(재시 안내).
 
 ## 과제(tasks) 와 과제등급(homework) 은 다른 것 ★
 헷갈리기 쉬워서 못 박아둡니다.
@@ -55,6 +58,9 @@
 
 ## 규칙
 - 실제 학생 이름·전화번호·API 키를 커밋하지 말 것 (샘플은 가짜).
+- **SQL 에서 "오늘" 은 `(now() at time zone 'Asia/Seoul')::date`** — `current_date` 를 쓰지 말 것.
+  Supabase 서버는 UTC 라 밤 12시~아침 9시(KST)에 돌리면 샘플이 하루 전 날짜로 들어갑니다
+  (앱은 전부 `lib/time.js` 의 KST 로 "오늘" 을 판단).
 - 한국어 주석 유지. 수정 후 실제 화면을 열어 동작 확인.
 - 기능을 고쳤으면 `node scripts/smoke-test.mjs` 를 돌려 전부 ✅ 인지 확인(실제 DB 없이 돌아감).
 - **배포 전·세미나 전에는 `bash scripts/verify/verify.sh`** — 진짜 PostgreSQL + 진짜 브라우저로

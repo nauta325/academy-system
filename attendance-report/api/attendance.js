@@ -17,6 +17,8 @@
 //   POST {action:"advance-today"}             → 오늘 진도를 목차 다음으로 일괄 채우기
 //   POST {action:"notify-absent"}             → 미등원 학부모 알림톡 (수동)
 //   POST {action:"save-textbook"|"delete-textbook"} → 교재·목차 관리
+//   GET  ?action=student-history&student_id=&days= → 학생 카드(진도·테스트·과제 이력)
+//   POST {action:"send-retest", date, dryRun, student_ids} → 재시 안내 학부모 카톡
 //   GET  ?action=teachers                     → 담당 선생님 목록 (선생님앱 teacher.html)
 //   GET  ?action=tasks&date=...                → 그날 과제 현황 (선생님앱)
 //   POST {action:"save-tasks", date, student_ids, items} → 과제 내주기 (여러 학생 × 여러 항목)
@@ -50,6 +52,25 @@ function progressText(progress) {
 function vocaText(rec) {
   if (!rec?.voca_test) return "";
   return rec.voca_score ? `${rec.voca_test} (${rec.voca_score})` : rec.voca_test;
+}
+
+// 단어테스트 "못 넘어갔다" 판정 — 운영은 '불통과', 노션에서 옮겨오면 '미통과' 로 적힌 행도 있다.
+const isFailText = (v) => /불통과|미통과/.test(String(v || ""));
+
+// 재시 안내 카톡 큐 — 운영(studyplanner admin-api 의 `단어카톡`)과 같은 규칙.
+//   · 단어테스트가 불통과 → '미전송'(발송 대기)
+//   · 통과로 고쳐지면     → 비움 (대기 해제)
+//   · 이미 '전송' 인 행은 건드리지 않음 (두 번 보내지 않게)
+// 바꿀 필요가 없으면 undefined 를 돌려줘서 호출하는 쪽이 아무것도 안 하게 한다.
+function retestQueueValue(cur, vocaTest) {
+  if (cur === "전송") return undefined;
+  if (isFailText(vocaTest)) return cur === "미전송" ? undefined : "미전송";
+  return cur === "미전송" ? null : undefined;
+}
+// 화면에서 "재시 안내를 보내야 하는 행" 판정 (서버·화면이 같은 규칙을 쓰게 여기서 한 번만)
+function needsRetest(rec) {
+  if (!rec || rec.retest_sent === "전송") return false;
+  return rec.retest_sent === "미전송" || isFailText(rec.voca_test);
 }
 
 // 오늘 행 없으면 만들어 반환 (진도는 교재 목차의 다음 유닛으로 자동 전환)
@@ -267,6 +288,8 @@ export default async function handler(req, res) {
             voca_test: rec.voca_test, voca_score: rec.voca_score,
             progress: rec.progress || {}, note: rec.note, parent_note: rec.parent_note,
             report_sent: rec.report_sent,
+            // 재시 안내 카톡 상태 — 화면의 「🔁 재시 안내」 개수를 이걸로 셉니다
+            retest_sent: rec.retest_sent || null,
           },
           prev: prev[0] ? { date: prev[0].date, progress: prev[0].progress || {} } : null,
           // 지난 수업 (최근 것이 앞) — 진도·단어테스트·태도·과제·지적
@@ -372,6 +395,59 @@ export default async function handler(req, res) {
         }
       }
       return res.status(200).json({ date, total: results.length, sent, dryRun, results, solapi: Boolean(TPL.daily) });
+    }
+
+    // ── 🔁 재시 안내 학부모 카톡 (단어테스트 불통과 → 다음 수업에 재시) ──────
+    // body: { date, dryRun?, student_ids?[] }
+    //
+    // 왜 따로 있나: 데일리 리포트 카톡은 **그날 전원**에게 나가는 요약이고,
+    // 이건 **불통과한 아이만** 받는 "다음 시간 재시" 안내입니다. 문구가 달라서
+    // 카카오 템플릿도 따로 등록해야 합니다 (`TPL_RETEST`).
+    // 큐는 save-record 가 자동으로 올려줍니다 — 선생님은 보내기만 누르면 됩니다.
+    if (action === "send-retest") {
+      const date = req.body.date || now.date;
+      if (!okDate(date)) throw new BadRequest(`날짜가 올바르지 않아요: ${date}`);
+      const only = Array.isArray(req.body.student_ids) ? new Set(req.body.student_ids) : null;
+      const dryRun = Boolean(req.body.dryRun);
+
+      const students = await select("students", `status=eq.재원${teacherFilter(req)}`);
+      const stuBy = Object.fromEntries(students.map((s) => [s.id, s]));
+      const records = (await select("daily_records", `date=eq.${date}`))
+        .filter((r) => stuBy[r.student_id] && (only ? only.has(r.student_id) : true))
+        .filter((r) => needsRetest(r) && r.lateness !== "결석");
+
+      const results = [];
+      let sent = 0;
+      for (const r of records) {
+        const stu = stuBy[r.student_id];
+        const rBooks = r.books || {}, sBooks = stu.books || {};
+        const book = String(rBooks["단어"] || sBooks["단어"] || "-");
+        const unit = unitLabel((r.progress || {})["단어"]) || "-";
+        const preview = {
+          student_id: stu.id, name: stu.name, phone: stu.phone || "",
+          book, unit, score: r.voca_score || "-",
+          already: r.retest_sent === "전송",
+        };
+        const phone = String(stu.phone || "").replace(/[^0-9]/g, "");
+        if (phone.length < 10) { results.push({ ...preview, ok: false, reason: "연락처 없음" }); continue; }
+        if (dryRun) { results.push({ ...preview, ok: true }); continue; }
+
+        const send = await sendAlimtalk(stu.phone, TPL.retest, {
+          "#{학생이름}": stu.name,
+          "#{날짜}": date,
+          "#{단어교재}": book,
+          "#{단어테스트}": unit,
+          "#{점수}": preview.score,
+        });
+        if (send.success) {
+          await patch("daily_records", `id=eq.${r.id}`, { retest_sent: "전송" });
+          sent++;
+          results.push({ ...preview, ok: true });
+        } else {
+          results.push({ ...preview, ok: false, reason: send.reason || (send.skipped ? "솔라피/TPL_RETEST 미설정" : "발송 실패") });
+        }
+      }
+      return res.status(200).json({ date, total: results.length, sent, dryRun, results, solapi: Boolean(TPL.retest) });
     }
 
     // ── 학생 저장(추가/수정) ──
@@ -498,6 +574,11 @@ export default async function handler(req, res) {
                      "note", "parent_note", "lateness", "check_out"];
       const body = {};
       for (const k of allow) if (k in (fields || {})) body[k] = fields[k];
+      // ★ 단어테스트 결과를 「불통과」로 적으면 재시 안내 카톡 큐에 자동으로 올린다.
+      //   (운영과 같은 방식 — 선생님이 따로 "재시 보내기" 를 기억하지 않아도 되게.
+      //    retest_sent 는 선생님이 직접 고치는 칸이 아니라서 allow 목록에 없습니다)
+      const q = retestQueueValue(row.retest_sent, "voca_test" in (fields || {}) ? fields.voca_test : row.voca_test);
+      if (q !== undefined) body.retest_sent = q;
       const upd = (await patch("daily_records", `id=eq.${row.id}`, body))[0];
       return res.status(200).json({ record: upd });
     }
@@ -546,6 +627,73 @@ export default async function handler(req, res) {
         updated++;
       }
       return res.status(200).json({ updated });
+    }
+
+    // ── 📋 학생 카드: 한 학생의 이전 진도·테스트·과제를 기간으로 쭉 ────────
+    //   ?action=student-history&student_id=...&days=30   (days = 7 / 30 / 90)
+    //
+    // 왜 따로 있나: daily.html 의 📜 최근 수업은 **오늘 행 안에서 8회**까지입니다.
+    // "이 아이가 지난 3달 동안 어디서 멈췄나 / 단어를 계속 못 넘기나" 는 그걸로
+    // 안 보여서, 운영(studyplanner `student_card.html`)처럼 한 명짜리 화면을 뒀습니다.
+    if (action === "student-history") {
+      const sid = String(req.query.student_id ?? "").trim();
+      if (BAD_ID.test(sid) || !SAFE_ID.test(sid)) throw new BadRequest("학생을 골라주세요.");
+      const days = [7, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
+      const from = new Date(new Date(`${now.date}T00:00:00Z`).getTime() - days * 86400000)
+        .toISOString().slice(0, 10);
+
+      const [stu, records, tasks] = await Promise.all([
+        select("students", `id=eq.${sid}`),
+        select("daily_records", `student_id=eq.${sid}&date=gte.${from}&order=date.desc`),
+        // 과제 표가 아직 없는 분(migrate_tasks.sql 미실행)도 화면이 열리게
+        select("tasks", `student_id=eq.${sid}&date=gte.${from}&order=date.desc`).catch(() => []),
+      ]);
+      if (!stu[0]) return res.status(404).json({ error: "학생을 찾을 수 없어요." });
+      const s = stu[0];
+
+      // 날짜별 과제 집계 (✓완료 / ✗미완료) — 표 한 칸에 넣으려고 서버에서 세어 준다
+      const taskBy = {};
+      for (const t of tasks) {
+        const o = (taskBy[t.date] ||= { done: 0, undone: 0, items: [] });
+        if (t.done) o.done++; else o.undone++;
+        o.items.push({ kind: t.kind, subject: t.subject, title: t.title, done: t.done });
+      }
+
+      // 과목은 고정하지 않는다 — 교재·진도(jsonb)에 실제로 들어 있는 키를 쓴다.
+      // (영어 문법·리딩·단어든 수학 연산·교과든 그대로 돌아가게)
+      const subjects = [...new Set([
+        ...SUBJECTS.filter((x) => (s.books || {})[x] || records.some((r) => (r.progress || {})[x])),
+        ...Object.keys(s.books || {}),
+        ...records.flatMap((r) => Object.keys(r.progress || {})),
+      ])];
+
+      return res.status(200).json({
+        days, from, to: now.date,
+        student: {
+          id: s.id, name: s.name, grade: s.grade, teacher: s.teacher,
+          student_code: s.student_code, books: s.books || {}, schedule: s.schedule || {},
+        },
+        subjects,
+        rows: records.map((r) => ({
+          date: r.date,
+          progress: r.progress || {},
+          books: r.books || {},
+          voca_test: r.voca_test || null,
+          voca_score: r.voca_score || null,
+          attitude: r.attitude || null,
+          homework: r.homework || null,
+          lateness: r.lateness || null,
+          check_in: r.check_in || null,
+          check_out: r.check_out || null,
+          note: r.note || null,
+          parent_note: r.parent_note || null,
+          report_sent: r.report_sent || null,
+          retest_sent: r.retest_sent || null,
+          tasks: taskBy[r.date] || null,
+        })),
+        // 수업이 없던 날 낸 과제도 빠뜨리지 않게 날짜별 과제를 통째로 같이 보낸다
+        tasks: taskBy,
+      });
     }
 
     // ── 담당 선생님 목록 (선생님앱 첫 화면에서 고른다) ──

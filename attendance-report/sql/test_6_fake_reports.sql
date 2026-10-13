@@ -19,7 +19,7 @@ with rp as (
 insert into monthly_reports (student_id, month, body, stats, progress, share_token, kakao_sent, updated_at)
 select
   s.id,
-  to_char(current_date - interval '1 month', 'YYYY-MM'),
+  to_char((now() at time zone 'Asia/Seoul')::date - interval '1 month', 'YYYY-MM'),
   rp.body,
   jsonb_build_object('classDays',rp.class_days,'late',rp.late,'absent',rp.absent,'vocaRate',rp.voca_rate,'hwRate',rp.hw_rate,'atRate',rp.at_rate),
   jsonb_strip_nulls(jsonb_build_object(
@@ -37,7 +37,7 @@ on conflict (student_id, month) do update
       share_token = excluded.share_token, updated_at = now();
 
 -- 확인: 열람 링크 (이 토큰을 /parent.html?t= 뒤에 붙이면 부모님 화면)
-select s.name, to_char(current_date - interval '1 month','YYYY-MM') as 월,
+select s.name, to_char((now() at time zone 'Asia/Seoul')::date - interval '1 month','YYYY-MM') as 월,
        '/parent.html?t=' || r.share_token as 부모님_링크
 from monthly_reports r join students s on s.id = r.student_id
 where r.share_token in ('demokim','demolee','demopark')

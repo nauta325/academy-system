@@ -43,7 +43,7 @@ from base;
 with kst as (select (now() at time zone 'Asia/Seoul') as t)
 insert into daily_records
   (student_id, date, check_in, check_out, lateness, attitude, homework, voca_test, voca_score, progress, books)
-select s.id, current_date,
+select s.id, (now() at time zone 'Asia/Seoul')::date,
   case
     when gg.g between 1 and 5  then to_char(k.t - interval '30 min', 'HH24:MI')                       -- 수업중
     when gg.g between 6 and 8  then to_char(k.t - make_interval(mins => s.class_minutes - 5), 'HH24:MI') -- 곧 하원

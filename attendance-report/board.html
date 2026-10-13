@@ -116,6 +116,7 @@
       <nav>
         <a href="/board.html" class="on">현황판</a><a href="/daily.html">데일리 리포트</a>
         <a href="/kiosk.html">키오스크</a><a href="/students.html">학생관리</a>
+        <a href="/student_card.html">학생 카드</a>
         <a href="/books.html">교재</a><a href="/report.html">월말평가서</a>
       </nav>
     </div>
@@ -140,6 +141,8 @@
   <div class="panel">
     <h2 id="eName"></h2>
     <div class="meta" id="eMeta"></div>
+    <!-- 📋 학생 카드 — 지난 진도·테스트·과제를 기간으로 쭉 (현황판에서 바로 열어보게) -->
+    <div class="meta" style="margin-top:4px"><a id="eCard" href="/student_card.html" target="_blank">📋 학생 카드 — 지난 진도 보기 →</a></div>
     <label>지각/결석</label>
     <div class="seg" data-field="lateness">
       <button data-v="정시">정시</button><button data-v="지각">지각</button><button data-v="결석">결석</button>
@@ -290,6 +293,7 @@ window.openEditor = (id) => {
   current = s;
   $("#eName").textContent = s.name;
   $("#eMeta").textContent = `${s.teacher||""} · 예정 ${s.scheduled||"-"}${s.record?.check_in?(" · 등원 "+s.record.check_in):""}`;
+  $("#eCard").href = "/student_card.html?student_id=" + encodeURIComponent(s.student_id);
   setSeg("lateness", s.record?.lateness || "정시");
   $("#eNote").value = s.record?.note || "";
   $("#overlay").classList.add("on");

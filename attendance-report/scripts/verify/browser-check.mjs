@@ -14,6 +14,7 @@ const PAGES = [
   { p: "/board.html", wait: "body", must: null },
   { p: "/daily.html", wait: "body", must: null },
   { p: "/students.html", wait: "body", must: null },
+  { p: "/student_card.html", wait: "body", must: null },
   { p: "/books.html", wait: "body", must: null },
   { p: "/kiosk.html", wait: "body", must: null },
   { p: "/report.html", wait: "body", must: null },
@@ -130,6 +131,71 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
     ck("★ 일괄등록 버튼 있음", false, "없음");
   }
   await ctx.close();
+}
+
+// ★ 🔁 재시 안내 — 불통과를 저장하면 버튼이 나타나고, 미리보기에 그 학생이 보여야 한다
+//   (예전에는 재시를 보낼 자리가 없어서, 미통과한 아이가 같은 유닛에 그냥 멈춰 있었습니다)
+{
+  await pg.goto(B + "/daily.html", { waitUntil: "networkidle" });
+  await pg.waitForTimeout(1200);
+  const seg = pg.locator('.seg[data-field="voca_test"] button:has-text("불통과")').first();
+  if (await seg.count()) {
+    await seg.click();
+    await pg.waitForTimeout(1600);           // 자동 저장(700ms 디바운스) 기다림
+    await pg.reload({ waitUntil: "networkidle" });
+    await pg.waitForTimeout(1400);
+    const btn = pg.locator("#retest");
+    ck("★ 「🔁 재시 안내」 버튼이 나타남", await btn.isVisible(), await btn.textContent().catch(() => null));
+    ck("버튼에 대상 인원수가 적힘", /\(\d+\)/.test((await btn.textContent()) || ""), await btn.textContent().catch(() => null));
+    ck("카드에 「재시 안내 대기」 표시", (await pg.locator("body").innerText()).includes("재시 안내 대기"), null);
+    await btn.click();
+    await pg.waitForTimeout(1400);
+    ck("★ 재시 미리보기가 열림", (await pg.locator("#rOverlay.on").count()) === 1, null);
+    const rt = await pg.locator("#rList").innerText().catch(() => "");
+    ck("미리보기에 단어교재·점수가 보임", /단어\s|점수/.test(rt), rt.slice(0, 160));
+    await pg.locator("#rCancel").click();
+    await pg.waitForTimeout(300);
+  } else {
+    ck("★ 단어테스트 불통과 버튼 있음", false, "버튼을 찾지 못함");
+  }
+}
+
+// ★ 📋 학생 카드 — 데일리 리포트에서 학생 이름을 누르면 지난 진도가 쭉 보여야 한다
+{
+  await pg.goto(B + "/daily.html", { waitUntil: "networkidle" });
+  await pg.waitForTimeout(1200);
+  const link = pg.locator("a.nm").first();
+  ck("★ daily.html 학생 이름이 학생 카드 링크", await link.count() > 0, null);
+  const href = (await link.getAttribute("href")) || "";
+  ck("링크에 student_id 가 붙음", /student_card\.html\?student_id=.+/.test(href), href);
+
+  await pg.goto(B + href, { waitUntil: "networkidle" });
+  await pg.waitForTimeout(1600);
+  const body2 = await pg.locator("body").innerText();
+  ck("★ 학생 카드가 열림 (학생 이름 나옴)", /김민준|이서연|박도윤/.test(body2), body2.slice(0, 160));
+  ck("★ 📊 과목별 진도 흐름이 보임", /과목별 진도/.test(body2), body2.slice(0, 200));
+  ck("★ 📅 진도 표가 보임", (await pg.locator("table.pt").count()) >= 1, null);
+  ck("표에 단어 TEST 칸이 있음", /단어 TEST/.test(body2), null);
+  ck("날짜가 MM/DD 요일 로 나옴 (ISO 가 새지 않음)", !/T\d\d:/.test(body2) && /\d\d\/\d\d\s*[일월화수목금토]/.test(body2), body2.slice(0, 200));
+  const trs = await pg.locator("table.pt tbody tr").count();
+  ck("표에 수업 줄이 들어 있음", trs >= 1, { trs });
+  // 설치 직후 샘플은 과거 기록이 2026-05 뿐이라 기간(최대 90일) 안에 오늘치만 들어옵니다.
+  // 그때 "고장난 게 아니다 + test_3_month.sql 을 돌리면 된다" 가 화면에 떠야 합니다.
+  if (trs <= 1) ck("★ 기록이 적을 때 해결법을 알려 줌", /test_3_month\.sql/.test(body2), body2.slice(0, 400));
+  // 기간을 바꿔도 화면이 깨지지 않아야 한다
+  await pg.locator('#seg button[data-d="7"]').click();
+  await pg.waitForTimeout(1500);
+  const n7 = await pg.locator("table.pt tbody tr").count();
+  ck("1주로 좁혀도 화면이 안 깨짐", (await pg.locator("body").innerText()).length > 50, { n7 });
+  await pg.locator('#seg button[data-d="90"]').click();
+  await pg.waitForTimeout(1800);
+  const n90 = await pg.locator("table.pt tbody tr").count();
+  ck("★ 기간(1주/3달)을 바꾸면 줄 수가 늘거나 같음", n90 >= n7, { n7, n90 });
+  ck("기간을 바꾸면 주소에도 남음 (새로고침해도 유지)", /days=90/.test(pg.url()), pg.url());
+  // 학생을 바꾸면 그 학생 것으로 바뀌어야 한다
+  const opts = await pg.locator("#stu option").count();
+  ck("학생 고르기 드롭다운", opts >= 3, { opts });
+  ck("날짜별 자세히가 보임", /날짜별 자세히/.test(await pg.locator("body").innerText()), null);
 }
 
 // 교재·목차

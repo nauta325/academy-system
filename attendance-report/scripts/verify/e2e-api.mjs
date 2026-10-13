@@ -63,6 +63,50 @@ ck("보강 행 추가", r.s === 200 && r.d.record, r.d);
 
 r = await post("/api/attendance", { action: "send-daily", date: today, dryRun: true });
 ck("데일리 발송 미리보기", r.s === 200 && Array.isArray(r.d.results), r.d);
+
+// ── 🔁 재시 안내 (단어테스트 불통과 → 큐 → 발송) ──
+// 선생님이 「재시 보내기」 를 따로 기억하지 않아도 되게 save-record 가 큐에 올립니다.
+{
+  const sid = byName["김민준"].id;
+  r = await post("/api/attendance", { action: "save-record", student_id: sid, date: today, fields: { voca_test: "불통과", voca_score: "11/20" } });
+  ck("★ 불통과 저장 → 재시 큐에 올라감", r.s === 200 && r.d.record?.retest_sent === "미전송", r.d.record);
+
+  r = await post("/api/attendance", { action: "send-retest", date: today, dryRun: true });
+  const mine = (r.d.results || []).find((x) => x.student_id === sid);
+  ck("★ 재시 미리보기에 그 학생이 있음", r.s === 200 && !!mine, r.d);
+  ck("재시 미리보기에 단어교재·유닛·점수", !!mine && mine.book !== "-" && mine.unit !== "-" && mine.score === "11/20", mine);
+  ck("통과한 학생은 안 들어감", (r.d.results || []).every((x) => x.student_id !== byName["박도윤"].id), r.d.results?.map((x) => x.name));
+
+  // 통과로 고치면 큐에서 내려와야 한다 (안 내려오면 엉뚱한 학부모에게 재시 안내가 갑니다)
+  r = await post("/api/attendance", { action: "save-record", student_id: sid, date: today, fields: { voca_test: "통과" } });
+  ck("★ 통과로 고치면 큐에서 내려옴", r.s === 200 && !r.d.record?.retest_sent, r.d.record);
+  r = await post("/api/attendance", { action: "send-retest", date: today, dryRun: true });
+  ck("큐에서 내려온 학생은 미리보기에 없음", (r.d.results || []).every((x) => x.student_id !== sid), r.d.results?.map((x) => x.name));
+
+  // 실제 발송 — 솔라피 미설정이면 조용히 skip 되고 500 이 나지 않아야 한다
+  await post("/api/attendance", { action: "save-record", student_id: sid, date: today, fields: { voca_test: "불통과" } });
+  r = await post("/api/attendance", { action: "send-retest", date: today });
+  ck("재시 발송 (솔라피 없음 → 조용히)", r.s === 200 && r.d.solapi === false, r.d);
+}
+
+// ── 📋 학생 카드 (지난 진도 쭉) ──
+{
+  const sid = byName["김민준"].id;
+  r = await get(`action=student-history&student_id=${sid}&days=90`);
+  ck("★ 학생 카드 이력", r.s === 200 && r.d.student?.name === "김민준" && Array.isArray(r.d.rows), { s: r.s, e: r.d.error });
+  ck("★ 과거 기록이 실제로 들어 있음 (2026-05 샘플)", (r.d.rows || []).length > 0, { n: r.d.rows?.length });
+  ck("최신 날짜가 앞에 옴", (r.d.rows || []).length < 2 || r.d.rows[0].date >= r.d.rows[1].date, r.d.rows?.slice(0, 2).map((x) => x.date));
+  ck("★ 과목 목록이 내려옴", Array.isArray(r.d.subjects) && r.d.subjects.length >= 1, r.d.subjects);
+  ck("진도가 비어 있지 않음", (r.d.rows || []).some((x) => Object.keys(x.progress || {}).length), r.d.rows?.[0]?.progress);
+  ck("과제 집계(✓/✗)가 붙음", (r.d.rows || []).some((x) => x.tasks && typeof x.tasks.done === "number") || Object.keys(r.d.tasks || {}).length === 0, r.d.rows?.find((x) => x.tasks)?.tasks);
+
+  r = await get(`action=student-history&student_id=${sid}&days=7`);
+  ck("기간 7일로 좁히면 줄어듦(또는 같음)", r.s === 200 && r.d.days === 7, { days: r.d.days, n: r.d.rows?.length });
+  r = await get("action=student-history&student_id=undefined");
+  ck("★ student_id 가 비면 400 (500 아님)", r.s === 400 && typeof r.d.error === "string" && !/\bat \//.test(r.d.error), r.d);
+  r = await get("action=student-history&student_id=00000000-0000-0000-0000-000000000000");
+  ck("없는 학생은 404", r.s === 404, r.d);
+}
 r = await post("/api/attendance", { action: "notify-absent" });
 ck("미등원 알림(솔라피 없음 → 조용히)", r.s === 200, r.d);
 

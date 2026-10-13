@@ -12,8 +12,8 @@
 delete from daily_records d using students s
  where d.student_id = s.id
    and s.name in ('김민준','이서연','박도윤')
-   and d.date >= date_trunc('month', current_date - interval '1 month')::date
-   and d.date <  date_trunc('month', current_date)::date;
+   and d.date >= date_trunc('month', (now() at time zone 'Asia/Seoul')::date - interval '1 month')::date
+   and d.date <  date_trunc('month', (now() at time zone 'Asia/Seoul')::date)::date;
 
 -- 지난달 평일 데일리 리포트 (월초=목차 2번째 → 월말=목차 3번째 유닛)
 insert into daily_records
@@ -36,8 +36,8 @@ from students s
 cross join lateral (
   select d, row_number() over (order by d) as rn
   from generate_series(
-    date_trunc('month', current_date - interval '1 month')::date,
-    (date_trunc('month', current_date)::date - 1),
+    date_trunc('month', (now() at time zone 'Asia/Seoul')::date - interval '1 month')::date,
+    (date_trunc('month', (now() at time zone 'Asia/Seoul')::date)::date - 1),
     '1 day') g(d)
   where extract(dow from d) between 1 and 5
 ) days
@@ -45,7 +45,7 @@ where s.name in ('김민준','이서연','박도윤');
 
 -- 월말 참고사항(선생님 메모) — AI 평가서에 반영됨
 insert into monthly_comments (student_id, month, comment)
-select id, to_char(current_date - interval '1 month', 'YYYY-MM'),
+select id, to_char((now() at time zone 'Asia/Seoul')::date - interval '1 month', 'YYYY-MM'),
   case name
     when '김민준' then '단어 재시험이 몇 번 있었지만 끝까지 통과. 발표에 적극적.'
     when '이서연' then '리딩 속도가 눈에 띄게 빨라짐. 숙제 성실. 중학생이라 내신 대비 필요.'
@@ -56,10 +56,10 @@ where name in ('김민준','이서연','박도윤')
 on conflict (student_id, month) do update set comment = excluded.comment;
 
 -- 확인: 지난달이 며칠치 들어갔는지
-select to_char(current_date - interval '1 month', 'YYYY-MM') as 지난달,
+select to_char((now() at time zone 'Asia/Seoul')::date - interval '1 month', 'YYYY-MM') as 지난달,
        s.name, count(*) as 수업일수
 from daily_records d join students s on s.id = d.student_id
 where s.name in ('김민준','이서연','박도윤')
-  and d.date >= date_trunc('month', current_date - interval '1 month')::date
-  and d.date <  date_trunc('month', current_date)::date
+  and d.date >= date_trunc('month', (now() at time zone 'Asia/Seoul')::date - interval '1 month')::date
+  and d.date <  date_trunc('month', (now() at time zone 'Asia/Seoul')::date)::date
 group by s.name order by s.name;

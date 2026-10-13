@@ -202,7 +202,11 @@
       + list.map(function (x) {
           var pr = Object.entries((x.record && x.record.progress) || {})
             .map(function (e) { var u = e[1] || {}; return e[0] + ' ' + (u.code || u); }).join(' · ');
-          return '<tr><td><b>' + esc(x.name) + '</b>' + (x.grade ? ' <span style="color:#aaa;font-size:11px">' + esc(x.grade) + '</span>' : '') + '</td>'
+          // 학생 이름 → 📋 학생 카드 (지난 진도 쭉). 담당 선생님을 같이 넘겨 담당 학생만 고르게.
+          var card = '/student_card.html?student_id=' + encodeURIComponent(x.student_id)
+            + (teacher() ? '&teacher=' + encodeURIComponent(teacher()) : '');
+          return '<tr><td><a href="' + card + '" target="_blank" style="color:inherit"><b>' + esc(x.name) + '</b></a>'
+            + (x.grade ? ' <span style="color:#aaa;font-size:11px">' + esc(x.grade) + '</span>' : '') + '</td>'
             + '<td>' + esc(x.scheduled || '-') + '</td>'
             + '<td>' + esc((x.record && x.record.check_in) || '-') + '</td>'
             + '<td><span class="badge b' + esc(x.status.replace(/\s/g, '')) + '">' + esc(x.status) + '</span></td>'

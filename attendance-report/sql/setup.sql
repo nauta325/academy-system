@@ -52,6 +52,9 @@ create table daily_records (
   parent_note text,                        -- 추가사항 (데일리 리포트 카톡에 나가는 내용)
   kakao_sent  text not null default '미전송', -- 등원 알림톡 상태: 미전송/전송/실패
   report_sent text not null default '미전송', -- 데일리 리포트 카톡 상태
+  -- 재시 안내 카톡 상태 (빈값=보낼 일 없음 / 미전송=발송 대기 / 전송=보냄)
+  -- 단어테스트를 '불통과'로 저장하면 서버가 '미전송'으로 자동 올립니다 (api/attendance.js)
+  retest_sent text,
   created_at timestamptz not null default now(),
   unique (student_id, date)
 );
@@ -189,9 +192,16 @@ cross join lateral (
   where extract(dow from d) between 1 and 5
 ) days;
 
+-- ★ "오늘" 은 반드시 **한국 날짜**로 — `(now() at time zone 'Asia/Seoul')::date`
+--   Supabase 서버는 UTC 로 돌아서 `current_date` 는 **UTC 날짜**입니다.
+--   앱은 전부 한국시간(lib/time.js kstNow)으로 "오늘" 을 판단하므로,
+--   밤 12시~아침 9시(KST) 사이에 이 SQL 을 돌리면 샘플이 **하루 전 날짜**로 들어가고
+--   현황판·선생님앱이 "오늘 수업 없음"·"과제 없음" 으로 텅 비어 보입니다.
+--   (이 리포의 다른 sql/*.sql 도 같은 이유로 전부 KST 로 씁니다 — 되돌리지 마세요)
+
 -- 오늘자 데일리리포트 (출결현황판/키오스크 데모 — 아직 등원 전, 진도는 다음 유닛)
 insert into daily_records (student_id, date, progress, books)
-select s.id, current_date,
+select s.id, (now() at time zone 'Asia/Seoul')::date,
   jsonb_strip_nulls(jsonb_build_object(
     '문법', (select t.units -> 3 from textbooks t where t.name = s.books->>'문법'),
     '리딩', (select t.units -> 3 from textbooks t where t.name = s.books->>'리딩'),
@@ -202,10 +212,10 @@ from students s;
 -- 오늘 과제 (학생앱 데모 — 로그인하면 바로 체크할 게 보이도록)
 --   학생 로그인은 student_code + pin (예: demo01 / 1111)
 insert into tasks (student_id, date, kind, subject, title, done)
-select s.id, current_date, v.kind, v.subject,
+select s.id, (now() at time zone 'Asia/Seoul')::date, v.kind, v.subject,
   -- 진도에서 유닛 코드를 끌어와 과제 제목을 만든다 (교재 목차 → 과제까지 이어지는 흐름 데모)
   v.prefix || coalesce((select r.progress -> v.subject ->> 'code'
-                        from daily_records r where r.student_id = s.id and r.date = current_date), '') || v.suffix,
+                        from daily_records r where r.student_id = s.id and r.date = (now() at time zone 'Asia/Seoul')::date), '') || v.suffix,
   v.done
 from students s
 cross join (values

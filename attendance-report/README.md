@@ -22,6 +22,10 @@
 > 학생앱 로그인은 **2차 세미나부터 쓰던 학생ID + 출결PIN** 그대로라 새로 만들 게 없어요.
 
 **받쳐주는 기능**
+- **학생 카드 `student_card.html`** — 한 학생의 **지난 진도·테스트·과제를 1주/1달/3달로 쭉**.
+  과목별 흐름(`Unit 2 → Unit 3 ×11 → Unit 4` — ×가 큰 칸이 멈춘 자리) + 날짜별 표.
+  데일리 리포트·학생관리·현황판·선생님앱에서 **학생 이름을 누르면** 열립니다.
+- **재시 안내 카톡** — 단어테스트를 「불통과」로 저장하면 `🔁 재시 안내 (n)` 버튼이 자동으로 뜸 (`TPL_RETEST`)
 - 출결 키오스크 `kiosk.html` — PIN 등·하원 (등원 알림톡 자동)
 - 교재·목차 `books.html` — 목차를 넣으면 데일리 리포트 진도가 다음 목차로 자동 전환
 - 학생 관리 `students.html` · 매일 새벽 `api/cron.js` 로 오늘 리포트 행 미리 생성
@@ -66,7 +70,7 @@
 | `SOLAPI_API_KEY` / `SOLAPI_API_SECRET` | 솔라피 API 키/시크릿 |
 | `SOLAPI_SENDER` | 등록한 발신번호 |
 | `SOLAPI_PFID` | 카카오 채널 pfId |
-| `TPL_CHECKIN` / `TPL_CHECKOUT` / `TPL_LATE` / `TPL_DAILY` / `TPL_REPORT` | 검수 통과한 템플릿 ID (등원·하원·미등원·데일리리포트·월말평가서) |
+| `TPL_CHECKIN` / `TPL_CHECKOUT` / `TPL_LATE` / `TPL_DAILY` / `TPL_REPORT` / `TPL_RETEST` | 검수 통과한 템플릿 ID (등원·하원·미등원·데일리리포트·월말평가서·**재시 안내**) |
 
 > 알림톡 미설정이면 등원·미등원·데일리리포트·평가서 발송은 조용히 건너뛰고 **나머지 전 기능은 정상 동작**해요.
 > 데일리리포트 템플릿 변수(1차 세미나 템플릿 그대로 동작):
@@ -80,6 +84,7 @@
 > `drop table` 때문에 데이터가 사라집니다. 대신 아래 마이그레이션만 SQL Editor 에 Run 하세요.
 > - `sql/migrate_daily_report.sql` — 2차 DB 속성(단어점수·추가사항·교재 스냅샷 등) 반영
 > - `sql/migrate_tasks.sql` — **학생앱·선생님앱용 `tasks` 테이블 추가** (+ 학생ID·PIN·담당 비어있는 학생 점검)
+> - `sql/migrate_retest.sql` — **재시 안내용 `daily_records.retest_sent` 칸 추가**
 
 ### DB 속성 (2차 세미나 노션 DB 이관 대응)
 2차 세미나의 전체학생/데일리리포트/교재 DB 속성을 그대로 담습니다 — 노션에 쌓아둔 데일리리포트를 옮겨 월말평가서까지 생성 가능.
@@ -140,6 +145,7 @@ report.html          월말평가서(선생님) ★
 kiosk.html           출결 키오스크 (PIN 등·하원)
 students.html        학생 관리
 books.html           교재 · 목차 관리 (진도 자동 전환의 원천)
+student_card.html    학생 카드 (한 학생의 지난 진도·테스트·과제 쭉) ★
 parent.html          월말평가서(학부모 열람)
 teacher.html         선생님앱 (담당 학생 현황 + 과제 내주기) ★
 student.html         학생앱 (학생이 폰으로 — 과제 체크·내 진도) ★

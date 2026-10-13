@@ -1,13 +1,14 @@
 // 솔라피 카카오 알림톡 (선택 모듈). 미설정이면 조용히 건너뛴다 — 나머지 기능엔 영향 없음.
 // 필요한 환경변수:
 //   SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_SENDER(발신번호), SOLAPI_PFID(=2차의 SOLAPI_PF_ID도 인정)
-//   TPL_CHECKIN / TPL_CHECKOUT / TPL_LATE / TPL_DAILY / TPL_REPORT (검수 통과한 템플릿 ID)
+//   TPL_CHECKIN / TPL_CHECKOUT / TPL_LATE / TPL_DAILY / TPL_REPORT / TPL_RETEST (검수 통과한 템플릿 ID)
 //
 // 템플릿 변수는 세미나2와 동일:
 //   등원 #{학생이름}#{등원시간}#{하원시간} · 하원 #{학생이름}#{하원시간}
 //   미등원 #{학생이름}#{예정시간}
 //   데일리리포트 #{학생이름}#{날짜}#{진도}#{태도}#{과제}#{단어테스트}#{추가사항}
 //   월말 #{학생이름}#{연월}#{링크}
+//   재시 안내 #{학생이름}#{날짜}#{단어교재}#{단어테스트}#{점수}   ← 6차에서 추가(운영과 같은 변수)
 
 import crypto from "node:crypto";
 
@@ -34,6 +35,9 @@ export const TPL = {
   late: process.env.TPL_LATE,
   daily: process.env.TPL_DAILY,   // 데일리 리포트 (학부모 발송)
   report: process.env.TPL_REPORT, // 월말평가서
+  // 재시 안내 — 단어테스트 불통과한 학생만. 미등록이면 조용히 skip 되고
+  // 다른 기능엔 영향이 없으니, 템플릿 검수를 기다리는 동안 그냥 비워두셔도 됩니다.
+  retest: process.env.TPL_RETEST,
 };
 
 function authHeader() {

@@ -28,6 +28,8 @@
   .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
   .stuhead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
   .nm { font-size:16px; font-weight:800; }
+  a.nm { color:inherit; text-decoration:none; border-bottom:1px dashed #cfcbc0; }
+  a.nm:hover { color:var(--green); border-bottom-color:var(--green); }
   .pill { font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px; background:#f1f0ea; color:var(--muted); }
   .pill.late { background:#fbeee9; color:var(--late); }
   .pill.sent { background:#e7f0ee; color:var(--green); }
@@ -86,6 +88,7 @@
   <nav>
     <a href="/board.html">현황판</a><a href="/daily.html" class="on">데일리 리포트</a>
     <a href="/kiosk.html">키오스크</a><a href="/students.html">학생관리</a>
+    <a href="/student_card.html">학생 카드</a>
     <a href="/books.html">교재</a><a href="/report.html">월말평가서</a>
   </nav>
 </header>
@@ -96,11 +99,14 @@
     <input type="search" id="q" placeholder="🔍 학생 이름" oninput="render()" style="width:130px" />
     <select class="btn" id="addStu" style="display:none;max-width:170px"></select>
     <button class="btn" id="addBtn">➕ 보강 학생 추가</button>
-    <button class="btn coral" id="send" style="margin-left:auto">📨 리포트 카톡 보내기</button>
+    <button class="btn" id="retest" style="margin-left:auto;display:none">🔁 재시 안내</button>
+    <button class="btn coral" id="send">📨 리포트 카톡 보내기</button>
   </div>
   <div class="muted" style="margin-bottom:12px">
     매일 새벽, 오늘 등원할 학생의 리포트가 <b>다음 진도까지 채워져 자동 생성</b>돼요. 바뀐 것만 고치면 됩니다 · 칸을 고치면 자동 저장 · 추가사항은 학부모 카톡에 나갑니다.<br>
-    <b>결석 보강</b>(정규 수업일이 아닌 날 온 학생)은 <b>➕ 보강 학생 추가</b>로 그날 행을 만들면 진도가 다음으로 이어져요.
+    <b>결석 보강</b>(정규 수업일이 아닌 날 온 학생)은 <b>➕ 보강 학생 추가</b>로 그날 행을 만들면 진도가 다음으로 이어져요.<br>
+    단어테스트를 <b>불통과</b>로 저장하면 <b>🔁 재시 안내</b> 버튼에 자동으로 올라옵니다 (학부모에게 "다음 시간 재시" 안내) ·
+    학생 이름을 누르면 <b>📋 학생 카드</b>에서 지난 진도를 쭉 볼 수 있어요.
   </div>
   <div id="msg" class="err"></div>
   <div id="list"><div class="muted">날짜를 고르면 데일리 리포트가 열립니다.</div></div>
@@ -117,6 +123,20 @@
       <button class="btn" id="cancelSend">닫기</button>
     </div>
     <div id="sendResult" class="muted" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- 🔁 재시 안내 미리보기 모달 (단어테스트 불통과한 학생만) -->
+<div class="overlay" id="rOverlay">
+  <div class="modal">
+    <h2>🔁 재시 안내 발송</h2>
+    <div class="muted" id="rSub" style="margin-bottom:12px"></div>
+    <div id="rList"></div>
+    <div class="foot">
+      <button class="btn green" id="rDoSend">발송</button>
+      <button class="btn" id="rCancel">닫기</button>
+    </div>
+    <div id="rResult" class="muted" style="margin-top:10px"></div>
   </div>
 </div>
 
@@ -139,6 +159,13 @@ function wdOf(d){
   return isNaN(t.getTime()) ? "" : WD[t.getUTCDay()];
 }
 function isFail(v){ return /불통과|미통과/.test(String(v||"")); }
+// 재시 안내를 보내야 하는 행인가 — **서버(api/attendance.js 의 needsRetest)와 같은 규칙**.
+//  · 이미 '전송' 이면 끝 · '미전송'(큐에 올라간 것) 이거나 결과가 불통과면 대상
+//  (노션에서 옮겨와 큐를 안 거친 행도 놓치지 않으려고 결과까지 같이 봅니다)
+function needsRetest(rec){
+  if (!rec || rec.retest_sent === "전송") return false;
+  return rec.retest_sent === "미전송" || isFail(rec.voca_test);
+}
 function resTxt(res, score){
   if (!res && !score) return "";
   const cls = isFail(res) ? "bad" : (res ? "ok" : "");
@@ -268,6 +295,16 @@ function render(){
     return;
   }
   $("#list").innerHTML = rows.map(r => cardHtml(ROWS.indexOf(r))).join("");
+  renderRetestBtn();
+}
+
+// 🔁 재시 안내 — 대상이 있을 때만 버튼이 보이고, 몇 명인지 적어 둡니다.
+function retestTargets(){ return ROWS.filter(r => needsRetest(r.record || {})); }
+function renderRetestBtn(){
+  const n = retestTargets().length;
+  const b = $("#retest");
+  b.style.display = n ? "" : "none";
+  b.textContent = `🔁 재시 안내 (${n})`;
 }
 
 function cardHtml(i){
@@ -287,9 +324,9 @@ function cardHtml(i){
     } else {
       field = `<input data-i="${i}" data-sub="${sub}" data-book="${esc(book)}" value="${esc(cur.code)}" placeholder="${esc(book||"교재 미지정")}">`;
     }
-    // 지난 수업 3회를 한 줄로 — "요즘 계속 멈춰 있나" 가 바로 보입니다.
-    // (예전엔 직전 1회만 보여줘서 흐름을 알 수 없었습니다)
-    const hist = (r.recent||[]).filter(h => (h.progress||{})[sub]);
+    // 과목 칸 바로 아래에 지난 진도 **3회**만 한 줄로. 흐름 전체는 위의 📜 최근 수업 표에서 봅니다.
+    // (8회를 전부 늘어놓으니 줄이 세 줄씩 접혀 카드가 읽기 어려웠습니다)
+    const hist = (r.recent||[]).filter(h => (h.progress||{})[sub]).slice(0, 3);
     const pv = hist.length
       ? `<div class="prev">↳ 지난 ${hist.map(h => `${esc(md(h.date))} ${esc(unitLabel(h.progress[sub]))}`).join("  ·  ")}</div>`
       : "";
@@ -297,9 +334,10 @@ function cardHtml(i){
   }).join("");
   return `<div class="card" data-i="${i}">
     <div class="stuhead">
-      <span class="nm">${esc(r.name)}</span>
+      <a class="nm" href="/student_card.html?student_id=${encodeURIComponent(r.student_id)}" target="_blank"
+         title="학생 카드 — 지난 진도 쭉 보기">${esc(r.name)}</a>
       ${r.record.check_in?`<span class="pill">🕒 등원 ${esc(r.record.check_in)}</span>`:(r.scheduled?`<span class="pill">예정 ${esc(r.scheduled)}</span>`:"")}
-      ${late} ${sent}
+      ${late} ${sent}${needsRetest(rec)?'<span class="pill late">🔁 재시 안내 대기</span>':""}
       <button class="btn" style="padding:5px 10px;font-size:12px" onclick="sendOne(${i})">📨 이 학생</button>
       <span class="savemsg" id="save-${i}"></span>
     </div>
@@ -437,6 +475,46 @@ $("#doSend").onclick = async () => {
       (!d.solapi? "<br>⚠️ 솔라피 미설정으로 실제 발송은 되지 않았어요." : "");
     load();
   } catch(e){ $("#sendResult").textContent = "오류: " + e.message; }
+  finally { btn.disabled = false; btn.textContent = "발송"; }
+};
+
+// ── 🔁 재시 안내 발송 (미리보기 → 선택 → 발송) ──
+// 데일리 리포트 카톡과 **다른 템플릿**(TPL_RETEST)으로 나갑니다 — 불통과한 학생만.
+let RPREVIEW = [];
+$("#retest").onclick = async () => {
+  $("#rResult").textContent = "";
+  try {
+    const d = await api({ action:"send-retest", date:$("#date").value, dryRun:true, teacher:TEACHER||undefined });
+    RPREVIEW = d.results || [];
+    if (!RPREVIEW.length){ alert("재시 안내를 보낼 학생이 없어요."); load(); return; }
+    $("#rSub").textContent = `${d.date} — 단어테스트 불통과 ${RPREVIEW.length}명`
+      + (d.solapi ? "" : " · ⚠️ TPL_RETEST(재시 안내 템플릿) 미설정 상태라 실제 발송은 안 됩니다");
+    $("#rList").innerHTML = RPREVIEW.map((p, idx) => {
+      const dis = !p.ok && p.reason === "연락처 없음";
+      return `<label class="srow${dis?" off":""}">
+        <input type="checkbox" data-idx="${idx}" ${dis?"disabled":(p.already?"":"checked")}>
+        <div class="info"><b>${esc(p.name)}</b> ${p.already?'<span class="pill sent">이미 전송</span>':""} ${dis?'<span class="pill late">연락처 없음</span>':""}
+          <div class="l2">단어 ${esc(p.book)} · ${esc(p.unit)} · 점수 ${esc(p.score)}</div>
+          <div class="l2">${p.phone?("학부모 "+esc(p.phone)):'<span style="color:var(--absent)">학부모 연락처 없음</span>'}</div>
+        </div></label>`;
+    }).join("");
+    $("#rOverlay").classList.add("on");
+  } catch(e){ alert(e.message); }
+};
+$("#rCancel").onclick = () => $("#rOverlay").classList.remove("on");
+$("#rDoSend").onclick = async () => {
+  const ids = Array.from(document.querySelectorAll("#rList input[type=checkbox]:checked"))
+    .map(c => RPREVIEW[Number(c.dataset.idx)].student_id);
+  if (!ids.length){ alert("보낼 학생을 선택하세요."); return; }
+  const btn = $("#rDoSend"); btn.disabled = true; btn.textContent = "발송 중…";
+  try {
+    const d = await api({ action:"send-retest", date:$("#date").value, student_ids:ids, teacher:TEACHER||undefined });
+    const fails = (d.results||[]).filter(x => !x.ok);
+    $("#rResult").innerHTML = `발송 완료 — ${d.sent}/${d.total}건 성공`
+      + (fails.length ? "<br>실패: " + fails.map(f => esc(f.name)+"("+esc(f.reason||"")+")").join(", ") : "")
+      + (!d.solapi ? "<br>⚠️ TPL_RETEST 미설정으로 실제 발송은 되지 않았어요." : "");
+    load();
+  } catch(e){ $("#rResult").textContent = "오류: " + e.message; }
   finally { btn.disabled = false; btn.textContent = "발송"; }
 };
 
