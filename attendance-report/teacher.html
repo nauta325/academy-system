@@ -108,6 +108,22 @@
       <div class="stats" id="tstats"></div>
       <div id="tasks"></div>
     </div>
+
+    <!-- 학생별 과제 이력 — "이 아이가 지난달에 과제를 몇 번 빼먹었나" 를 보는 곳.
+         예전에는 '오늘' 밖에 못 봐서 이력을 볼 데가 없었습니다. -->
+    <div class="card">
+      <h2>학생별 과제 이력</h2>
+      <div class="hint">기간을 정해 한 학생의 과제를 모아 봅니다. 상담·월말평가서 쓸 때 보세요.</div>
+      <div class="row" style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select id="hStudent" style="min-width:120px"></select>
+        <input type="date" id="hFrom">
+        <span>~</span>
+        <input type="date" id="hTo">
+        <button class="btn" onclick="loadHistory()">보기</button>
+      </div>
+      <div class="stats" id="hstats"></div>
+      <div id="history"></div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -165,6 +181,7 @@
       state.tasks = t.tasks;
       renderPick();
       renderTasks();
+      fillHistoryStudents();
       if (!document.querySelector('#items .item')) addItem();
     } catch (e) { toast(e.message); }
   }
@@ -259,6 +276,51 @@
         + '<div class="st ' + (x.done ? 'y' : 'n') + '">' + (x.done ? '완료' : '미완료') + '</div>'
         + '<button class="x" title="삭제" onclick="del(\'' + x.id + '\')">✕</button></div>';
     }).join('');
+  }
+
+  // ── 학생별 과제 이력 ──────────────────────────────
+  function fillHistoryStudents() {
+    var sel = $('hStudent');
+    if (!sel) return;
+    // ⚠️ 선생님을 바꾸면 **다시 채운다.** 한 번만 채우면 전체 목록이 남아서
+    //    박선생 화면에서 이선생 담당 학생을 고를 수 있게 됩니다
+    //    (선생님앱이 지켜야 할 "담당 학생만" 이 깨짐).
+    var keep = sel.value;
+    sel.innerHTML = (state.students || []).map(function (s) {
+      return '<option value="' + s.id + '">' + esc(s.name) + '</option>';
+    }).join('');
+    // 바꾸기 전에 고른 학생이 여전히 담당이면 그대로 둔다
+    if (keep && Array.prototype.some.call(sel.options, function (o) { return o.value === keep; })) sel.value = keep;
+    // 담당이 바뀌어 목록에서 사라졌으면 이전 결과도 지운다
+    else { $('history').innerHTML = ''; $('hstats').innerHTML = ''; }
+    // 기본 기간: 이번 달 1일 ~ 오늘
+    var d = date() || new Date().toISOString().slice(0, 10);
+    if (!$('hFrom').value) $('hFrom').value = d.slice(0, 8) + '01';
+    if (!$('hTo').value) $('hTo').value = d;
+  }
+
+  async function loadHistory() {
+    var sid = $('hStudent').value, from = $('hFrom').value, to = $('hTo').value;
+    if (!sid) { toast('학생을 고르세요.'); return; }
+    if (!from || !to) { toast('기간을 정해주세요.'); return; }
+    try {
+      var d = await get('action=tasks&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to)
+        + '&student_id=' + encodeURIComponent(sid) + (teacher() ? '&teacher=' + encodeURIComponent(teacher()) : ''));
+      var t = d.tasks || [], sm = d.summary || { total: t.length, done: 0, rate: null };
+      $('hstats').innerHTML = '<div class="stat"><div class="v">' + sm.total + '</div><div class="l">받은 과제</div></div>'
+        + '<div class="stat good"><div class="v">' + sm.done + '</div><div class="l">완료</div></div>'
+        + '<div class="stat warn"><div class="v">' + (sm.total - sm.done) + '</div><div class="l">미완료</div></div>'
+        + '<div class="stat"><div class="v">' + (sm.rate == null ? '-' : sm.rate + '%') + '</div><div class="l">완료율</div></div>';
+      if (!t.length) { $('history').innerHTML = '<div class="empty">이 기간에 받은 과제가 없어요.</div>'; return; }
+      $('history').innerHTML = t.map(function (x) {
+        return '<div class="tline' + (x.done ? ' done' : '') + '">'
+          + '<div class="who">' + esc(x.date) + '</div>'
+          + '<div class="ti">' + esc(x.title)
+          + ' <span class="tag' + (x.kind === '집' ? ' home' : '') + '">' + esc(x.kind) + '</span>'
+          + (x.subject ? ' <span class="tag">' + esc(x.subject) + '</span>' : '') + '</div>'
+          + '<div class="st ' + (x.done ? 'y' : 'n') + '">' + (x.done ? '완료' : '미완료') + '</div></div>';
+      }).join('');
+    } catch (e) { toast(e.message); }
   }
 
   async function del(id) {

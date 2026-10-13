@@ -31,7 +31,7 @@ export function monthFilter(month) {
 
 // ── 집계: 그 달 daily_records → planner (2차 getMonthlyPlannerData 형식) ──
 // 이 planner가 AI 지침(reportGuideline)의 재료가 된다.
-function computePlanner(records, books) {
+function computePlanner(records, books, taskStats) {
   const attended = records.filter((r) => r.lateness !== "결석");
   const cnt = (arr, f) => arr.filter(f).length;
   // 노션 이관 데이터 값 흡수: 정시등원=정시, 과제 100%완료=상
@@ -90,10 +90,33 @@ function computePlanner(records, books) {
     출석,
     태도,
     과제,
+    // 학생이 **앱에서 직접 체크한** 과제 실적. 위의 `과제` 는 선생님이 매긴 등급이고
+    // 이건 학생이 실제로 한 것이라 서로 다릅니다. 둘 다 있어야 평가서가 공정해집니다.
+    // (예전에는 학생이 체크해도 어디에도 안 쓰여서, 체크할 이유가 없었습니다)
+    ...(taskStats ? { 과제체크: taskStats } : {}),
     단어테스트,
     월초진도: progOf(firstRec),
     최종진도: progOf(lastRec),
     교재전환,
+  };
+}
+
+// 그 달 학생이 받은 과제와 체크한 개수 → {총건수, 완료, 완료율}
+// 과제가 하나도 없으면 null 을 돌려줘서 평가서에 빈 줄이 안 생기게 합니다.
+async function taskStatsFor(studentId, month) {
+  const rows = await select("tasks", `student_id=eq.${studentId}&${monthFilter(month)}&select=done,kind`);
+  if (!rows.length) return null;
+  const 완료 = rows.filter((t) => t.done).length;
+  const byKind = (k) => {
+    const sub = rows.filter((t) => t.kind === k);
+    return sub.length ? { 총건수: sub.length, 완료: sub.filter((t) => t.done).length } : null;
+  };
+  return {
+    총건수: rows.length,
+    완료,
+    완료율: Math.round((완료 / rows.length) * 100),
+    ...(byKind("집") ? { 집과제: byKind("집") } : {}),
+    ...(byKind("학원") ? { 학원과제: byKind("학원") } : {}),
   };
 }
 
@@ -109,6 +132,10 @@ function displayStats(p) {
     vocaRate: pct(p.단어테스트.통과, p.단어테스트.총횟수),
     hwRate: pct(p.과제.상, hwTotal),
     atRate: pct(p.태도.상, atTotal), // 태도 상 비율 (부모님 화면 바 그래프)
+    // 학생이 앱에서 체크한 과제 완료율 (과제를 안 내준 달이면 null → 화면에서 숨김)
+    taskRate: p.과제체크 ? p.과제체크.완료율 : null,
+    taskDone: p.과제체크 ? p.과제체크.완료 : null,
+    taskTotal: p.과제체크 ? p.과제체크.총건수 : null,
   };
 }
 
@@ -168,6 +195,16 @@ export default async function handler(req, res) {
       );
       const reportBy = Object.fromEntries(reports.map((r) => [r.student_id, r]));
 
+      // 그 달 과제를 **한 번에** 가져와 학생별로 묶는다 (학생 수만큼 조회하지 않게).
+      const taskRows = await select("tasks", `${monthFilter(month)}&select=student_id,done,kind`);
+      const taskBy = {};
+      for (const t of taskRows) (taskBy[t.student_id] ||= []).push(t);
+      for (const id of Object.keys(taskBy)) {
+        const rows = taskBy[id];
+        const 완료 = rows.filter((t) => t.done).length;
+        taskBy[id] = { 총건수: rows.length, 완료, 완료율: Math.round((완료 / rows.length) * 100) };
+      }
+
       const list = students.map((s) => {
         const recs = records.filter((r) => r.student_id === s.id);
         const rep = reportBy[s.id];
@@ -175,7 +212,7 @@ export default async function handler(req, res) {
           id: s.id,
           name: s.name,
           grade: s.grade,
-          stats: displayStats(computePlanner(recs, s.books)),
+          stats: displayStats(computePlanner(recs, s.books, taskBy[s.id] || null)),
           hasRecords: recs.length > 0,
           hasReport: Boolean(rep),
           share_token: rep?.share_token || null,
@@ -196,7 +233,7 @@ export default async function handler(req, res) {
         "daily_records",
         `student_id=eq.${student_id}&${monthFilter(month)}`
       );
-      const planner = computePlanner(records, student.books);
+      const planner = computePlanner(records, student.books, await taskStatsFor(student_id, month));
       return res.status(200).json({ hasRecords: records.length > 0, planner });
     }
 
@@ -231,7 +268,7 @@ export default async function handler(req, res) {
         .filter((r) => r.note && String(r.note).trim())
         .sort((a, b) => (a.date < b.date ? -1 : 1))
         .map((r) => `${String(r.date).slice(5).replace("-", "/")} ${String(r.note).trim()}`);
-      const planner = computePlanner(records, student.books);
+      const planner = computePlanner(records, student.books, await taskStatsFor(student_id, month));
       const body = await generateReport({ student, month, planner, comment, dailyNotes });
       const stats = displayStats(planner);
       const progress = planner.최종진도; // {과목:{교재명,유닛코드}}
@@ -290,7 +327,9 @@ export default async function handler(req, res) {
           "daily_records",
           `student_id=eq.${studentId}&${monthFilter(r.month)}`
         );
-        const planner = recs.length ? computePlanner(recs, stu.books) : pseudoPlanner(r.stats, r.progress);
+        const planner = recs.length
+          ? computePlanner(recs, stu.books, await taskStatsFor(studentId, r.month))
+          : pseudoPlanner(r.stats, r.progress);
         reports.push({ month: r.month, body: r.body, planner, live: recs.length > 0 });
       }
       return res.status(200).json({ student: { name: stu.name, grade: stu.grade }, reports });

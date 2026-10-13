@@ -65,6 +65,8 @@ function vocaText(rec) {
 const BAD_ID = /^(undefined|null|NaN|)$/i;
 const SAFE_ID = /^[A-Za-z0-9_-]+$/;         // 필터에 그대로 들어가므로 이상한 문자는 거른다
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// 형식만 보면 "2026-13-99" 도 통과합니다. 실제로 있는 날짜인지까지 봅니다.
+const okDate = (v) => DATE_RE.test(String(v)) && !isNaN(new Date(`${v}T00:00:00Z`).getTime());
 class BadRequest extends Error {
   constructor(msg) { super(msg); this.status = 400; }
 }
@@ -73,7 +75,7 @@ async function ensureTodayRow(studentId, date) {
   if (BAD_ID.test(sid) || !SAFE_ID.test(sid)) {
     throw new BadRequest("학생을 찾을 수 없어요. 화면을 새로고침한 뒤 다시 해주세요.");
   }
-  if (!date || !DATE_RE.test(String(date)) || isNaN(new Date(`${date}T00:00:00Z`).getTime())) {
+  if (!okDate(date)) {
     throw new BadRequest(`날짜가 올바르지 않아요: ${date}`);
   }
   const rows = await select(
@@ -531,19 +533,44 @@ export default async function handler(req, res) {
     }
 
     // ── 과제 현황 (선생님앱) — 그날 낸 과제와 학생 체크 여부 ──
+    // 하루치(기본) 또는 기간 조회.
+    //   ?date=2026-10-13                  → 그날 하루 (선생님앱 기본 화면)
+    //   ?from=2026-10-01&to=2026-10-31     → 기간 (학생별 과제 이력)
+    //   ?student_id=...                    → 그 학생만
+    // 기간 조회를 넣은 이유: 예전에는 '오늘' 밖에 못 봐서
+    // "이 아이가 지난달에 과제를 몇 번 빼먹었나" 를 볼 데가 없었습니다.
     if (action === "tasks") {
+      const { from, to, student_id } = req.query;
       const date = req.query.date || now.date;
+      const ranged = Boolean(from || to);
+      const f = from || to || date;
+      const t2 = to || from || date;
+      if (ranged && (!okDate(f) || !okDate(t2))) {
+        return res.status(400).json({ error: `날짜가 올바르지 않아요: ${f} ~ ${t2}` });
+      }
       const students = await select("students", `status=eq.재원&order=name.asc${teacherFilter(req)}`);
       const ids = new Set(students.map((s) => s.id));
-      const all = await select("tasks", `date=eq.${date}&order=kind.asc`);
-      const tasks = all.filter((t) => ids.has(t.student_id)); // 담당 학생 것만
+      const where = ranged
+        ? `date=gte.${f}&date=lte.${t2}&order=date.desc,kind.asc`
+        : `date=eq.${date}&order=kind.asc`;
+      const all = await select("tasks", where);
+      let tasks = all.filter((t) => ids.has(t.student_id)); // 담당 학생 것만
+      if (student_id) tasks = tasks.filter((t) => t.student_id === student_id);
       const nameBy = Object.fromEntries(students.map((s) => [s.id, s.name]));
+      // 기간 조회면 완료율을 같이 계산해 준다 (화면에서 다시 세지 않게)
+      const summary = ranged
+        ? (() => {
+            const total = tasks.length, done = tasks.filter((t) => t.done).length;
+            return { total, done, rate: total ? Math.round((done / total) * 100) : null };
+          })()
+        : null;
       return res.status(200).json({
-        date,
+        date, from: ranged ? f : null, to: ranged ? t2 : null, summary,
         students: students.map((s) => ({ id: s.id, name: s.name, grade: s.grade, books: s.books || {} })),
         tasks: tasks.map((t) => ({
           id: t.id, student_id: t.student_id, name: nameBy[t.student_id] || "",
-          kind: t.kind, subject: t.subject, title: t.title, done: t.done,
+          date: t.date, kind: t.kind, subject: t.subject, title: t.title,
+          done: t.done, done_at: t.done_at,
         })),
       });
     }

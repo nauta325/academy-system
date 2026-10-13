@@ -274,6 +274,36 @@ check("삭제 반영 (1건 남음)", r.body.tasks.length === 1, r.body.tasks);
   check("★ 미래 날짜도 '쓰면' 저장됨", T.daily_records.some(r => r.date === future), future);
 }
 
+
+// ── 과제 이력 + 월말평가서 반영 ★ ──
+//    예전에는 학생이 앱에서 체크해도 그 기록을 쓰는 곳이 한 군데도 없었습니다
+//    (선생님앱 '오늘' 화면 하나뿐). 학생 입장에서 체크할 이유가 없었던 셈입니다.
+{
+  const reportApi = (await import("../api/report.js")).default;
+  const sid = T.students[0].id;
+  const MONTH = "2026-03";                 // 다른 점검과 겹치지 않는 달로 격리
+  T.tasks.push(
+    { id: "h1", student_id: sid, date: "2026-03-05", kind: "집",   subject: "문법", title: "워크북 p.10", done: true,  done_at: null },
+    { id: "h2", student_id: sid, date: "2026-03-05", kind: "학원", subject: "리딩", title: "본문 읽기",   done: false, done_at: null },
+    { id: "h3", student_id: sid, date: "2026-03-06", kind: "집",   subject: "단어", title: "Day 1-10",    done: true,  done_at: null },
+  );
+  const hist = await GET(attendance, { action: "tasks", from: "2026-03-01", to: "2026-03-31", student_id: sid });
+  const rows = hist.body.tasks || [];
+  check("★ 과제 기간 조회됨", rows.length === 3, rows.length);
+  check("★ 완료율을 계산해 줌", hist.body.summary?.rate === 67, hist.body.summary);
+  check("과제에 날짜가 실려 옴 (이력 표시용)", rows.every(t => !!t.date), rows[0]);
+  check("고른 학생 것만 나옴", rows.every(t => t.student_id === sid), rows.map(t => t.student_id));
+  const bad = await GET(attendance, { action: "tasks", from: "2026-13-99", to: "2026-03-31" });
+  check("★ 없는 날짜(2026-13-99)는 400", bad.code === 400, bad.code);
+
+  const rep = await POST(reportApi, { action: "preview", student_id: sid, month: MONTH });
+  const tc = rep.body?.planner?.과제체크;
+  check("★★ 월말평가서에 과제 체크가 들어감", !!tc && tc.총건수 === 3 && tc.완료 === 2, tc);
+  check("집/학원을 나눠서 셈", tc?.집과제?.총건수 === 2 && tc?.학원과제?.총건수 === 1, tc);
+  const empty = await POST(reportApi, { action: "preview", student_id: sid, month: "2026-07" });
+  check("과제 없는 달에는 칸이 안 생김", !empty.body?.planner?.과제체크, empty.body?.planner?.과제체크);
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);
 

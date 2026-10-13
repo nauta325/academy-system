@@ -132,6 +132,18 @@ await pg.selectOption("#teacher", "박선생");
 await pg.waitForTimeout(1200);
 const body = await pg.locator("body").innerText();
 ck("★ 담당 학생만 보임 (박도윤 O / 김민준 X)", body.includes("박도윤") && !body.includes("김민준"), body.slice(0, 160));
+// 과제 이력 드롭다운도 담당 학생만이어야 한다 (선생님을 바꾸면 다시 채워져야 함)
+{
+  const names = await pg.locator("#hStudent option").allInnerTexts().catch(() => []);
+  ck("★ 과제 이력 드롭다운도 담당 학생만", names.length > 0 && !names.includes("김민준"), names);
+  // 기간 조회가 실제로 되는지
+  await pg.locator("#hFrom").fill("2026-01-01");
+  await pg.locator("#hTo").fill("2026-12-31");
+  await pg.locator("button:has-text('보기')").first().click();
+  await pg.waitForTimeout(1500);
+  const h = await pg.locator("#hstats").innerText().catch(() => "");
+  ck("★ 학생별 과제 이력이 조회됨", /완료율|받은 과제/.test(h), h.slice(0, 120));
+}
 
 // 학생앱 로그인
 await pg.goto(B + "/student.html", { waitUntil: "networkidle" });

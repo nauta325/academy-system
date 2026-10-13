@@ -117,6 +117,15 @@ export function buildDataSummary({ studentName, periodLabel, planner, comment, d
   } else {
     L.push("【과제 수행도】기록 없음");
   }
+  // 학생이 앱에서 직접 체크한 과제 — 선생님이 매긴 등급과 별개 자료입니다.
+  // 과제를 안 내준 달이면 아예 넣지 않습니다(없는 걸 지어내지 않게).
+  const tc = p.과제체크;
+  if (tc && tc.총건수 > 0) {
+    const parts = [`받은 과제 ${tc.총건수}개 중 ${tc.완료}개 완료 (${tc.완료율}%)`];
+    if (tc.집과제) parts.push(`집과제 ${tc.집과제.완료}/${tc.집과제.총건수}`);
+    if (tc.학원과제) parts.push(`학원과제 ${tc.학원과제.완료}/${tc.학원과제.총건수}`);
+    L.push(`【과제 체크(학생 앱)】${parts.join(" · ")}`);
+  }
   if (dailyNotes && dailyNotes.length > 0) {
     L.push("");
     L.push("【데일리 지적사항 모음】(그 달 매일 기록된 특이사항 — 반복되는 패턴만 자연스럽게 반영, 일회성은 제외)");

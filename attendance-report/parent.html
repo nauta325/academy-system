@@ -168,6 +168,10 @@
             ms((p.출석?p.출석.정시등원+p.출석.지각:0), '수업일', '') +
             ms(vocaRate + '%', '단어', cl(vocaRate)) +
             ms(hwRate + '%', '과제(상)', cl(hwRate)) +
+            // 아이가 앱에서 직접 체크한 과제 — 과제를 안 내준 달이면 아예 안 보입니다
+            (p.과제체크 && p.과제체크.총건수 > 0
+              ? ms(p.과제체크.완료율 + '%', '과제 체크(' + p.과제체크.완료 + '/' + p.과제체크.총건수 + ')', cl(p.과제체크.완료율))
+              : '') +
           '</div>' +
           '<div class="report-body"><div class="report-text">' + esc(rpt.body) + '</div>' +
           '<div class="report-actions"><button onclick="copyText(this)">📋 복사</button></div></div>';
