@@ -2,15 +2,22 @@
 process.env.SUPABASE_URL = "http://fake";
 process.env.SUPABASE_SERVICE_KEY = "fake";
 
+// ⚠️ 점검용 학생은 **요일 7개를 모두** 채웁니다.
+//    예전에는 화·목이 비어 있어서, 화요일이나 목요일에 돌리면 "오늘 올 학생" 이 0명이 되어
+//    점검 7건이 한꺼번에 FAIL 났습니다. 세미나가 화·목에 열리면 수강생 전원이
+//    `node scripts/smoke-test.mjs` 에서 ❌ 를 보게 되는 지뢰였습니다.
+//    (실제 등원 요일 설정은 students.html 에서 하고, 여기는 로직 점검용 고정 픽스처입니다.)
+const EVERYDAY = (t) => ({ 월: t, 화: t, 수: t, 목: t, 금: t, 토: t, 일: t });
+
 const T = {
   students: [
     { id: "s1", name: "김민준", student_code: "demo01", pin: "1111", phone: "010-0000-0001",
       grade: "중2", teacher: "이선생", class_minutes: 120, status: "재원",
-      schedule: { 월: "17:00", 화: "", 수: "17:00", 목: "", 금: "17:00", 토: "17:00", 일: "17:00" },
+      schedule: EVERYDAY("17:00"),
       books: { 문법: "그래머인유즈 1", 리딩: "리딩릴레이 스타터1", 단어: "능률 보카 기본" } },
     { id: "s2", name: "박도윤", student_code: "demo03", pin: "3333", phone: "010-0000-0003",
       grade: "초6", teacher: "박선생", class_minutes: 90, status: "재원",
-      schedule: { 월: "16:00", 화: "", 수: "16:00", 목: "", 금: "16:00", 토: "16:00", 일: "16:00" },
+      schedule: EVERYDAY("16:00"),
       books: { 문법: "초등 그래머" } },
     { id: "s3", name: "퇴원생", student_code: "demo09", pin: "9999", status: "퇴원", schedule: {}, books: {} },
   ],

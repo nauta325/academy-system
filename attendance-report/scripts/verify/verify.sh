@@ -35,7 +35,8 @@ if [ -n "$ERR" ]; then echo "❌ setup.sql 오류:"; echo "$ERR"; exit 1; fi
 echo "  setup.sql OK"
 
 echo "── 1. 스키마 ↔ 코드 컬럼 대조 ──"
-node audit-schema.mjs | tail -2
+TESTDB=tapp node audit-schema.mjs > /tmp/schema.out 2>&1; S=$?; tail -3 /tmp/schema.out
+[ $S -ne 0 ] && echo "  ⚠️ 스키마 대조 실패 (위 내용 확인)"
 
 echo "── 2. 서버 기동 (진짜 PostgreSQL) ──"
 (fuser -k 4330/tcp 2>/dev/null || true); sleep 1
@@ -50,10 +51,28 @@ echo "── 4. 브라우저에서 전 화면 ──"
 if [ -f browser-check.mjs ]; then node browser-check.mjs > /tmp/br.out 2>&1; B=$?; tail -4 /tmp/br.out; else echo "  (생략)"; B=0; fi
 
 echo "── 5. 단위 점검 ──"
-(cd "$APP" && node scripts/smoke-test.mjs | tail -1)
-(cd "$APP" && node scripts/check-personal.mjs | tail -1)
+(cd "$APP" && node scripts/smoke-test.mjs > /tmp/smoke.out 2>&1); U=$?
+grep -E "^FAIL|실패|통과" /tmp/smoke.out | tail -8
+(cd "$APP" && node scripts/check-personal.mjs > /tmp/pers.out 2>&1); P=$?; tail -1 /tmp/pers.out
 
 (fuser -k 4330/tcp 2>/dev/null || true)
-[ $A -eq 0 ] && [ $B -eq 0 ] && echo "
-✅ 전면 검수 통과" || echo "
-❌ 검수 실패"
+
+# ── 판정: 다섯 단계를 모두 본다 ──
+#  예전에는 $A(API)·$B(브라우저)만 봐서, 스키마 대조가 죽어도 단위 점검이 실패해도
+#  "전면 검수 통과" 가 찍혔습니다. 한 번 그러고 나면 검수기를 믿을 수 없게 됩니다.
+FAILED=""
+[ $S -ne 0 ] && FAILED="$FAILED 스키마대조"
+[ $A -ne 0 ] && FAILED="$FAILED API"
+[ $B -ne 0 ] && FAILED="$FAILED 브라우저"
+[ $U -ne 0 ] && FAILED="$FAILED 단위점검"
+[ $P -ne 0 ] && FAILED="$FAILED 개인정보"
+if [ -z "$FAILED" ]; then
+  echo "
+✅ 전면 검수 통과"
+  exit 0
+else
+  echo "
+❌ 검수 실패 —$FAILED
+   자세한 내용: /tmp/schema.out · /tmp/e2e.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out"
+  exit 1
+fi
