@@ -88,8 +88,9 @@
 
 <div class="overlay" id="bulkOverlay"><div class="panel">
   <h2 style="margin:0 0 6px;font-size:18px">붙여넣기 일괄등록</h2>
-  <p class="muted">엑셀/시트에서 <b>이름 / PIN / 학년 / 담당 / 연락처</b> 열을 복사해 붙여넣으세요 (탭 구분, 한 줄 = 한 명).</p>
-  <textarea id="bulkText" rows="8" placeholder="김민준&#9;1111&#9;중2&#9;이선생&#9;01000000001"></textarea>
+  <p class="muted">엑셀/시트에서 <b>이름 / 학생ID / PIN / 학년 / 담당 / 연락처</b> 열을 복사해 붙여넣으세요 (탭 구분, 한 줄 = 한 명).</p>
+  <p class="muted">⚠️ <b>학생ID</b>는 학생앱 로그인에 씁니다(학생ID + PIN). 비워두면 그 학생은 <b>학생앱에 못 들어갑니다.</b></p>
+  <textarea id="bulkText" rows="8" placeholder="김민준&#9;demo01&#9;1111&#9;중2&#9;이선생&#9;01000000001"></textarea>
   <div class="actions"><button id="bulkSave">등록</button><button class="ghost" id="bulkClose">닫기</button></div>
 </div></div>
 
@@ -143,11 +144,22 @@ $("#del").onclick = async () => {
 $("#bulkBtn").onclick = () => $("#bulkOverlay").classList.add("on");
 $("#bulkClose").onclick = () => $("#bulkOverlay").classList.remove("on");
 $("#bulkSave").onclick = async () => {
-  const rows = $("#bulkText").value.trim().split("\n").map(line=>{
-    const [name,pin,grade,teacher,phone] = line.split("\t").map(x=>(x||"").trim());
-    return { name, pin, grade, teacher, phone };
+  // 열 순서: 이름 / 학생ID / PIN / 학년 / 담당 / 연락처
+  // ⚠️ 예전에는 student_code(학생ID) 를 아예 읽지 않아서, 일괄등록으로 넣은 학생은
+  //    학생앱에 로그인할 수 없었습니다(로그인 = 학생ID + PIN). 조용히 비는 값이라
+  //    세미나 당일에야 "학생앱이 안 돼요" 로 드러나는 자리였습니다.
+  const rows = $("#bulkText").value.trim().split(/\r?\n/).map(line=>{
+    const [name,student_code,pin,grade,teacher,phone] = line.split("\t").map(x=>(x||"").trim());
+    return { name, student_code, pin, grade, teacher, phone };
   }).filter(r=>r.name);
   if(!rows.length) return alert("붙여넣은 내용이 없어요.");
+  // 학생ID 가 빈 줄이 있으면 먼저 알려준다 (모르고 넘어가면 학생앱이 안 됨)
+  const noCode = rows.filter(r=>!r.student_code).map(r=>r.name);
+  if(noCode.length && !confirm(
+      `학생ID가 비어 있는 학생이 ${noCode.length}명 있어요: ${noCode.slice(0,5).join(", ")}${noCode.length>5?" 외":""}\n\n`
+      + `학생ID가 없으면 그 학생은 학생앱(student.html)에 로그인할 수 없습니다.\n`
+      + `열 순서는 이름 / 학생ID / PIN / 학년 / 담당 / 연락처 입니다.\n\n`
+      + `이대로 등록할까요?`)) return;
   try{ const d=await api({action:"bulk-students", rows}); $("#bulkOverlay").classList.remove("on"); $("#bulkText").value=""; alert(`${d.count}명 등록됐어요.`); load(); }catch(e){ alert(e.message); }
 };
 load();

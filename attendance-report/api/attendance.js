@@ -53,7 +53,24 @@ function vocaText(rec) {
 }
 
 // 오늘 행 없으면 만들어 반환 (진도는 교재 목차의 다음 유닛으로 자동 전환)
+// 학생 한 명의 그날 데일리리포트 행을 찾고, 없으면 다음 진도로 만들어 돌려준다.
+//
+// ⚠️ studentId/date 가 비어 있으면 `student_id=eq.undefined` 같은 질의가 나가서
+//    PostgREST 가 400 을 주고, 그게 500 으로 올라가 화면에 내부 에러가 그대로 뜹니다.
+//    (화면에서는 늘 채워 보내지만, 저장 중 행이 아직 없거나 통신이 꼬이면 생길 수 있음)
+//    여기서 한 번 막으면 이 함수를 쓰는 네 곳이 전부 보호됩니다.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+class BadRequest extends Error {
+  constructor(msg) { super(msg); this.status = 400; }
+}
 async function ensureTodayRow(studentId, date) {
+  if (!studentId || !UUID_RE.test(String(studentId))) {
+    throw new BadRequest("학생을 찾을 수 없어요. 화면을 새로고침한 뒤 다시 해주세요.");
+  }
+  if (!date || !DATE_RE.test(String(date)) || isNaN(new Date(`${date}T00:00:00Z`).getTime())) {
+    throw new BadRequest(`날짜가 올바르지 않아요: ${date}`);
+  }
   const rows = await select(
     "daily_records",
     `student_id=eq.${studentId}&date=eq.${date}`
@@ -548,6 +565,9 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: `알 수 없는 action: ${action}` });
   } catch (e) {
+    // 입력이 잘못된 것(BadRequest)은 400 으로, 진짜 서버 사고만 500 으로.
+    // 500 에는 PostgREST 원문이 그대로 실려 화면에 내부 메시지가 노출되므로 구분합니다.
+    if (e instanceof BadRequest) return res.status(400).json({ error: e.message });
     return res.status(500).json({ error: String(e.message || e) });
   }
 }

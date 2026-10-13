@@ -78,6 +78,41 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
   }
 }
 
+// ★ 붙여넣기 일괄등록 → 그 학생이 학생앱에 로그인되나
+//   예전에는 일괄등록 파서가 student_code(학생ID) 를 아예 읽지 않아서,
+//   일괄등록으로 넣은 학생은 전부 학생앱 로그인이 안 됐습니다(로그인 = 학생ID + PIN).
+//   조용히 비는 값이라 세미나 당일에야 "학생앱이 안 돼요" 로 드러날 자리였습니다.
+//   ⚠️ 로그인 상태가 뒤의 점검에 새지 않도록 **별도 컨텍스트**에서 돌립니다.
+{
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 950 } });
+  const p2 = await ctx.newPage();
+  const dl = [];
+  p2.on("dialog", async (d) => { dl.push(d.message()); await d.accept().catch(() => {}); });
+  await p2.goto(B + "/students.html", { waitUntil: "networkidle" });
+  await p2.waitForTimeout(1000);
+  const code = "vfy" + String(Date.now()).slice(-5);
+  if (await p2.locator("#bulkBtn").count()) {
+    await p2.locator("#bulkBtn").click();
+    await p2.waitForTimeout(400);
+    await p2.locator("#bulkText").fill(`검수학생\t${code}\t4242\t중1\t이선생\t010-4242-4242`);
+    await p2.locator("#bulkSave").click();
+    await p2.waitForTimeout(2200);
+    ck("★ 일괄등록에 학생ID가 들어감", (await p2.locator("body").innerText()).includes(code), dl.slice(0, 2));
+    await p2.goto(B + "/student.html", { waitUntil: "networkidle" });
+    await p2.waitForTimeout(800);
+    const ii = await p2.locator("input:visible").all();
+    if (ii.length >= 2) {
+      await ii[0].fill(code); await ii[1].fill("4242");
+      await p2.locator("button:visible").first().click();
+      await p2.waitForTimeout(2000);
+    }
+    ck("★★ 일괄등록한 학생이 학생앱에 로그인됨", (await p2.locator("body").innerText()).includes("검수학생"), null);
+  } else {
+    ck("★ 일괄등록 버튼 있음", false, "없음");
+  }
+  await ctx.close();
+}
+
 // 교재·목차
 await pg.goto(B + "/books.html", { waitUntil: "networkidle" });
 await pg.waitForTimeout(900);
