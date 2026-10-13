@@ -4,7 +4,7 @@ import http from "http";
 import fs from "fs";
 import path from "path";
 import { handle } from "./pgrest.mjs";
-import { notionRespond } from "./notion-mock.mjs";
+import { notionRespond, WRITES as NOTION_WRITES } from "./notion-mock.mjs";
 
 const APP = path.resolve(import.meta.dirname, "../..");
 process.env.SUPABASE_URL = "http://fake-supabase";
@@ -56,6 +56,8 @@ export function start(port = 4330) {
       let u;
       try { u = new URL(req.url, "http://x"); }
       catch { res.statusCode = 400; return res.end("bad request"); }
+      // 검수용: 노션에 쓰기가 일어났는지 확인하는 창구
+      if (u.pathname === "/__notion-writes") { return res.json({ writes: NOTION_WRITES }); }
       const h = handlers[u.pathname];
       if (h) {
         let raw = ""; for await (const c of req) raw += c;

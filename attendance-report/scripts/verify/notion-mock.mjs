@@ -64,7 +64,16 @@ const ROWS = {
 const WHICH = (id) => (id||"").includes("stu") ? "students" : (id||"").includes("daily") ? "daily"
   : (id||"").includes("book") ? "books" : (id||"").includes("report") ? "reports" : "comments";
 
+// ★ 노션에 '쓰기' 가 일어나면 기록해 둔다.
+//   이관 가이드가 "노션은 읽기만 합니다 / 원본은 그대로 남습니다" 를 약속하므로,
+//   쓰기 호출이 한 번이라도 있으면 그 약속이 깨진 것입니다.
+export const WRITES = [];
 export function notionRespond(url, opts) {
+  const method = String((opts && opts.method) || "GET").toUpperCase();
+  const isQuery = /\/query$/.test(String(url).split("?")[0]);
+  // 노션은 DB 조회도 POST /query 를 씁니다 — 그것만 읽기로 인정합니다.
+  if (method !== "GET" && !isQuery) WRITES.push(`${method} ${url}`);
+
   const m = /\/v1\/databases\/([^/?]+)(\/query)?/.exec(url);
   if (!m) return new Response(JSON.stringify({ message: "mock: 모르는 경로 " + url }), { status: 404 });
   const which = WHICH(m[1]);

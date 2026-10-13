@@ -54,5 +54,16 @@ const after2 = (await P("attendance", { action: "students" })).body;
 const l2 = (after2?.students || after2 || []).map((s) => s.name);
 ck("★ 두 번 이관해도 학생이 중복되지 않음", new Set(l2).size === l2.length, l2);
 
+// ★ 이관 가이드가 수강생에게 한 약속을 코드로 지킨다
+{
+  const w = await (await fetch(`${B}/__notion-writes`)).json().catch(() => ({}));
+  ck("★ 노션에 쓰기가 한 번도 없었음 (원본은 그대로)", (w.writes || []).length === 0, w.writes);
+  // 기존 학생ID·출결PIN 으로 실제 로그인·등원이 되나 = "다시 안내할 게 없다"
+  const ci = await P("attendance", { action: "checkin", code: "nt01", pin: "1212" });
+  ck("★ 기존 출결PIN 으로 키오스크 등원됨", ci.code === 200, ci.raw.slice(0, 140));
+  const lg = await P("student", { action: "home", code: "nt01", pin: "1212" });
+  ck("★★ 기존 학생ID 로 학생앱 로그인됨", lg.code === 200 && /노션학생A/.test(JSON.stringify(lg.body)), lg.raw.slice(0, 140));
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);
