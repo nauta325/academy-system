@@ -209,6 +209,24 @@ check("선생님 화면에 완료 1건", r.body.tasks.filter((t) => t.done).leng
 r = await POST(attendance, { action: "send-daily", date: today, dryRun: true });
 check("send-daily dryRun 2명", r.body.results?.length === 2, r.body);
 
+// ── 알림톡 과목 변수 — 자료실이 "1·2차 템플릿 그대로 재사용" 을 약속하는 부분.
+//    값이 비면 학부모 카톡의 교재·진도 줄이 빈칸으로 나가는데, 예전에는 자동 점검이
+//    전혀 없어서 **실제로 보내 봐야** 알 수 있었습니다.
+const v = r.body.results?.[0]?.vars || {};
+check("알림톡 과목 변수 생성됨", Object.keys(v).length > 0, Object.keys(v));
+check(
+  "1차 템플릿 3과목이 항상 있음 (리딩·문법·단어)",
+  ["리딩", "문법", "단어"].every((s) => `#{${s}교재}` in v && `#{${s}진도}` in v),
+  Object.keys(v),
+);
+check("교재명이 실제로 채워짐 (빈칸 아님)", v["#{문법교재}"] === "그래머인유즈 1", v["#{문법교재}"]);
+check("진도가 실제로 채워짐 (빈칸 아님)", /Unit/.test(v["#{문법진도}"] || ""), v["#{문법진도}"]);
+check(
+  "안 듣는 과목도 '-' 로 채워짐 (카카오는 빈 변수면 발송 거부)",
+  Object.values(v).every((x) => String(x).length > 0),
+  v,
+);
+
 // ── 10. 과제 삭제 ───────────────────────────────────────
 r = await POST(attendance, { action: "delete-task", id: myTask });
 check("과제 삭제", r.code === 200, r.body);

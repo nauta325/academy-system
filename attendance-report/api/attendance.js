@@ -266,12 +266,16 @@ export default async function handler(req, res) {
           already: r.report_sent === "전송",
         };
         if (phone.length < 10) { results.push({ ...preview, ok: false, reason: "연락처 없음" }); continue; }
-        if (dryRun) { results.push({ ...preview, ok: true }); continue; }
 
         // 알림톡 변수 — 1차(노션 알림톡) 세미나 템플릿을 그대로 쓰실 수 있게 과목별 교재·진도도 함께 보낸다.
         // 과목명은 고정하지 않고 books/progress(jsonb)에 실제로 들어 있는 키를 쓴다.
         // → 영어(문법·리딩·단어)든 수학(연산·교과)이든 과목 키만 바꾸면 템플릿이 그대로 동작.
         // 솔라피는 템플릿에 없는 변수는 무시하므로, 어떤 템플릿을 쓰시든 안전하다.
+        //
+        // ★ 미리보기(dryRun)에서도 이 변수를 만들어 돌려줍니다.
+        //   예전에는 dryRun 이 여기 위에서 빠져나가서, 교재·진도가 제대로 채워지는지
+        //   **실제로 학부모에게 보내 봐야** 알 수 있었습니다. 제일 나쁜 곳에서 알게 되는 구조라
+        //   미리보기 단계에서 값을 볼 수 있게 바꿨습니다.
         const rBooks = r.books || {}, sBooks = stu.books || {}, rProg = r.progress || {};
         // 1차 템플릿이 쓰는 3과목은 학생이 안 듣더라도 변수를 비워두지 않는다.
         // (카카오는 치환 안 된 변수가 있으면 발송을 거부한다 — 그래서 없으면 "-")
@@ -286,6 +290,9 @@ export default async function handler(req, res) {
           subjVars[`#{${s}교재}`] = String(rBooks[s] || sBooks[s] || "-");
           subjVars[`#{${s}진도}`] = String(unit || "-");
         }
+        // 미리보기면 "무엇이 나갈지" 를 돌려주고 끝. (발송하지 않음)
+        if (dryRun) { results.push({ ...preview, vars: subjVars, ok: true }); continue; }
+
         const send = await sendAlimtalk(stu.phone, TPL.daily, {
           "#{학생이름}": stu.name,
           "#{날짜}": date,

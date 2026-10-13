@@ -61,6 +61,23 @@ ck("★ daily.html 진도 드롭다운(목차 연결됨)", selects >= 1, { selec
 const firstVal = selects ? await pg.locator("select[data-sub]").first().inputValue() : "";
 ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { firstVal });
 
+// 📨 카톡 미리보기 — 원장님이 매일 쓰는 화면인데 검사에서 빠져 있었습니다.
+//    여기서 과목별 교재·진도가 보여야 "보내기 전에" 빈칸을 잡을 수 있습니다.
+{
+  const btn = pg.locator("button", { hasText: "리포트 카톡" }).first();
+  if (await btn.count()) {
+    await btn.click();
+    await pg.waitForTimeout(1200);
+    const open = await pg.locator("#overlay.on").count();
+    ck("★ 카톡 미리보기가 열림", open === 1, { open });
+    const txt = open ? await pg.locator("#sendList").innerText() : "";
+    ck("★ 미리보기에 과목별 교재·진도가 보임", /카톡에 들어갈 과목/.test(txt), txt.slice(0, 160));
+    ck("★ 교재명이 '-' 가 아님", /그래머|리딩|보카/.test(txt), txt.slice(0, 160));
+  } else {
+    ck("★ 카톡 미리보기 버튼 있음", false, "버튼을 찾지 못함");
+  }
+}
+
 // 교재·목차
 await pg.goto(B + "/books.html", { waitUntil: "networkidle" });
 await pg.waitForTimeout(900);

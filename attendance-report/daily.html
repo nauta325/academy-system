@@ -114,6 +114,23 @@ const SUBJECTS = ["문법", "리딩", "단어"];
 let ROWS = [], TOC = {}, PREVIEW = [];
 
 function esc(s){ return (s ?? "").toString().replace(/[&<>"]/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+// 카톡 미리보기 — 과목별 교재·진도 한 줄. '-' 인 과목은 눈에 띄게 표시합니다.
+// (1차 템플릿을 쓰시는데 여기가 '-' 면 학생DB 의 과목 키 이름이 템플릿 변수명과 다른 것)
+function subjLine(vars){
+  if (!vars) return "";
+  const subj = [...new Set(Object.keys(vars).map(k => k.replace(/^#\{|교재\}$|진도\}$/g,"")).filter(Boolean))];
+  if (!subj.length) return "";
+  const parts = subj.map(s => {
+    const b = vars[`#{${s}교재}`] || "-", p = vars[`#{${s}진도}`] || "-";
+    const miss = (b === "-" && p === "-");
+    return `<span style="${miss?"color:var(--absent)":""}">${esc(s)} ${esc(b)} ${esc(p)}</span>`;
+  });
+  const anyMiss = subj.some(s => (vars[`#{${s}교재}`]||"-") === "-" && (vars[`#{${s}진도}`]||"-") === "-");
+  return `<div class="l2">📨 카톡에 들어갈 과목: ${parts.join(" · ")}`
+    + (anyMiss ? ` <span style="color:var(--absent)">— '-' 인 과목은 학생DB의 과목 이름이 템플릿 변수명과 다른 것일 수 있어요</span>` : "")
+    + `</div>`;
+}
 // 유닛 {code,title} 정규화 + 표시 라벨
 function normU(u){ if(!u) return {code:"",title:""}; if(typeof u==="string") return {code:u,title:""}; return {code:u.code||"",title:u.title||""}; }
 function unitLabel(u){ u=normU(u); return u.code + (u.title? " — "+u.title : ""); }
@@ -311,6 +328,9 @@ async function openSend(studentIds){
     const d = await api({ action:"send-daily", date:$("#date").value, dryRun:true, student_ids:studentIds||null, teacher:TEACHER||undefined });
     PREVIEW = d.results || [];
     if (!PREVIEW.length){ alert("발송할 리포트가 없어요."); return; }
+    // 1차(노션 알림톡) 템플릿을 쓰시면 카톡에 과목별 교재·진도 줄이 들어갑니다.
+    // 그게 '-' 로 나가면 학생DB books/progress 의 **과목 키 이름**이 템플릿 변수명과 다른 것.
+    // 보내기 전에 여기서 확인할 수 있게 미리보기에 같이 보여줍니다.
     $("#sendSub").textContent = `${d.date} — 대상 ${PREVIEW.length}명` + (d.solapi?"":" · ⚠️ 솔라피(TPL_DAILY) 미설정 상태라 실제 발송은 안 됩니다");
     $("#sendList").innerHTML = PREVIEW.map((p,idx) => {
       const dis = !p.ok && p.reason==="연락처 없음";
@@ -320,6 +340,7 @@ async function openSend(studentIds){
         <div class="info"><b>${esc(p.name)}</b> ${p.already?'<span class="pill sent">이미 전송</span>':""} ${dis?'<span class="pill late">연락처 없음</span>':""}
           <div class="l2">진도: ${esc(p.progress||"-")} · 태도 ${esc(p.attitude)} · 과제 ${esc(p.homework)} · 단어 ${esc(p.voca)}${p.parent_note?` · 추가: ${esc(p.parent_note)}`:""}</div>
           <div class="l2">${p.phone?("학부모 "+esc(p.phone)):'<span style="color:var(--absent)">학부모 연락처 없음</span>'}</div>
+          ${subjLine(p.vars)}
         </div></label>`;
     }).join("");
     $("#overlay").classList.add("on");
