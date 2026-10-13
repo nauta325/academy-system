@@ -143,6 +143,16 @@ ck("★ 담당 학생만 보임 (박도윤 O / 김민준 X)", body.includes("박
   await pg.waitForTimeout(1500);
   const h = await pg.locator("#hstats").innerText().catch(() => "");
   ck("★ 학생별 과제 이력이 조회됨", /완료율|받은 과제/.test(h), h.slice(0, 120));
+  // 「미완료만」 이 기본으로 켜져 있어야 한다 (운영 과제 현황 화면과 같은 기본값 —
+  // 선생님이 이력에서 찾는 건 "누가 안 했나" 이기 때문)
+  const pendOn = await pg.locator("#hPending").isChecked().catch(() => null);
+  ck("★ 「미완료만」이 기본으로 켜져 있음", pendOn === true, pendOn);
+  const onlyPending = await pg.locator("#history .tline .st").allInnerTexts().catch(() => []);
+  ck("미완료만 켜면 완료 건이 안 보임", onlyPending.every((x) => x.includes("미완료")), onlyPending.slice(0, 5));
+  await pg.locator("#hPending").uncheck();
+  await pg.waitForTimeout(600);
+  const allRows = await pg.locator("#history .tline").count().catch(() => 0);
+  ck("끄면 전부 보임", allRows >= onlyPending.length, { allRows, pending: onlyPending.length });
 }
 
 // 학생앱 로그인

@@ -120,6 +120,9 @@
         <span>~</span>
         <input type="date" id="hTo">
         <button class="btn" onclick="loadHistory()">보기</button>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px">
+          <input type="checkbox" id="hPending" checked onchange="renderHistory()"> 미완료만
+        </label>
       </div>
       <div class="stats" id="hstats"></div>
       <div id="history"></div>
@@ -306,12 +309,29 @@
     try {
       var d = await get('action=tasks&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to)
         + '&student_id=' + encodeURIComponent(sid) + (teacher() ? '&teacher=' + encodeURIComponent(teacher()) : ''));
-      var t = d.tasks || [], sm = d.summary || { total: t.length, done: 0, rate: null };
+      state.history = d.tasks || [];
+      state.historySummary = d.summary || { total: state.history.length, done: 0, rate: null };
+      renderHistory();
+    } catch (e) { toast(e.message); }
+  }
+
+  // 「미완료만」 은 기본으로 켜 둡니다 — 선생님이 이력에서 실제로 찾는 건
+  // "누가 안 했나" 이기 때문입니다. (운영 과제 현황 화면도 같은 기본값)
+  function renderHistory() {
+    try {
+      var all = state.history || [], sm = state.historySummary || { total: 0, done: 0, rate: null };
+      var pend = $('hPending') && $('hPending').checked;
+      var t = pend ? all.filter(function (x) { return !x.done; }) : all;
       $('hstats').innerHTML = '<div class="stat"><div class="v">' + sm.total + '</div><div class="l">받은 과제</div></div>'
         + '<div class="stat good"><div class="v">' + sm.done + '</div><div class="l">완료</div></div>'
         + '<div class="stat warn"><div class="v">' + (sm.total - sm.done) + '</div><div class="l">미완료</div></div>'
         + '<div class="stat"><div class="v">' + (sm.rate == null ? '-' : sm.rate + '%') + '</div><div class="l">완료율</div></div>';
-      if (!t.length) { $('history').innerHTML = '<div class="empty">이 기간에 받은 과제가 없어요.</div>'; return; }
+      if (!t.length) {
+        $('history').innerHTML = '<div class="empty">'
+          + (pend && all.length ? '이 기간에 <b>안 한 과제가 없습니다.</b> 전부 완료했어요 👏' : '이 기간에 받은 과제가 없어요.')
+          + '</div>';
+        return;
+      }
       $('history').innerHTML = t.map(function (x) {
         return '<div class="tline' + (x.done ? ' done' : '') + '">'
           + '<div class="who">' + esc(x.date) + '</div>'
