@@ -51,7 +51,11 @@ export function start(port = 4330) {
     const srv = http.createServer(async (req, res) => {
       res.status = (c) => { res.statusCode = c; return res; };
       res.json = (b) => { res.setHeader("content-type", "application/json"); res.end(JSON.stringify(b)); return res; };
-      const u = new URL(req.url, "http://x");
+      // 이상한 경로("//" 같은 것)에도 검수 서버가 죽지 않게 한다.
+      // 죽으면 그 뒤 검사가 통째로 못 돌아서, 진짜 문제를 못 보게 됩니다.
+      let u;
+      try { u = new URL(req.url, "http://x"); }
+      catch { res.statusCode = 400; return res.end("bad request"); }
       const h = handlers[u.pathname];
       if (h) {
         let raw = ""; for await (const c of req) raw += c;
