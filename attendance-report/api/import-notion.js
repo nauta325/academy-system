@@ -240,10 +240,17 @@ export default async function handler(req, res) {
       const toc = await tocByBook();
       const titleOf = (book, code) => { const u = (toc[book]?.units || []).map(normUnit).find((x) => x.code === code); return u ? u.title : ""; };
       const batch = [];
+      // 건너뛴 줄을 세어 둔다 ★
+      // 학생 연결이나 날짜가 없는 줄은 넣을 수 없는데, 예전에는 조용히 버려서
+      // 노션에 300줄이 있어도 "daily: 3" 만 뜨고 왜 그런지 알 수 없었습니다.
+      // 이관의 약속이 "쓰시던 기록을 그대로 가져온다" 라서, 못 가져온 줄은 반드시 알려야 합니다.
+      let skipNoStudent = 0, skipNoDate = 0, total = 0;
       for (const p of await queryDatabase(DAILY)) {
+        total++;
         const sid = stuIdByPage[firstId(prop(p, M.student))];
         const date = String(prop(p, M.date) || "").slice(0, 10);
-        if (!sid || !date) continue;
+        if (!sid) { skipNoStudent++; continue; }
+        if (!date) { skipNoDate++; continue; }
         const books = {};
         for (const s of ["문법", "리딩", "단어"]) { const b = tbNameByPage[firstId(prop(p, M.book[s]))]; if (b) books[s] = b; }
         const progress = {};
@@ -267,6 +274,20 @@ export default async function handler(req, res) {
         const chunk = batch.slice(i, i + 100);
         if (chunk.length) await upsert("daily_records", chunk, "student_id,date");
         result.daily += chunk.length;
+      }
+      // 못 가져온 줄을 화면에 알린다 (조용히 버리지 않는다)
+      result.dailySkipped = { total, noStudent: skipNoStudent, noDate: skipNoDate };
+      if (skipNoStudent) {
+        result.warnings.push(
+          `데일리리포트 ${total}줄 중 ${skipNoStudent}줄은 **학생 연결이 비어** 못 가져왔어요. ` +
+          `노션에서 그 줄의 학생(Relation)을 채우고 다시 불러오세요.`
+        );
+      }
+      if (skipNoDate) {
+        result.warnings.push(
+          `데일리리포트 ${total}줄 중 ${skipNoDate}줄은 **날짜가 비어** 못 가져왔어요. ` +
+          `노션에서 날짜를 채우고 다시 불러오세요.`
+        );
       }
     }
 

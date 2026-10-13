@@ -1,6 +1,7 @@
 #!/bin/bash
 # attendance-report 전면 검수 — 매번 깨끗한 DB에서 처음부터.
 set -u
+set +m   # 백그라운드 서버를 죽일 때 "Killed" 알림이 뜨지 않게 (수강생이 오류로 오해함)
 HERE="$(cd "$(dirname "$0")" && pwd)"   # 검수 스크립트 폴더
 APP="$(cd "$HERE/../.." && pwd)"        # attendance-report 루트
 cd "$HERE"
@@ -41,11 +42,27 @@ TESTDB=tapp node audit-schema.mjs > /tmp/schema.out 2>&1; S=$?; tail -3 /tmp/sch
 echo "── 2. 서버 기동 (진짜 PostgreSQL) ──"
 (fuser -k 4330/tcp 2>/dev/null || true); sleep 1
 TESTDB=tapp nohup node app-server.mjs > app.log 2>&1 < /dev/null &
+disown 2>/dev/null || true
 sleep 3
 curl -s -o /dev/null -w "  서버 %{http_code}\n" localhost:4330/
 
 echo "── 3. API 전수 검사 ──"
 node e2e-api.mjs > /tmp/e2e.out 2>&1; A=$?; tail -4 /tmp/e2e.out
+
+echo "── 3-2. 노션 이관 (가짜 노션) ──"
+(fuser -k 4330/tcp 2>/dev/null || true); sleep 1
+MOCK_NOTION=1 TESTDB=tapp NOTION_TOKEN=secret_fake \
+  NOTION_STUDENTS_DB=db-stu NOTION_DAILY_DB=db-daily NOTION_TEXTBOOKS_DB=db-book \
+  NOTION_REPORTS_DB=db-report NOTION_COMMENTS_DB=db-comment \
+  nohup node app-server.mjs > app.log 2>&1 < /dev/null &
+disown 2>/dev/null || true
+sleep 3
+node notion-check.mjs > /tmp/notion.out 2>&1; N=$?; tail -4 /tmp/notion.out
+# 노션 환경변수 없는 평소 상태로 되돌려 다음 단계 진행
+(fuser -k 4330/tcp 2>/dev/null || true); sleep 1
+TESTDB=tapp nohup node app-server.mjs > app.log 2>&1 < /dev/null &
+disown 2>/dev/null || true
+sleep 3
 
 echo "── 4. 브라우저에서 전 화면 ──"
 if [ -f browser-check.mjs ]; then node browser-check.mjs > /tmp/br.out 2>&1; B=$?; tail -4 /tmp/br.out; else echo "  (생략)"; B=0; fi
@@ -64,6 +81,7 @@ FAILED=""
 [ $S -ne 0 ] && FAILED="$FAILED 스키마대조"
 [ $A -ne 0 ] && FAILED="$FAILED API"
 [ $B -ne 0 ] && FAILED="$FAILED 브라우저"
+[ $N -ne 0 ] && FAILED="$FAILED 노션이관"
 [ $U -ne 0 ] && FAILED="$FAILED 단위점검"
 [ $P -ne 0 ] && FAILED="$FAILED 개인정보"
 if [ -z "$FAILED" ]; then
@@ -73,6 +91,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/e2e.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out"
   exit 1
 fi

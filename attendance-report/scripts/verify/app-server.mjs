@@ -4,6 +4,7 @@ import http from "http";
 import fs from "fs";
 import path from "path";
 import { handle } from "./pgrest.mjs";
+import { notionRespond } from "./notion-mock.mjs";
 
 const APP = path.resolve(import.meta.dirname, "../..");
 process.env.SUPABASE_URL = "http://fake-supabase";
@@ -26,6 +27,10 @@ globalThis.fetch = async (url, opts = {}) => {
       // 쿼리가 실제 SQL 에서 깨지면 여기로 — 이게 잡고 싶은 것
       return new Response(JSON.stringify({ message: String(e.message) }), { status: 400 });
     }
+  }
+  // 가짜 노션 (MOCK_NOTION=1 일 때만) — 실제 노션 키 없이 이관 전 구간을 검사하려고.
+  if (process.env.MOCK_NOTION === "1" && u.startsWith("https://api.notion.com")) {
+    return notionRespond(u, opts);
   }
   return realFetch(url, opts);
 };
