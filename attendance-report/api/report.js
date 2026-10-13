@@ -13,6 +13,22 @@ import { normUnit } from "../lib/progress.js";
 import { generateReport, claudeConfigured } from "../lib/claude.js";
 import { sendAlimtalk, solapiConfigured, TPL } from "../lib/solapi.js";
 
+// ── 한 달 날짜 범위 ★ ───────────────────────────────────
+// "YYYY-MM" → `date=gte.YYYY-MM-01&date=lt.(다음달)-01`
+//
+// ⚠️ 예전에는 `date=lte.${month}-31` 로 썼는데, **30일까지인 달과 2월에서 터집니다.**
+//    2026-09-31 같은 날짜는 없으므로 PostgreSQL 이
+//    `date/time field value out of range` (400) 를 돌려줍니다.
+//    → 4·6·9·11·2월 평가서에서 학부모 화면·선생님 화면이 전부 깨졌습니다.
+//    마지막 날을 계산하는 대신 **다음 달 1일 미만(lt)** 으로 두면 어떤 달이든 안전합니다.
+export function monthFilter(month) {
+  const [y, m] = String(month).split("-").map(Number);
+  const ny = m === 12 ? y + 1 : y;
+  const nm = m === 12 ? 1 : m + 1;
+  const next = `${ny}-${String(nm).padStart(2, "0")}-01`;
+  return `date=gte.${month}-01&date=lt.${next}`;
+}
+
 // ── 집계: 그 달 daily_records → planner (2차 getMonthlyPlannerData 형식) ──
 // 이 planner가 AI 지침(reportGuideline)의 재료가 된다.
 function computePlanner(records, books) {
@@ -144,7 +160,7 @@ export default async function handler(req, res) {
       const students = await select("students", "status=eq.재원&order=name.asc");
       const records = await select(
         "daily_records",
-        `date=gte.${month}-01&date=lte.${month}-31&select=student_id,date,lateness,attitude,homework,voca_test,progress`
+        `${monthFilter(month)}&select=student_id,date,lateness,attitude,homework,voca_test,progress`
       );
       const reports = await select(
         "monthly_reports",
@@ -178,7 +194,7 @@ export default async function handler(req, res) {
       if (!student) return res.status(404).json({ error: "학생을 찾을 수 없어요." });
       const records = await select(
         "daily_records",
-        `student_id=eq.${student_id}&date=gte.${month}-01&date=lte.${month}-31`
+        `student_id=eq.${student_id}&${monthFilter(month)}`
       );
       const planner = computePlanner(records, student.books);
       return res.status(200).json({ hasRecords: records.length > 0, planner });
@@ -198,7 +214,7 @@ export default async function handler(req, res) {
 
       const records = await select(
         "daily_records",
-        `student_id=eq.${student_id}&date=gte.${month}-01&date=lte.${month}-31`
+        `student_id=eq.${student_id}&${monthFilter(month)}`
       );
       // 참고사항: 화면에서 입력하면 그걸, 없으면 월말참고사항DB에서 읽음
       let comment = (reqComment ?? "").trim();
@@ -272,7 +288,7 @@ export default async function handler(req, res) {
       for (const r of saved) {
         const recs = await select(
           "daily_records",
-          `student_id=eq.${studentId}&date=gte.${r.month}-01&date=lte.${r.month}-31`
+          `student_id=eq.${studentId}&${monthFilter(r.month)}`
         );
         const planner = recs.length ? computePlanner(recs, stu.books) : pseudoPlanner(r.stats, r.progress);
         reports.push({ month: r.month, body: r.body, planner, live: recs.length > 0 });

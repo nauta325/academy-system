@@ -233,5 +233,29 @@ check("과제 삭제", r.code === 200, r.body);
 r = await POST(student, { action: "home", code: "demo01", pin: "1111" });
 check("삭제 반영 (1건 남음)", r.body.tasks.length === 1, r.body.tasks);
 
+
+// ── 월 범위 필터 ★ 학부모 월말평가서가 400 으로 깨지던 버그 ──
+//    예전에는 `date=lte.${month}-31` 이라 2026-09-31 같은 없는 날짜가 만들어졌고,
+//    PostgreSQL 이 "date/time field value out of range" 로 거절했습니다.
+//    → 4·6·9·11·2월 평가서에서 학부모 화면·선생님 화면이 전부 깨졌습니다.
+{
+  const { monthFilter } = await import("../api/report.js");
+  const ok = (m, want) => check(`월 범위 ${m} → ${want}`, monthFilter(m).endsWith(want), monthFilter(m));
+  ok("2026-09", "date=lt.2026-10-01");   // 30일까지 — 예전엔 09-31 로 400
+  ok("2026-02", "date=lt.2026-03-01");   // 2월 — 예전엔 02-31 로 400
+  ok("2026-12", "date=lt.2027-01-01");   // 연말 — 다음 해로 넘어가야 함
+  ok("2026-01", "date=lt.2026-02-01");
+  // 12개월 전부 실제로 유효한 날짜인지
+  const bad = [];
+  for (let m = 1; m <= 12; m++) {
+    const mm = `2026-${String(m).padStart(2, "0")}`;
+    const end = monthFilter(mm).split("date=lt.")[1];
+    const d = new Date(end + "T00:00:00Z");
+    if (isNaN(d.getTime()) || end.slice(8) !== "01") bad.push(mm + "→" + end);
+  }
+  check("월 범위: 12개월 전부 유효한 경계", bad.length === 0, bad);
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);
+
