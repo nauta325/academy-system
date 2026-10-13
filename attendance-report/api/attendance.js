@@ -232,14 +232,14 @@ export default async function handler(req, res) {
       }
 
       // 각 행에 **지난 수업 3회**(진도 + 단어테스트 + 태도·과제)를 붙인다.
-      //   왜 3회인가 — 직전 1회만 보면 "오늘 제대로 전진했나" 는 알아도
+      //   직전 1회만 보면 "오늘 제대로 전진했나" 는 알아도
       //   "요즘 이 아이가 계속 멈춰 있나 / 단어를 계속 안 보나" 는 안 보입니다.
-      //   선생님이 리포트를 쓰면서 바로 판단할 수 있게 흐름을 같이 보여줍니다.
+      //   화면은 **표**로 3회를 먼저 보여주고 「더 보기」로 8회까지 폅니다.
       // 학생 수만큼 조회하지 않도록 **한 번에** 가져와 학생별로 묶습니다.
-      const PREV_N = 3;
+      const PREV_N = 8;   // 화면은 3회만 먼저 보여주고 「더 보기」로 8회까지
       const histAll = await select(
         "daily_records",
-        `date=lt.${date}&order=date.desc&select=student_id,date,progress,voca_test,voca_score,attitude,homework,lateness`
+        `date=lt.${date}&order=date.desc&select=student_id,date,progress,voca_test,voca_score,attitude,homework,lateness,note`
       );
       const histBy = {};
       for (const h of histAll) {
@@ -269,7 +269,7 @@ export default async function handler(req, res) {
             report_sent: rec.report_sent,
           },
           prev: prev[0] ? { date: prev[0].date, progress: prev[0].progress || {} } : null,
-          // 지난 수업 3회 — 진도·단어테스트·태도·과제를 함께 (최근 것이 앞)
+          // 지난 수업 (최근 것이 앞) — 진도·단어테스트·태도·과제·지적
           recent: prev.map((h) => ({
             date: h.date,
             progress: h.progress || {},
@@ -278,6 +278,7 @@ export default async function handler(req, res) {
             attitude: h.attitude || null,
             homework: h.homework || null,
             lateness: h.lateness || null,
+            note: h.note || null,
           })),
           // 진도가 교재 목차와 연결됐는지 — 화면에서 "왜 안 넘어가지?" 를 바로 보여주려고.
           link: linkStatus(rec.progress, s.books, toc),

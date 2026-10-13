@@ -39,8 +39,18 @@
   .prow .k { font-size:12px; font-weight:800; color:var(--muted); }
   .prow input { width:100%; padding:7px 9px; border:1px solid var(--line); border-radius:8px; }
   .prev { grid-column:2; font-size:11.5px; color:var(--muted); margin-top:-2px; }
-  .recent { font-size:12px; color:var(--muted); background:#faf9f7; border:1px solid var(--line);
-            border-radius:8px; padding:6px 9px; margin:6px 0 2px; line-height:1.6; }
+  /* 📜 최근 수업 — 운영 플래너와 같은 모양 */
+  .hist{margin:6px 0 10px;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:12px;}
+  .hist table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  .hist th,.hist td{padding:4px 7px;border-bottom:1px solid #f1f1f1;text-align:left;vertical-align:top;}
+  .hist th{background:#faf8f4;font-size:11px;color:#8a8f98;font-weight:700;}
+  .hist td.d{white-space:nowrap;font-weight:700;width:68px;}
+  .hist .same{color:#b5bac2;}
+  .hist .bad{color:#c0392b;font-weight:700;} .hist .ok{color:#1c9a66;font-weight:700;}
+  .hist .more{display:block;width:100%;border:0;background:#fafafa;padding:4px;font:inherit;
+              font-size:11.5px;color:#6b7280;cursor:pointer;}
+  .retest{background:#fde8e8;color:#b91c1c;border-radius:8px;padding:5px 9px;
+          font-size:12.5px;font-weight:800;margin:4px 0;}
   .warn { grid-column:1/-1; font-size:11.5px; line-height:1.5; color:#8a5d0f; background:#fff8e6;
           border:1px solid #f0dca8; border-radius:7px; padding:6px 8px; margin:4px 0 2px; }
   .warn a { color:#7a500c; font-weight:700; }
@@ -115,31 +125,62 @@ const $ = (s) => document.querySelector(s);
 const SUBJECTS = ["문법", "리딩", "단어"];
 let ROWS = [], TOC = {}, PREVIEW = [];
 
-// 지난 수업 3회 요약 — 단어테스트·태도·과제가 어떻게 흘러왔는지 한 줄로.
-// 선생님이 오늘 칸을 채우기 전에 "요즘 어땠나" 를 보고 판단할 수 있게.
-// 날짜를 "MM/DD" 로. Supabase 는 "2026-05-29" 로 주지만 환경에 따라
-// ISO 타임스탬프("2026-05-29T00:00:00.000Z")로 올 수도 있어 앞 10자만 씁니다.
+// ── 📜 최근 수업 ────────────────────────────────────────
+// 운영 플래너(studyplanner `public/daily_report.html` 의 histHtml)를 그대로 옮긴 것.
+// 시트처럼 위로 쭉: 날짜(요일) · 과목별 진도 · 단어 TEST · 태도/과제 · 지적.
+//   · 3줄 먼저 보여주고 「더 보기」로 전부
+//   · 직전(한 칸 아래)과 같은 진도는 흐리게 — 며칠째 그대로인지 바로 보임
+//   · 값이 없으면 "-"
+const WD = ["일","월","화","수","목","금","토"];
+const HIST_OPEN = {};
 function md(d){ return String(d||"").slice(0,10).slice(5).replace("-","/"); }
+function wdOf(d){
+  const t = new Date(String(d||"").slice(0,10) + "T00:00:00Z");
+  return isNaN(t.getTime()) ? "" : WD[t.getUTCDay()];
+}
+function isFail(v){ return /불통과|미통과/.test(String(v||"")); }
+function resTxt(res, score){
+  if (!res && !score) return "";
+  const cls = isFail(res) ? "bad" : (res ? "ok" : "");
+  return `<span class="${cls}">${esc(res||"")}</span>${score ? " " + esc(score) : ""}`;
+}
 
-function recentLine(r){
-  const h = r.recent || [];
-  if (!h.length) return "";
-  const one = (x) => {
-    const d = md(x.date);
-    const bits = [];
-    if (x.voca_test) bits.push(`단어 ${x.voca_test==="통과"?"✅":"❌"}${x.voca_score?" "+x.voca_score:""}`);
-    else bits.push("단어 –");                       // 미응시도 보여야 함 (진도가 멈추는 이유)
-    if (x.attitude) bits.push(`태도 ${x.attitude}`);
-    if (x.homework) bits.push(`과제 ${x.homework}`);
-    if (x.lateness && x.lateness !== "정시") bits.push(x.lateness);
-    return `<b>${esc(d)}</b> ${esc(bits.join(" · "))}`;
+// 직전 수업이 단어 미통과였으면 「오늘 재시?」 를 묻는다 — 운영의 retestNote.
+// 재시를 놓치면 그 학생은 같은 유닛에서 계속 멈춥니다.
+function retestNote(r){
+  const h = (r.recent || [])[0];
+  if (!h || !isFail(h.voca_test)) return "";
+  const unit = unitLabel((h.progress||{})["단어"]);
+  return `<div class="retest">🔁 오늘 재시? — 지난 수업(${esc(md(h.date))}) 단어${unit ? " " + esc(unit) : ""} 미통과</div>`;
+}
+
+function histHtml(r, i){
+  const H = r.recent || [];
+  if (!H.length) return "";
+  const subs = SUBJECTS.filter(sub => H.some(h => (h.progress||{})[sub]) || r.books[sub]);
+  const n = HIST_OPEN[i] ? H.length : Math.min(3, H.length);
+  const cell = (h, sub, idx) => {
+    const v = unitLabel((h.progress||{})[sub]);
+    if (!v) return '<td class="same">-</td>';
+    const older = H[idx + 1];
+    const same = older && unitLabel((older.progress||{})[sub]) === v;
+    return `<td${same ? ' class="same"' : ""}>${esc(v)}</td>`;
   };
-  // 단어테스트를 연달아 안 봤으면 눈에 띄게 (진도가 안 나가는 가장 흔한 이유)
-  const noVoca = h.filter(x => !x.voca_test).length;
-  const warn = noVoca >= 2
-    ? ` <span style="color:var(--absent)">— 단어테스트 ${noVoca}회 미응시</span>`
+  const rows = H.slice(0, n).map((h, idx) => {
+    const att = h.lateness && h.lateness !== "정시" && h.lateness !== "정시등원"
+      ? ` <span class="bad">${esc(h.lateness)}</span>` : "";
+    return `<tr><td class="d">${esc(md(h.date))} ${esc(wdOf(h.date))}${att}</td>`
+      + subs.map(sub => cell(h, sub, idx)).join("")
+      + `<td>${resTxt(h.voca_test, h.voca_score)}</td>`
+      + `<td>${esc(h.attitude || "-")}</td><td>${esc(h.homework || "-")}</td>`
+      + `<td style="color:#6b7280">${esc(h.note || "")}</td></tr>`;
+  }).join("");
+  const more = H.length > 3
+    ? `<button class="more" onclick="HIST_OPEN[${i}]=!HIST_OPEN[${i}];render()">${HIST_OPEN[i] ? "▲ 접기" : `▼ 더 보기 (최근 ${H.length}번)`}</button>`
     : "";
-  return `<div class="recent">📊 지난 ${h.length}회 &nbsp; ${h.map(one).join(" &nbsp;|&nbsp; ")}${warn}</div>`;
+  return `<div class="hist"><table><thead><tr><th>📜 최근 수업</th>`
+    + subs.map(x => `<th>${esc(x)}</th>`).join("")
+    + `<th>단어 TEST</th><th>태도</th><th>과제</th><th>지적</th></tr></thead><tbody>${rows}</tbody></table>${more}</div>`;
 }
 
 function esc(s){ return (s ?? "").toString().replace(/[&<>"]/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
@@ -262,7 +303,7 @@ function cardHtml(i){
       <button class="btn" style="padding:5px 10px;font-size:12px" onclick="sendOne(${i})">📨 이 학생</button>
       <span class="savemsg" id="save-${i}"></span>
     </div>
-    ${recentLine(r)}
+    ${retestNote(r)}${histHtml(r, i)}
     <div class="prog">${prog}</div>
     <div class="grid">
       <div class="fld"><label>지각/결석</label>${segHtml(i,"lateness",[{v:"정시",t:"정시"},{v:"지각",t:"지각"},{v:"결석",t:"결석"}],rec.lateness||"정시")}</div>

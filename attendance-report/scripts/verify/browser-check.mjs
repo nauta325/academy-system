@@ -62,10 +62,20 @@ const firstVal = selects ? await pg.locator("select[data-sub]").first().inputVal
 ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { firstVal });
 // 지난 수업 3회 요약 — 진도·단어테스트 흐름이 보여야 함
 {
-  const rec = await pg.locator(".recent").first().innerText().catch(() => "");
-  ck("★ 지난 수업 요약이 보임", /지난 \d회/.test(rec), rec.slice(0, 120));
-  ck("★ 단어테스트 결과가 보임", /단어/.test(rec), rec.slice(0, 120));
-  ck("날짜가 MM/DD 로 나옴 (ISO 가 새지 않음)", !/T\d\d:/.test(rec), rec.slice(0, 120));
+  const rec = await pg.locator(".hist").first().innerText().catch(() => "");
+  ck("★ 최근 수업 표가 보임", /최근 수업/.test(rec), rec.slice(0, 140));
+  ck("★ 단어 TEST 칸이 있음", /단어 TEST/.test(rec), rec.slice(0, 140));
+  ck("날짜가 MM/DD 로 나옴 (ISO 가 새지 않음)", !/T\d\d:/.test(rec), rec.slice(0, 140));
+  ck("요일이 같이 나옴", /\d\d\/\d\d\s*[일월화수목금토]/.test(rec), rec.slice(0, 140));
+  ck("값이 없으면 '-' 로 채움", /-/.test(rec), rec.slice(0, 140));
+  // 「더 보기」 를 누르면 줄이 늘어나야 한다
+  const before = await pg.locator(".hist tbody tr").count();
+  const more = pg.locator(".hist .more").first();
+  if (await more.count()) {
+    await more.click(); await pg.waitForTimeout(600);
+    const after = await pg.locator(".hist tbody tr").count();
+    ck("★ 「더 보기」로 줄이 늘어남", after > before, { before, after });
+  }
   const prev = await pg.locator(".prev").first().innerText().catch(() => "");
   ck("과목 줄에 지난 진도가 보임", /지난|직전/.test(prev), prev.slice(0, 100));
 }
