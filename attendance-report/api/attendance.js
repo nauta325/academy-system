@@ -231,15 +231,27 @@ export default async function handler(req, res) {
         recBy = Object.fromEntries(records.map((r) => [r.student_id, r]));
       }
 
-      // 각 행에 직전 수업 진도(비교용)를 붙인다
+      // 각 행에 **지난 수업 3회**(진도 + 단어테스트 + 태도·과제)를 붙인다.
+      //   왜 3회인가 — 직전 1회만 보면 "오늘 제대로 전진했나" 는 알아도
+      //   "요즘 이 아이가 계속 멈춰 있나 / 단어를 계속 안 보나" 는 안 보입니다.
+      //   선생님이 리포트를 쓰면서 바로 판단할 수 있게 흐름을 같이 보여줍니다.
+      // 학생 수만큼 조회하지 않도록 **한 번에** 가져와 학생별로 묶습니다.
+      const PREV_N = 3;
+      const histAll = await select(
+        "daily_records",
+        `date=lt.${date}&order=date.desc&select=student_id,date,progress,voca_test,voca_score,attitude,homework,lateness`
+      );
+      const histBy = {};
+      for (const h of histAll) {
+        const arr = (histBy[h.student_id] ||= []);
+        if (arr.length < PREV_N) arr.push(h);
+      }
+
       const rows = [];
       for (const s of students) {
         const rec = recBy[s.id];
         if (!rec) continue; // 오늘 수업 없고 행도 없으면 데일리 리포트 대상 아님
-        const prev = await select(
-          "daily_records",
-          `student_id=eq.${s.id}&date=lt.${date}&order=date.desc&limit=1&select=date,progress`
-        );
+        const prev = histBy[s.id] || [];
         rows.push({
           record_id: rec.id,
           student_id: s.id,
@@ -257,6 +269,16 @@ export default async function handler(req, res) {
             report_sent: rec.report_sent,
           },
           prev: prev[0] ? { date: prev[0].date, progress: prev[0].progress || {} } : null,
+          // 지난 수업 3회 — 진도·단어테스트·태도·과제를 함께 (최근 것이 앞)
+          recent: prev.map((h) => ({
+            date: h.date,
+            progress: h.progress || {},
+            voca_test: h.voca_test || null,
+            voca_score: h.voca_score || null,
+            attitude: h.attitude || null,
+            homework: h.homework || null,
+            lateness: h.lateness || null,
+          })),
           // 진도가 교재 목차와 연결됐는지 — 화면에서 "왜 안 넘어가지?" 를 바로 보여주려고.
           link: linkStatus(rec.progress, s.books, toc),
         });

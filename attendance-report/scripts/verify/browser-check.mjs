@@ -60,6 +60,15 @@ const selects = await pg.locator("select[data-sub]").count();
 ck("★ daily.html 진도 드롭다운(목차 연결됨)", selects >= 1, { selects });
 const firstVal = selects ? await pg.locator("select[data-sub]").first().inputValue() : "";
 ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { firstVal });
+// 지난 수업 3회 요약 — 진도·단어테스트 흐름이 보여야 함
+{
+  const rec = await pg.locator(".recent").first().innerText().catch(() => "");
+  ck("★ 지난 수업 요약이 보임", /지난 \d회/.test(rec), rec.slice(0, 120));
+  ck("★ 단어테스트 결과가 보임", /단어/.test(rec), rec.slice(0, 120));
+  ck("날짜가 MM/DD 로 나옴 (ISO 가 새지 않음)", !/T\d\d:/.test(rec), rec.slice(0, 120));
+  const prev = await pg.locator(".prev").first().innerText().catch(() => "");
+  ck("과목 줄에 지난 진도가 보임", /지난|직전/.test(prev), prev.slice(0, 100));
+}
 
 // 📨 카톡 미리보기 — 원장님이 매일 쓰는 화면인데 검사에서 빠져 있었습니다.
 //    여기서 과목별 교재·진도가 보여야 "보내기 전에" 빈칸을 잡을 수 있습니다.

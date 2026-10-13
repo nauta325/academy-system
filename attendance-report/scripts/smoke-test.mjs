@@ -304,6 +304,32 @@ check("삭제 반영 (1건 남음)", r.body.tasks.length === 1, r.body.tasks);
   check("과제 없는 달에는 칸이 안 생김", !empty.body?.planner?.과제체크, empty.body?.planner?.과제체크);
 }
 
+
+// ── 지난 수업 3회 (진도 + 테스트 결과) ★ ──
+//    직전 1회만 보면 "오늘 전진했나" 는 알아도 "요즘 계속 멈춰 있나" 는 모릅니다.
+//    운영 플래너가 직전 수업을 회색 줄로 보여주던 것을 3회로 늘린 것.
+{
+  const sid = T.students[0].id;
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const d = (n) => { const x = new Date(Date.now() - n * 864e5 + 9 * 3600e3); return x.toISOString().slice(0, 10); };
+  T.daily_records.push(
+    { id: "r1", student_id: sid, date: d(2), progress: { 문법: { code: "Unit 1", title: "be동사" } }, voca_test: "통과",   voca_score: "18/20", attitude: "상", homework: "상", lateness: "정시" },
+    { id: "r2", student_id: sid, date: d(4), progress: { 문법: { code: "Unit 2", title: "일반동사" } }, voca_test: null,   voca_score: null,    attitude: "중", homework: "하", lateness: "지각" },
+    { id: "r3", student_id: sid, date: d(6), progress: { 문법: { code: "Unit 3", title: "현재진행" } }, voca_test: "불통과", voca_score: "9/20",  attitude: "상", homework: "상", lateness: "정시" },
+    { id: "r4", student_id: sid, date: d(8), progress: { 문법: { code: "Unit 4", title: "과거" } },     voca_test: "통과",   voca_score: "20/20", attitude: "상", homework: "상", lateness: "정시" },
+  );
+  const rr = await GET(attendance, { action: "daily-rows", date: today });
+  const row = (rr.body.rows || []).find((x) => x.student_id === sid);
+  check("★ 지난 수업이 3회까지 옴", (row?.recent || []).length === 3, (row?.recent || []).length);
+  check("최근 것이 앞에 옴", row?.recent?.[0]?.date > row?.recent?.[2]?.date, row?.recent?.map((h) => h.date));
+  check("★ 진도가 함께 옴", !!row?.recent?.[0]?.progress?.문법, row?.recent?.[0]?.progress);
+  check("★ 단어테스트 결과가 함께 옴", row?.recent?.[0]?.voca_test === "통과", row?.recent?.[0]);
+  check("점수도 함께 옴", row?.recent?.[0]?.voca_score === "18/20", row?.recent?.[0]?.voca_score);
+  check("미응시(null)도 그대로 전달됨", row?.recent?.[1]?.voca_test === null, row?.recent?.[1]);
+  check("태도·과제·지각도 옴", row?.recent?.[1]?.attitude === "중" && row?.recent?.[1]?.lateness === "지각", row?.recent?.[1]);
+  check("prev(직전 1회)도 그대로 유지됨", !!row?.prev?.date, row?.prev);
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);
 

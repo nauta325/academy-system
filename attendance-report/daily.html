@@ -39,6 +39,8 @@
   .prow .k { font-size:12px; font-weight:800; color:var(--muted); }
   .prow input { width:100%; padding:7px 9px; border:1px solid var(--line); border-radius:8px; }
   .prev { grid-column:2; font-size:11.5px; color:var(--muted); margin-top:-2px; }
+  .recent { font-size:12px; color:var(--muted); background:#faf9f7; border:1px solid var(--line);
+            border-radius:8px; padding:6px 9px; margin:6px 0 2px; line-height:1.6; }
   .warn { grid-column:1/-1; font-size:11.5px; line-height:1.5; color:#8a5d0f; background:#fff8e6;
           border:1px solid #f0dca8; border-radius:7px; padding:6px 8px; margin:4px 0 2px; }
   .warn a { color:#7a500c; font-weight:700; }
@@ -112,6 +114,33 @@
 const $ = (s) => document.querySelector(s);
 const SUBJECTS = ["문법", "리딩", "단어"];
 let ROWS = [], TOC = {}, PREVIEW = [];
+
+// 지난 수업 3회 요약 — 단어테스트·태도·과제가 어떻게 흘러왔는지 한 줄로.
+// 선생님이 오늘 칸을 채우기 전에 "요즘 어땠나" 를 보고 판단할 수 있게.
+// 날짜를 "MM/DD" 로. Supabase 는 "2026-05-29" 로 주지만 환경에 따라
+// ISO 타임스탬프("2026-05-29T00:00:00.000Z")로 올 수도 있어 앞 10자만 씁니다.
+function md(d){ return String(d||"").slice(0,10).slice(5).replace("-","/"); }
+
+function recentLine(r){
+  const h = r.recent || [];
+  if (!h.length) return "";
+  const one = (x) => {
+    const d = md(x.date);
+    const bits = [];
+    if (x.voca_test) bits.push(`단어 ${x.voca_test==="통과"?"✅":"❌"}${x.voca_score?" "+x.voca_score:""}`);
+    else bits.push("단어 –");                       // 미응시도 보여야 함 (진도가 멈추는 이유)
+    if (x.attitude) bits.push(`태도 ${x.attitude}`);
+    if (x.homework) bits.push(`과제 ${x.homework}`);
+    if (x.lateness && x.lateness !== "정시") bits.push(x.lateness);
+    return `<b>${esc(d)}</b> ${esc(bits.join(" · "))}`;
+  };
+  // 단어테스트를 연달아 안 봤으면 눈에 띄게 (진도가 안 나가는 가장 흔한 이유)
+  const noVoca = h.filter(x => !x.voca_test).length;
+  const warn = noVoca >= 2
+    ? ` <span style="color:var(--absent)">— 단어테스트 ${noVoca}회 미응시</span>`
+    : "";
+  return `<div class="recent">📊 지난 ${h.length}회 &nbsp; ${h.map(one).join(" &nbsp;|&nbsp; ")}${warn}</div>`;
+}
 
 function esc(s){ return (s ?? "").toString().replace(/[&<>"]/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
@@ -217,7 +246,12 @@ function cardHtml(i){
     } else {
       field = `<input data-i="${i}" data-sub="${sub}" data-book="${esc(book)}" value="${esc(cur.code)}" placeholder="${esc(book||"교재 미지정")}">`;
     }
-    const pv = prev && (prev.progress||{})[sub] ? `<div class="prev">↳ 직전(${esc((prev.date||"").slice(5))}) ${esc(unitLabel(prev.progress[sub]))}</div>` : "";
+    // 지난 수업 3회를 한 줄로 — "요즘 계속 멈춰 있나" 가 바로 보입니다.
+    // (예전엔 직전 1회만 보여줘서 흐름을 알 수 없었습니다)
+    const hist = (r.recent||[]).filter(h => (h.progress||{})[sub]);
+    const pv = hist.length
+      ? `<div class="prev">↳ 지난 ${hist.map(h => `${esc(md(h.date))} ${esc(unitLabel(h.progress[sub]))}`).join("  ·  ")}</div>`
+      : "";
     return `<div class="prow"><span class="k">${sub}</span>${field}</div>${pv}${linkNote(r, sub)}`;
   }).join("");
   return `<div class="card" data-i="${i}">
@@ -228,6 +262,7 @@ function cardHtml(i){
       <button class="btn" style="padding:5px 10px;font-size:12px" onclick="sendOne(${i})">📨 이 학생</button>
       <span class="savemsg" id="save-${i}"></span>
     </div>
+    ${recentLine(r)}
     <div class="prog">${prog}</div>
     <div class="grid">
       <div class="fld"><label>지각/결석</label>${segHtml(i,"lateness",[{v:"정시",t:"정시"},{v:"지각",t:"지각"},{v:"결석",t:"결석"}],rec.lateness||"정시")}</div>
