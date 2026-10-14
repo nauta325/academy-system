@@ -88,9 +88,17 @@
 
 <div class="overlay" id="bulkOverlay"><div class="panel">
   <h2 style="margin:0 0 6px;font-size:18px">붙여넣기 일괄등록</h2>
-  <p class="muted">엑셀/시트에서 <b>이름 / 학생ID / PIN / 학년 / 담당 / 연락처</b> 열을 복사해 붙여넣으세요 (탭 구분, 한 줄 = 한 명).</p>
-  <p class="muted">⚠️ <b>학생ID</b>는 학생앱 로그인에 씁니다(학생ID + PIN). 비워두면 그 학생은 <b>학생앱에 못 들어갑니다.</b></p>
-  <textarea id="bulkText" rows="8" placeholder="김민준&#9;demo01&#9;1111&#9;중2&#9;이선생&#9;01000000001"></textarea>
+  <p class="muted">구글시트·엑셀에서 <b>제목 줄까지 같이</b> 복사해 붙여넣으세요 (한 줄 = 한 명).<br>
+    제목 줄을 보고 칸을 알아서 맞춥니다 — <b>열 순서가 달라도 되고, 없는 열은 빼셔도 됩니다.</b></p>
+  <p class="muted">넣을 수 있는 제목: <code>이름</code> <code>학생ID</code> <code>출결PIN</code> <code>학년</code> <code>담당</code> <code>연락처</code>
+    <code>월</code> <code>화</code> <code>수</code> <code>목</code> <code>금</code> <code>토</code> <code>일</code>
+    <code>문법교재</code> <code>리딩교재</code> <code>단어교재</code> <code>수업시간</code></p>
+  <p class="muted">⚠️ <b>학생ID</b>는 학생앱 로그인(학생ID+PIN)에, <b>요일</b>은 그날 수업 여부 판단에,
+    <b>교재</b>는 진도 자동 전환에 씁니다. 요일이 비면 그 학생은 <b>데일리 리포트에 안 뜹니다.</b></p>
+  <div style="margin:8px 0"><button class="ghost" id="tplCsv">📄 시트 양식 받기 (CSV)</button>
+    <span class="muted" style="margin-left:6px">구글시트에서 열어 채운 뒤, 전체 복사해서 아래에 붙여넣으세요</span></div>
+  <textarea id="bulkText" rows="8" placeholder="이름&#9;학생ID&#9;출결PIN&#9;학년&#9;담당&#9;연락처&#9;월&#9;화&#9;수&#9;목&#9;금&#9;문법교재&#9;리딩교재&#9;단어교재&#10;김민준&#9;demo01&#9;1111&#9;중2&#9;이선생&#9;01000000001&#9;17:00&#9;&#9;17:00&#9;&#9;17:00&#9;그래머인유즈 1&#9;리딩릴레이 스타터1&#9;능률 보카 기본"></textarea>
+  <div id="bulkPreview" class="muted" style="margin:6px 0"></div>
   <div class="actions"><button id="bulkSave">등록</button><button class="ghost" id="bulkClose">닫기</button></div>
 </div></div>
 
@@ -143,24 +151,108 @@ $("#del").onclick = async () => {
 };
 $("#bulkBtn").onclick = () => $("#bulkOverlay").classList.add("on");
 $("#bulkClose").onclick = () => $("#bulkOverlay").classList.remove("on");
-$("#bulkSave").onclick = async () => {
-  // 열 순서: 이름 / 학생ID / PIN / 학년 / 담당 / 연락처
-  // ⚠️ 예전에는 student_code(학생ID) 를 아예 읽지 않아서, 일괄등록으로 넣은 학생은
-  //    학생앱에 로그인할 수 없었습니다(로그인 = 학생ID + PIN). 조용히 비는 값이라
-  //    세미나 당일에야 "학생앱이 안 돼요" 로 드러나는 자리였습니다.
-  const rows = $("#bulkText").value.trim().split(/\r?\n/).map(line=>{
-    const [name,student_code,pin,grade,teacher,phone] = line.split("\t").map(x=>(x||"").trim());
-    return { name, student_code, pin, grade, teacher, phone };
+// ── 붙여넣기 해석 ──────────────────────────────────────
+// 제목 줄이 있으면 **제목을 보고** 칸을 맞춥니다. 원장님마다 시트가 다르고
+// 요일·교재까지 넣으면 열이 16개라, 순서를 외우게 하는 건 현실적이지 않습니다.
+// 제목 줄이 없으면 예전 6열 순서(이름/학생ID/PIN/학년/담당/연락처)로 읽습니다.
+const DAYS_KO = ["월","화","수","목","금","토","일"];
+const HEAD = [
+  ["name",        ["이름","학생이름","성명","학생명"]],
+  ["student_code",["학생id","학생아이디","아이디","id","학생코드"]],
+  ["pin",         ["출결pin","pin","핀","출결번호","출결"]],
+  ["grade",       ["학년"]],
+  ["teacher",     ["담당","담당선생님","선생님","담당강사","강사"]],
+  ["phone",       ["연락처","전화번호","학부모연락처","학부모","휴대폰","전화"]],
+  ["class_minutes",["수업시간","수업분","수업시간(분)"]],
+];
+const norm = (x) => String(x||"").trim().toLowerCase().replace(/[\s()·.\-_]/g,"");
+function headerKey(h){
+  const n = norm(h);
+  if(!n) return null;
+  for(const [key,alias] of HEAD) if(alias.some(a=>norm(a)===n)) return key;
+  for(const d of DAYS_KO) if(n===norm(d)||n===norm(d+"요일")||n===norm(d+"등원시간")||n===norm(d+"-등원시간")) return "day:"+d;
+  for(const sub of ["문법","리딩","단어"]){
+    if(n===norm(sub)||n===norm(sub+"교재")) return "book:"+sub;
+  }
+  if(n===norm("어휘")||n===norm("어휘교재")) return "book:단어";
+  return null;
+}
+function parseBulk(text){
+  const lines = text.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length) return { rows:[], headed:false };
+  const first = lines[0].split("\t").map(x=>(x||"").trim());
+  const keys = first.map(headerKey);
+  // 제목 줄로 보려면 「이름」이 잡히고, 알아본 칸이 2개 이상이어야 합니다
+  const headed = keys.includes("name") && keys.filter(Boolean).length >= 2;
+  const body = headed ? lines.slice(1) : lines;
+  const order = headed ? keys : ["name","student_code","pin","grade","teacher","phone"];
+  const rows = body.map(line=>{
+    const c = line.split("\t").map(x=>(x||"").trim());
+    const r = { schedule:{}, books:{} };
+    order.forEach((k,i)=>{
+      const v = c[i]; if(!k || !v) return;
+      if(k.startsWith("day:")) r.schedule[k.slice(4)] = v;
+      else if(k.startsWith("book:")) r.books[k.slice(5)] = v;
+      else r[k] = v;
+    });
+    return r;
   }).filter(r=>r.name);
+  return { rows, headed, unknown: headed ? first.filter((h,i)=>h && !keys[i]) : [] };
+}
+// 붙여넣는 동안 "몇 명 / 어떤 칸이 잡혔는지" 를 바로 보여줍니다 (잘못 붙여넣는 걸 그 자리에서 알게)
+$("#bulkText").addEventListener("input", ()=>{
+  const p = parseBulk($("#bulkText").value);
+  const el = $("#bulkPreview");
+  if(!p.rows.length){ el.textContent = ""; return; }
+  const withDay = p.rows.filter(r=>Object.keys(r.schedule).length).length;
+  const withBook = p.rows.filter(r=>Object.keys(r.books).length).length;
+  el.innerHTML = `읽은 학생 <b>${p.rows.length}명</b>`
+    + (p.headed ? " · 제목 줄 인식됨" : " · 제목 줄 없음 → 이름/학생ID/PIN/학년/담당/연락처 순서로 읽음")
+    + ` · 요일 들어간 학생 ${withDay}명 · 교재 들어간 학생 ${withBook}명`
+    + (p.unknown && p.unknown.length ? `<br><span style="color:#cf6a4a">못 알아본 제목: ${p.unknown.join(", ")} (이 칸은 건너뜁니다)</span>` : "");
+});
+
+// 📄 시트 양식 받기 — 구글시트에 올려 채우고 다시 복사해 오시면 됩니다
+$("#tplCsv").onclick = () => {
+  const head = ["이름","학생ID","출결PIN","학년","담당","연락처",...DAYS_KO,"문법교재","리딩교재","단어교재"];
+  const sample = [
+    ["김민준","demo01","1111","중2","이선생","010-0000-0001","17:00","","17:00","","17:00","","","그래머인유즈 1","리딩릴레이 스타터1","능률 보카 기본"],
+    ["이서연","demo02","2222","중3","이선생","010-0000-0002","18:00","18:00","","18:00","","","","그래머인유즈 2","리딩릴레이 스타터2","능률 보카 실력"],
+  ];
+  const csv = [head, ...sample].map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const blob = new Blob(["\uFEFF"+csv], { type:"text/csv;charset=utf-8" });  // BOM — 엑셀에서 한글이 안 깨지게
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "학생명단_양식.csv"; a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  // 바로 지우면 브라우저가 파일 이름을 못 읽고 "download" 로 저장하는 일이 있습니다
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1500);
+};
+
+$("#bulkSave").onclick = async () => {
+  const parsed = parseBulk($("#bulkText").value);
+  const rows = parsed.rows;
   if(!rows.length) return alert("붙여넣은 내용이 없어요.");
   // 학생ID 가 빈 줄이 있으면 먼저 알려준다 (모르고 넘어가면 학생앱이 안 됨)
   const noCode = rows.filter(r=>!r.student_code).map(r=>r.name);
   if(noCode.length && !confirm(
       `학생ID가 비어 있는 학생이 ${noCode.length}명 있어요: ${noCode.slice(0,5).join(", ")}${noCode.length>5?" 외":""}\n\n`
       + `학생ID가 없으면 그 학생은 학생앱(student.html)에 로그인할 수 없습니다.\n`
-      + `열 순서는 이름 / 학생ID / PIN / 학년 / 담당 / 연락처 입니다.\n\n`
+      + `제목 줄에 「학생ID」 칸을 넣으면 함께 등록됩니다.\n\n`
       + `이대로 등록할까요?`)) return;
-  try{ const d=await api({action:"bulk-students", rows}); $("#bulkOverlay").classList.remove("on"); $("#bulkText").value=""; alert(`${d.count}명 등록됐어요.`); load(); }catch(e){ alert(e.message); }
+  // 요일이 하나도 없으면 데일리 리포트에 안 뜹니다 — 조용히 넘어가면 안 되는 자리
+  const noDay = rows.filter(r=>!Object.keys(r.schedule||{}).length).map(r=>r.name);
+  if(noDay.length && !confirm(
+      `요일별 등원시간이 비어 있는 학생이 ${noDay.length}명 있어요: ${noDay.slice(0,5).join(", ")}${noDay.length>5?" 외":""}\n\n`
+      + `요일이 비면 그 학생은 데일리 리포트에 아예 나오지 않습니다(그날 수업인지 알 수 없어서).\n`
+      + `제목 줄에 「월 화 수 목 금」 칸을 넣고 등원시간을 적으면 같이 들어갑니다.\n\n`
+      + `이대로 등록할까요?`)) return;
+  try{
+    const d=await api({action:"bulk-students", rows});
+    $("#bulkOverlay").classList.remove("on"); $("#bulkText").value=""; $("#bulkPreview").textContent="";
+    alert(`${d.count}명 등록됐어요.`); load();
+  }catch(e){ alert(e.message); }
 };
 load();
 </script>

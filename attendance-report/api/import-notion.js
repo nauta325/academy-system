@@ -9,7 +9,7 @@
 //   POST {action:"run", parts:[...]} → 실제 이관 (기본: textbooks→students→daily)
 
 import { select, insert, patch, upsert, dbConfigured } from "../lib/db.js";
-import { notionConfigured, queryDatabase, retrieveDatabase, prop } from "../lib/notion.js";
+import { notionConfigured, queryDatabase, retrieveDatabase, prop, retrievePageTitle } from "../lib/notion.js";
 import { tocByBook, normUnit } from "../lib/progress.js";
 
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
@@ -42,15 +42,29 @@ function studentMap(schema) {
     name: resolve(schema, { exact: ["학생이름", "이름", "성명", "Name"], type: "title" }),
     code: resolve(schema, { exact: ["학생ID", "학생 ID", "studentId"], includes: ["학생", "ID"] }),
     status: resolve(schema, { exact: ["재원상태", "상태"], includes: ["재원"] }),
-    teacher: resolve(schema, { exact: ["담당선생님", "담당 선생님", "담당", "선생님"], includes: ["담당"] }),
+    // 「강사」도 담당으로 읽습니다 — 0차(노션 왕기초) 템플릿이 강사 DB 를 그 이름으로 만듭니다.
+    // 관계형이면 연결된 페이지 제목(강사 이름)을 그대로 씁니다.
+    teacher: resolve(schema, { exact: ["담당선생님", "담당 선생님", "담당강사", "담당", "선생님", "강사"], includes: ["담당"] })
+          || resolve(schema, { includes: ["강사"] })
+          || resolve(schema, { includes: ["선생"] }),
     minutes: resolve(schema, { exact: ["수업시간", "수업시간(분)", "수업 시간"], type: "number", includes: ["수업"] }),
     grade: resolve(schema, { exact: ["학년"], includes: ["학년"] }),
-    pin: resolve(schema, { exact: ["출결PIN", "출결 PIN", "PIN", "핀"], includes: ["PIN"] }),
-    phone: resolve(schema, { exact: ["전화번호", "연락처", "학부모연락처", "휴대폰"], includes: ["전화"] }),
+    pin: resolve(schema, { exact: ["출결PIN", "출결 PIN", "출결번호", "PIN", "핀"], includes: ["PIN"] })
+      || resolve(schema, { includes: ["출결"] }),
+    phone: resolve(schema, { exact: ["전화번호", "연락처", "학부모연락처", "학부모 연락처", "휴대폰"], includes: ["전화"] })
+        || resolve(schema, { includes: ["연락"] }),
     book: {}, day: {},
   };
-  for (const s of ["문법", "리딩", "단어"]) m.book[s] = resolve(schema, { exact: [`${s}교재`, `${s} 교재`], includes: [s, "교재"], type: "relation" });
-  for (const d of DAYS) m.day[d] = resolve(schema, { exact: [`${d}-등원시간`, `${d} 등원시간`, `${d}등원시간`], includes: [d, "등원"] });
+  // 교재는 관계형(교재DB)이 기본이지만, 교재명을 **글자로** 적어둔 분도 많아서 그것도 읽습니다.
+  for (const s of ["문법", "리딩", "단어"]) {
+    m.book[s] = resolve(schema, { exact: [`${s}교재`, `${s} 교재`], includes: [s, "교재"], type: "relation" })
+             || resolve(schema, { exact: [`${s}교재`, `${s} 교재`, s], includes: [s, "교재"] });
+  }
+  // 요일: 「월-등원시간」이 기본. 「월요일」·「월」처럼 짧게 쓴 시트도 읽습니다.
+  for (const d of DAYS) {
+    m.day[d] = resolve(schema, { exact: [`${d}-등원시간`, `${d} 등원시간`, `${d}등원시간`], includes: [d, "등원"] })
+            || resolve(schema, { exact: [`${d}요일`, d] });
+  }
   return m;
 }
 // 데일리리포트DB 속성 매핑
@@ -130,6 +144,8 @@ function monthNorm(v) {
 }
 
 function firstId(v) { return Array.isArray(v) && v.length ? v[0] : null; }
+// 노션 페이지ID(32자리 hex, 하이픈 유무 무관) 모양인가 — 이름 칸에 UUID 가 새는 걸 막는다.
+const looksLikeId = (s) => /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(s || "").trim());
 function timeOf(v) { const s = Array.isArray(v) ? v[0] : v; const m = String(s || "").match(/\d{1,2}:\d{2}/); return m ? m[0] : String(s || "").trim(); }
 function numOrNull(v) { if (v === "" || v == null) return null; const n = Number(String(v).replace(/[^0-9.-]/g, "")); return isNaN(n) ? null : n; }
 
@@ -209,13 +225,29 @@ export default async function handler(req, res) {
         const code = prop(p, M.code) || null;
         const schedule = {};
         for (const d of DAYS) { const t = timeOf(prop(p, M.day[d])); if (t) schedule[d] = t; }
+        // 교재는 관계형(교재DB)일 수도, 교재명을 **글자로** 적어둔 것일 수도 있습니다.
+        // 관계형인데 교재DB 를 같이 안 옮겼으면 제목을 되읽어 씁니다 (UUID 가 들어가지 않게).
         const books = {};
-        for (const s of ["문법", "리딩", "단어"]) { const b = tbNameByPage[firstId(prop(p, M.book[s]))]; if (b) books[s] = b; }
+        for (const s of ["문법", "리딩", "단어"]) {
+          const v = prop(p, M.book[s]);
+          const id = firstId(v);
+          let b = id ? (tbNameByPage[id] || await retrievePageTitle(id)) : "";
+          if (!b) { const t = String((Array.isArray(v) ? v[0] : v) ?? "").trim(); if (t && !looksLikeId(t)) b = t; }
+          if (b) books[s] = b;
+        }
+        // 담당 선생님: 글자면 그대로, 관계형(0차 템플릿의 「강사」)이면 그 페이지 제목으로.
+        let teacherName = "";
+        {
+          const v = prop(p, M.teacher);
+          const id = firstId(v);
+          if (id) teacherName = await retrievePageTitle(id);
+          else { const t = String(v ?? "").trim(); if (t && !looksLikeId(t)) teacherName = t; }
+        }
         const row = {
           name,
           student_code: (code ?? "") + "" || null,
           status: prop(p, M.status) || "재원",
-          teacher: prop(p, M.teacher) || null,
+          teacher: teacherName || null,
           class_minutes: numOrNull(prop(p, M.minutes)) || 120,
           grade: (prop(p, M.grade) ?? "") + "" || null,
           pin: (prop(p, M.pin) ?? "") + "" || null,

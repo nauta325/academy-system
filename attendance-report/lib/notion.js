@@ -30,6 +30,28 @@ export async function retrieveDatabase(dbId) {
   return out; // { "학생이름":"title", "날짜":"date", ... }
 }
 
+// 페이지 하나의 **제목**만 가져온다 (관계형이 가리키는 쪽 이름을 읽을 때).
+// 0차(노션 왕기초) 템플릿처럼 담당 강사를 관계형으로 연결해 둔 경우, 값이 페이지ID 라서
+// 그대로 쓰면 담당 선생님 칸에 UUID 가 들어갑니다. 그걸 막으려고 제목을 되읽습니다.
+// 실패해도 이관 전체를 멈추지 않도록 빈 문자열을 돌려줍니다.
+const titleCache = new Map();
+export async function retrievePageTitle(pageId) {
+  if (!pageId) return "";
+  if (titleCache.has(pageId)) return titleCache.get(pageId);
+  let title = "";
+  try {
+    const res = await fetch(`${BASE}/pages/${pageId}`, { headers: headers() });
+    if (res.ok) {
+      const d = await res.json();
+      for (const p of Object.values(d.properties || {})) {
+        if (p.type === "title") { title = (p.title || []).map((t) => t.plain_text).join("").trim(); break; }
+      }
+    }
+  } catch (e) { /* 이름을 못 읽어도 나머지는 그대로 옮깁니다 */ }
+  titleCache.set(pageId, title);
+  return title;
+}
+
 // DB 전체 페이지를 페이지네이션으로 모두 가져온다.
 export async function queryDatabase(dbId) {
   const out = [];

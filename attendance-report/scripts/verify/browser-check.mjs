@@ -109,7 +109,7 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
 //   조용히 비는 값이라 세미나 당일에야 "학생앱이 안 돼요" 로 드러날 자리였습니다.
 //   ⚠️ 로그인 상태가 뒤의 점검에 새지 않도록 **별도 컨텍스트**에서 돌립니다.
 {
-  const ctx = await b.newContext({ viewport: { width: 1280, height: 950 } });
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 950 }, acceptDownloads: true });
   const p2 = await ctx.newPage();
   const dl = [];
   p2.on("dialog", async (d) => { dl.push(d.message()); await d.accept().catch(() => {}); });
@@ -132,6 +132,48 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
       await p2.waitForTimeout(2000);
     }
     ck("★★ 일괄등록한 학생이 학생앱에 로그인됨", (await p2.locator("body").innerText()).includes("검수학생"), null);
+
+    // ★ 제목 줄이 있는 시트(구글시트에서 그대로 복사)도 읽어야 한다 — 요일·교재까지.
+    //   요일이 안 들어가면 그 학생은 데일리 리포트에 아예 안 뜨고,
+    //   교재가 안 들어가면 진도 자동 전환이 안 됩니다. 둘 다 조용히 비는 값이라 검사로 못 박습니다.
+    const code2 = "sht" + String(Date.now()).slice(-5);
+    await p2.goto(B + "/students.html", { waitUntil: "networkidle" });
+    await p2.waitForTimeout(900);
+    await p2.locator("#bulkBtn").click(); await p2.waitForTimeout(300);
+    await p2.locator("#bulkText").fill(
+      "이름\t학생ID\t출결PIN\t학년\t담당\t연락처\t월\t화\t수\t목\t금\t문법교재\t리딩교재\t단어교재\n" +
+      `시트학생\t${code2}\t7777\t중1\t이선생\t010-7777-7777\t17:00\t\t17:00\t\t17:00\t그래머인유즈 1\t리딩릴레이 스타터1\t능률 보카 기본`
+    );
+    await p2.waitForTimeout(500);
+    const prev = await p2.locator("#bulkPreview").innerText();
+    ck("★ 제목 줄을 알아봄", /제목 줄 인식됨/.test(prev), prev);
+    ck("요일·교재가 잡힘", /요일 들어간 학생 1명/.test(prev) && /교재 들어간 학생 1명/.test(prev), prev);
+    await p2.locator("#bulkSave").click(); await p2.waitForTimeout(2200);
+    const made = await (await fetch(`${B}/api/attendance?action=students`)).json();
+    const row = (made.students || []).find((x) => x.student_code === code2);
+    ck("★★ 시트 한 장으로 등록됨", !!row, null);
+    ck("★★ 요일별 등원시간이 들어감", row && Object.keys(row.schedule || {}).length === 3, row && row.schedule);
+    ck("★★ 과목별 교재가 들어감", row && (row.books || {}).문법 === "그래머인유즈 1", row && row.books);
+    ck("담당·PIN·학년도 들어감", row && row.teacher === "이선생" && row.pin === "7777" && row.grade === "중1", row);
+
+    // 📄 시트 양식(CSV) 내려받기가 실제로 되는지 (등록하면 모달이 닫히므로 다시 연다)
+    await p2.locator("#bulkBtn").click(); await p2.waitForTimeout(400);
+    const [dlFile] = await Promise.all([
+      p2.waitForEvent("download", { timeout: 8000 }).catch(() => null),
+      p2.locator("#tplCsv").click(),
+    ]);
+    // 파일 **내용**을 봅니다. headless 브라우저는 blob 다운로드의 파일 이름을 "download" 로
+    // 돌려줘서 이름으로는 판정할 수 없고, 정작 중요한 건 제목 줄이 붙여넣기 파서와 맞는지입니다.
+    let csvHead = "";
+    if (dlFile) {
+      const to = "/tmp/_tpl_check.csv";
+      await dlFile.saveAs(to).catch(() => {});
+      csvHead = (await import("fs")).readFileSync(to, "utf8").split("\n")[0] || "";
+    }
+    ck("★ 시트 양식(CSV) 받아짐", !!dlFile, null);
+    ck("★★ 양식의 제목 줄이 붙여넣기 파서와 맞음",
+       ["이름", "학생ID", "출결PIN", "담당", "연락처", "월", "금", "문법교재", "단어교재"].every((h) => csvHead.includes(h)),
+       csvHead.slice(0, 160));
   } else {
     ck("★ 일괄등록 버튼 있음", false, "없음");
   }
