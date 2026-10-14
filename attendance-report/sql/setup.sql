@@ -178,7 +178,11 @@ select
   case when rn % 4 = 0 then '중' else '상' end,
   case when rn % 6 = 0 then '중' else '100%완료' end,
   case when rn % 9 = 0 then null when rn % 7 = 0 then '불통과' else '통과' end,
-  case when rn % 9 = 0 then null else (16 + (rn % 5)) || '/20' end,
+  -- ★ 점수는 **결과와 어긋나면 안 됩니다** — 예전에는 결과와 따로 뽑아서
+  --   "불통과 20/20" 같은 줄이 샘플에 섞였습니다(화면이 틀린 것처럼 보임).
+  case when rn % 9 = 0 then null
+       when rn % 7 = 0 then (10 + (rn % 4)) || '/20'   -- 불통과: 10~13
+       else (16 + (rn % 5)) || '/20' end,               -- 통과: 16~20
   jsonb_strip_nulls(jsonb_build_object(
     '문법', (select t.units -> (case when extract(day from d) <= 15 then 1 else 2 end) from textbooks t where t.name = s.books->>'문법'),
     '리딩', (select t.units -> (case when extract(day from d) <= 15 then 1 else 2 end) from textbooks t where t.name = s.books->>'리딩'),

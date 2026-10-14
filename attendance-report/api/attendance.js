@@ -365,12 +365,22 @@ export default async function handler(req, res) {
           "리딩", "문법", "단어",
           ...Object.keys(sBooks), ...Object.keys(rBooks), ...Object.keys(rProg),
         ])];
+        // ★ 진도에는 **유닛 제목까지** 싣습니다 — "CH1-1" 이 아니라 "CH1-1 be동사".
+        //   학부모가 받는 게 코드뿐이면 무슨 뜻인지 모릅니다.
+        //   교재 목차에 제목을 안 넣으셨으면 예전처럼 코드만 나가므로, 쓰시던 템플릿은
+        //   그대로 두셔도 됩니다(변수 이름이 바뀌지 않으니 재승인도 필요 없습니다).
+        //   코드와 제목을 **줄을 나눠** 쓰고 싶은 분을 위해 `#{과목제목}` 도 함께 보냅니다
+        //   (솔라피는 템플릿에 없는 변수를 무시하므로 더 보내도 안전합니다).
         const subjVars = {};
         for (const s of subjects) {
           const p = rProg[s] || {};
-          const unit = typeof p === "string" ? p : (p.code || p.유닛코드 || "");
+          const u = normUnit(p) || {};
+          const code = typeof p === "string" ? p : (u.code || p.유닛코드 || "");
+          const title = typeof p === "string" ? "" : (u.title || p.제목 || "");
           subjVars[`#{${s}교재}`] = String(rBooks[s] || sBooks[s] || "-");
-          subjVars[`#{${s}진도}`] = String(unit || "-");
+          subjVars[`#{${s}진도}`] = [code, title].filter(Boolean).join(" ") || "-";
+          subjVars[`#{${s}유닛}`] = String(code || "-");   // 코드만
+          subjVars[`#{${s}제목}`] = String(title || "-");  // 제목만
         }
         // 미리보기면 "무엇이 나갈지" 를 돌려주고 끝. (발송하지 않음)
         if (dryRun) { results.push({ ...preview, vars: subjVars, ok: true }); continue; }

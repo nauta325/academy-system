@@ -30,6 +30,22 @@ const rows = r.d.rows;
 ck("★ 진도가 목차 다음으로 채워짐", rows.every((x) => Object.keys(x.record.progress || {}).length > 0), rows[0]?.record?.progress);
 ck("★ link 상태 내려옴", rows.every((x) => x.link && typeof x.link === "object"), rows[0]?.link);
 
+// 샘플 데이터 자체의 앞뒤가 맞는지 — 「불통과 20/20」 같은 줄이 있으면
+// 수강생이 화면이 틀렸다고 생각합니다 (실제로 샘플에 섞여 있었습니다).
+{
+  const hist = await get("action=student-history&student_id=" + stu[0].id + "&days=90");
+  const bad = (hist.d.rows || []).filter((x) => {
+    if (!x.voca_test || !x.voca_score) return false;
+    const got = Number(String(x.voca_score).split("/")[0]);
+    const tot = Number(String(x.voca_score).split("/")[1] || 20);
+    if (!isFinite(got) || !isFinite(tot)) return false;
+    const pass = !/불통과|미통과/.test(x.voca_test);
+    return pass ? got / tot < 0.6 : got / tot >= 0.8;   // 통과인데 낮거나, 불통과인데 높거나
+  });
+  ck("★ 샘플의 단어테스트 결과↔점수가 앞뒤 맞음", bad.length === 0,
+     bad.slice(0, 3).map((x) => `${x.date} ${x.voca_test} ${x.voca_score}`));
+}
+
 r = await get("action=teachers");
 ck("teachers", r.s === 200 && r.d.teachers.length === 2, r.d.teachers);
 

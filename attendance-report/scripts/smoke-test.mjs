@@ -221,11 +221,33 @@ check(
 );
 check("교재명이 실제로 채워짐 (빈칸 아님)", v["#{문법교재}"] === "그래머인유즈 1", v["#{문법교재}"]);
 check("진도가 실제로 채워짐 (빈칸 아님)", /Unit/.test(v["#{문법진도}"] || ""), v["#{문법진도}"]);
+// ★ 진도에 **유닛 제목**까지 실려야 한다 — 학부모가 받는 게 "Unit 1" 뿐이면 무슨 뜻인지 모릅니다.
+//   (원장님 운영이 "CH1-1. be동사" 로 보내는 것과 맞춤)
+check("★ 진도에 유닛 제목까지 들어감", /Unit 1 be동사/.test(v["#{문법진도}"] || ""), v["#{문법진도}"]);
+check("코드만·제목만 쓰는 변수도 함께 옴", v["#{문법유닛}"] === "Unit 1" && v["#{문법제목}"] === "be동사", {
+  유닛: v["#{문법유닛}"], 제목: v["#{문법제목}"],
+});
 check(
   "안 듣는 과목도 '-' 로 채워짐 (카카오는 빈 변수면 발송 거부)",
   Object.values(v).every((x) => String(x).length > 0),
   v,
 );
+
+// 목차에 제목을 안 넣은 교재는 **예전처럼 코드만** 나가야 한다
+// (제목을 안 쓰시던 분의 카톡 문구가 바뀌면 안 되므로)
+{
+  const tb = T.textbooks.find((x) => x.name === "초등 그래머");
+  const keep = tb.units;
+  tb.units = [{ code: "1과" }, { code: "2과" }];              // 제목 없는 목차
+  const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const row = T.daily_records.find((x) => x.student_id === "s2" && x.date === day);
+  if (row) row.progress = { 문법: { code: "1과", title: "" } };
+  const rr = await POST(attendance, { action: "send-daily", date: day, dryRun: true, student_ids: ["s2"] });
+  const vv = rr.body.results?.[0]?.vars || {};
+  check("★ 제목 없는 목차는 코드만 (문구가 안 바뀜)", vv["#{문법진도}"] === "1과", vv["#{문법진도}"]);
+  check("제목 변수는 '-' 로 (빈 변수 금지)", vv["#{문법제목}"] === "-", vv["#{문법제목}"]);
+  tb.units = keep;
+}
 
 // ── 10. 과제 삭제 ───────────────────────────────────────
 r = await POST(attendance, { action: "delete-task", id: myTask });

@@ -54,7 +54,10 @@ select s.id, (now() at time zone 'Asia/Seoul')::date,
   case when gg.g % 4 = 0 then '중' else '상' end,
   case when gg.g % 6 = 0 then '중' else '상' end,
   case when gg.g between 12 and 13 then null when gg.g % 7 = 0 then '불통과' else '통과' end,
-  case when gg.g between 12 and 13 then null else (16 + (gg.g % 5)) || '/20' end,
+  -- 점수는 결과와 맞춰서 (불통과인데 20/20 이면 화면이 틀린 것처럼 보입니다)
+  case when gg.g between 12 and 13 then null
+       when gg.g % 7 = 0 then (10 + (gg.g % 4)) || '/20'
+       else (16 + (gg.g % 5)) || '/20' end,
   jsonb_strip_nulls(jsonb_build_object(
     '문법', (select t.units -> 3 from textbooks t where t.name = s.books->>'문법'),
     '리딩', (select t.units -> 3 from textbooks t where t.name = s.books->>'리딩'),

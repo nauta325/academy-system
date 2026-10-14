@@ -216,7 +216,11 @@ function esc(s){ return (s ?? "").toString().replace(/[&<>"]/g,c=>({ "&":"&amp;"
 // (1차 템플릿을 쓰시는데 여기가 '-' 면 학생DB 의 과목 키 이름이 템플릿 변수명과 다른 것)
 function subjLine(vars){
   if (!vars) return "";
-  const subj = [...new Set(Object.keys(vars).map(k => k.replace(/^#\{|교재\}$|진도\}$/g,"")).filter(Boolean))];
+  // 과목 목록은 **`#{○○교재}` 키에서만** 뽑습니다.
+  // 예전에는 키에서 `#{`·`교재}`·`진도}` 를 지워 남는 걸 과목으로 봤는데,
+  // `#{문법유닛}`·`#{문법제목}` 처럼 다른 변수가 늘자 `문법유닛}` 이 과목으로 잡혀
+  // 미리보기에 「문법유닛} - -」 같은 쓰레기 줄이 나왔습니다.
+  const subj = Object.keys(vars).filter(k => /^#\{.+교재\}$/.test(k)).map(k => k.slice(2, -3));
   if (!subj.length) return "";
   const parts = subj.map(s => {
     const b = vars[`#{${s}교재}`] || "-", p = vars[`#{${s}진도}`] || "-";
