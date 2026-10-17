@@ -40,6 +40,40 @@ join (values
 ) as v(name, check_in, check_out, lateness, attitude, homework, voca_test, voca_score, parent_note)
   on v.name = s.name;
 
+-- ── 오늘 진도를 '직전 수업의 다음 목차'로 바로잡기 ────────────────────────────
+-- 위에서 오늘 기록을 넣을 때 진도를 목차의 고정 위치(4번째)로 박아 넣었습니다.
+-- 그런데 test_3_month.sql 로 지난달을 채우면 직전 수업이 이미 그보다 앞서 있어서,
+-- 화면에 **지난 10/14 5과 → 오늘 4과** 처럼 진도가 거꾸로 가는 것으로 보입니다.
+-- (앱의 자동 전환은 정상입니다 — 샘플을 손으로 박아 넣어서 생기는 어긋남입니다.)
+-- 이 세미나의 간판이 '진도 자동'이라 그대로 두면 고장난 것처럼 보여서, 넣은 뒤 바로잡습니다.
+update daily_records t
+set progress = (
+  select jsonb_strip_nulls(jsonb_object_agg(x.subj, x.unit))
+  from (
+    select subj,
+           (select tb.units -> (least(
+                     coalesce(
+                       (select i - 1 from jsonb_array_elements(tb.units) with ordinality u(e, i)
+                         where e->>'code' = prev.code),
+                       -1) + 1,
+                     jsonb_array_length(tb.units) - 1))::int
+            from textbooks tb where tb.name = s.books->>subj) as unit
+    from (values ('문법'), ('리딩'), ('단어')) as sub(subj)
+    cross join lateral (
+      select (d.progress->subj->>'code') as code
+      from daily_records d
+      where d.student_id = t.student_id and d.date < t.date
+        and d.progress->subj->>'code' is not null
+      order by d.date desc limit 1
+    ) prev
+  ) x
+)
+from students s
+where s.id = t.student_id
+  and t.date = (now() at time zone 'Asia/Seoul')::date
+  and exists (select 1 from daily_records d2
+               where d2.student_id = t.student_id and d2.date < t.date);
+
 -- 확인: 방금 넣은 오늘 기록
 select s.name, d.check_in, d.check_out, d.lateness, d.attitude, d.homework,
        d.voca_test, d.voca_score, d.progress, d.parent_note, d.report_sent
