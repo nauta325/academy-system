@@ -75,6 +75,9 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .hl-box.red{background:rgba(207,106,74,.1);border:1px solid rgba(207,106,74,.4);color:#a2402a}
 .hl-box.claude{background:rgba(217,119,87,.12);border:1px solid rgba(217,119,87,.4);color:var(--claude-deep)}
 .hl-box strong{color:inherit;font-weight:800}
+/* 1·2차(앱스크립트) 들으신 분께만 의미 있는 곁다리 — 처음 오신 분은 건너뛰어도 되게 흐리게 */
+.prev-note{display:block;margin-top:9px;padding-top:9px;border-top:1px solid currentColor;
+           opacity:.6;font-size:13px}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
 .chip{background:var(--surface2);border:1px solid var(--border);color:var(--muted2);font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;font-family:'Space Mono',monospace}
@@ -116,11 +119,11 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
   <div class="hero-inner">
     <div class="hero-tag">⚡ 세미나 실습 소책자</div>
     <h1>학원 자동화<br>말로 만든다</h1>
-    <p class="hero-sub">출결 · 데일리리포트 · 월말평가서 — 앱스크립트 없이, Vercel로.</p>
-    <p class="hero-desc">지난 앱스크립트 세미나에서 만들던 그 시스템을, 이번엔 <b style="color:#fff">노션·앱스크립트 없이</b> Supabase + Vercel + Claude로 만듭니다. 설치는 SQL 붙여넣기 한 번, 수정은 클로드한테 말로. 이 자료를 화면과 같이 보며 한 단계씩 따라오세요.</p>
+    <p class="hero-sub">출결 · 데일리리포트 · AI 월말평가서 · 학생앱 · 선생님앱 — 내 주소로.</p>
+    <p class="hero-desc">교재 목차를 한 번 넣어두면 <b style="color:#fff">진도가 매일 저절로</b> 넘어갑니다. 설치는 SQL 붙여넣기 한 번, 고칠 건 클로드한테 말로. 이 자료를 화면과 같이 보며 한 단계씩 따라오세요.</p>
     <div class="hero-meta">
       <div class="hero-meta-item">🖥 PC + 크롬 필수</div>
-      <div class="hero-meta-item">⏱ 설치 약 30분</div>
+      <div class="hero-meta-item">⏱ 설치 약 20분</div>
       <div class="hero-meta-item">💬 막히면 클로드에게</div>
     </div>
   </div>
@@ -143,19 +146,25 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
 <div class="content" id="prep">
   <div class="card">
     <div class="card-title"><div class="num">✓</div> 시작 전 준비물</div>
-    <p>아래 4개 계정만 있으면 됩니다. 전부 무료로 시작할 수 있고, 실습 중 결제할 일은 없어요(클로드 AI 생성만 소액).</p>
+    <p>아래 <b>계정 5개</b>가 필요합니다(+ 알림톡 쓰실 분은 솔라피). GitHub·Supabase·Vercel 은 무료로 시작합니다.</p>
     <ul class="step-list" style="margin-top:8px">
-      <li><b>GitHub</b> 계정 — 템플릿을 내 것으로 복제 (github.com)</li>
+      <li><b>GitHub</b> 계정 — 템플릿을 내 것으로 복제 (github.com, 무료)</li>
       <li><b>Supabase</b> 계정 — 데이터베이스 (supabase.com, 무료)</li>
       <li><b>Vercel</b> 계정 — 배포(서버) (vercel.com, 무료). GitHub으로 로그인 추천</li>
-      <li><b>Claude</b> 계정 — 월말평가서 생성 + 바이브 코딩 (console.anthropic.com)</li>
-      <li>(선택) <b>솔라피</b> — 카카오 알림톡. 사업자 인증·검수 며칠 걸리니 미리 신청</li>
+      <li><b>Claude 구독</b> — <b>내가</b> 말로 시켜서 고칠 때 씁니다 (claude.ai, Pro 이상 / 월 2만원대)</li>
+      <li><b>Anthropic 콘솔</b> — <b>앱이</b> 월말평가서를 쓸 때 쓰는 API 키 (console.anthropic.com, $5 충전)</li>
+      <li>(선택) <b>솔라피</b> — 카카오 알림톡. 발신번호 인증·템플릿 검수에 며칠 걸리니 미리 신청</li>
     </ul>
-    <div class="hl-box teal"><strong>💡 순서만 기억하세요</strong><br>복제(GitHub) → 데이터베이스(Supabase에 SQL 1번) → 배포(Vercel에 키 입력) → 끝. 노션도, 앱스크립트도, 복사할 코드 파일도 없습니다.</div>
+    <div class="hl-box yellow"><strong>⚠️ 위 두 개(Claude 구독 / Anthropic 콘솔)는 다른 것입니다.</strong>
+      구독은 <b>내가</b> 쓰는 것, API 키는 <b>앱이</b> 쓰는 것이에요. 둘 다 있어야 오늘 끝까지 갑니다.
+      그리고 <b>Anthropic 결제에서 제일 많이 막힙니다</b> — 주소를 <b>영문으로</b> 넣으셔야 카드가 통과해요
+      (<code>juso.go.kr</code> 에서 내 주소를 검색하면 영문 주소가 나옵니다). 그래도 안 되면 크롬 언어를
+      English 로 바꾸고 재시도. 당일 안 되셔도 <b>월말평가서만</b> 못 만들고 나머지는 전부 됩니다.</div>
+    <div class="hl-box teal"><strong>💡 순서만 기억하세요</strong><br>복제(GitHub) → 데이터베이스(Supabase에 SQL 1번) → 배포(Vercel에 키 입력) → 끝. 컴퓨터에 설치할 프로그램도, 복사해 붙일 코드 파일도 없습니다.<span class="prev-note">1·2차 들으신 분께 — 노션 DB도 앱스크립트도 쓰지 않습니다.</span></div>
   </div>
 </div>
 
-<div class="part-divider"><div class="pd-inner"><div class="pd-num">01</div><div><div class="pd-label">PART ONE</div><div class="pd-title">셋업 — 30분이면 내 주소가 생깁니다</div></div></div></div>
+<div class="part-divider"><div class="pd-inner"><div class="pd-num">01</div><div><div class="pd-label">PART ONE</div><div class="pd-title">셋업 — 20분이면 내 주소가 생깁니다</div></div></div></div>
 
 <div class="content" id="big">
   <div class="sec-header"><div class="sec-num">00</div><div><div class="sec-label">오늘 만드는 것</div><div class="sec-title">한눈에 보는 올인원 7기능</div></div></div>
@@ -198,7 +207,7 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
       <li>복제한 리포의 <b><code>sql/setup.sql</code></b> 파일을 열어 <b>전체 복사</b>.</li>
       <li>SQL Editor에 붙여넣고 오른쪽 아래 <b>Run</b>. → 표(테이블) <b>6개</b> + 샘플 학생·기록·과제가 한 번에 생성됩니다.</li>
     </ul>
-    <div class="hl-box green"><strong>✓ 이게 앱스크립트판의 "노션 DB 5개 수작업 + 속성명 일치 지옥"을 대체합니다.</strong> 속성명 오타로 나던 <code>is not a property</code> 에러가 원천적으로 사라져요.</div>
+    <div class="hl-box green"><strong>✓ 표 6개가 한 번에 만들어집니다.</strong> 칸 이름을 손으로 맞출 일이 없어서, 오타 때문에 안 돌아가는 일이 생기지 않아요.<span class="prev-note">1·2차 들으신 분께 — 노션 DB 5개를 손으로 만들고 속성명을 맞추던 그 과정이 통째로 없어집니다. <code>is not a property</code> 에러도 같이 사라져요.</span></div>
     <div class="card-title" style="margin-top:20px"><div class="num">C</div> 열쇠 2개 복사 (다음 단계에서 씀)</div>
     <ul class="step-list">
       <li>왼쪽 <b>Project Settings → API</b> 로 이동.</li>
@@ -227,7 +236,7 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
       <li><b>Deploy</b> 클릭 → 1~2분 후 <b>내 주소</b>(<code>https://내프로젝트.vercel.app</code>)가 생깁니다.</li>
       <li>주소 뒤에 <code>/</code> 를 붙여 홈을 열면 4개 화면 버튼이 보여요.</li>
     </ul>
-    <div class="hl-box green"><strong>✓ URL이 고정입니다.</strong> 앱스크립트의 "새 배포 누르면 학부모 링크 전멸" 사고가 없어요. 코드가 바뀌면 자동 재배포되고 주소는 그대로.</div>
+    <div class="hl-box green"><strong>✓ 주소가 바뀌지 않습니다.</strong> 코드를 고치면 알아서 다시 배포되는데 주소는 그대로라, 학부모에게 이미 보낸 링크가 계속 살아 있습니다.<span class="prev-note">1·2차 들으신 분께 — 앱스크립트에서 「새 배포」 누를 때마다 학부모 링크가 전멸하던 사고가 없습니다.</span></div>
     <div class="hl-box teal"><strong>🔑 Claude 키 없으면?</strong> 통계·저장·출결·학부모 열람은 다 됩니다. "AI 평가서 생성" 버튼만 비활성. 키는 나중에 넣어도 돼요.</div>
   </div>
 </div>
@@ -422,7 +431,7 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
     <p>등원·하원·미등원·<b>데일리 리포트</b>·월말평가서 링크를 학부모에게 자동 발송하려면 솔라피를 연결합니다. <b>사업자 인증 + 템플릿 검수(1~2영업일)</b>가 필요해서, 준비되신 분만 후반부에 연결해요.</p>
     <ul class="step-list">
       <li>솔라피 가입 → 카카오 비즈니스 채널 연동(<code>pfId</code>) → 발신번호 등록 → API 키/시크릿.</li>
-      <li>템플릿 5종(등원/하원/미등원/<b>데일리리포트</b>/월말) 등록 → 검수 요청 → 승인되면 각 <b>템플릿 ID</b> 확보. <b>이전 세미나에서 등록한 템플릿은 그대로 재사용</b>하시면 됩니다(1차=데일리리포트, 2차=나머지 4종).</li>
+      <li>템플릿 6종(등원/하원/미등원/<b>데일리리포트</b>/월말/<b>재시 안내</b>) 등록 → 검수 요청 → 승인되면 각 <b>템플릿 ID</b> 확보. <b>이전 세미나에서 등록한 템플릿은 그대로 재사용</b>하시면 됩니다(1차=데일리리포트, 2차=나머지 4종). 1·2차를 다 들으셨다면 <b>재시 안내 하나만</b> 새로 신청하시면 돼요.</li>
       <li>Vercel 환경변수에 아래를 추가하고 재배포:</li>
     </ul>
     <table class="tb">
@@ -467,7 +476,7 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
       <li><span class="rc-check">✓</span> 내 주소(<code>vercel.app</code>)로 도는 출결·데일리·월말평가서 시스템</li>
       <li><span class="rc-check">✓</span> PIN 등하원 · 현황판 한 줄 기록 · 진도 캐리포워드</li>
       <li><span class="rc-check">✓</span> 클로드가 써주는 월말평가서 + 학부모 열람 링크</li>
-      <li><span class="rc-check">✓</span> "말해서 고치는" 평생 기술 — 앱스크립트 수정 지옥에서 탈출</li>
+      <li><span class="rc-check">✓</span> "말해서 고치는" 기술 — 코드를 못 읽어도 내 시스템을 계속 바꿀 수 있습니다</li>
     </ul>
   </div>
 </div>
