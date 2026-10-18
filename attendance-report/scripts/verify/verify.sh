@@ -71,6 +71,8 @@ echo "── 5. 단위 점검 ──"
 (cd "$APP" && node scripts/smoke-test.mjs > /tmp/smoke.out 2>&1); U=$?
 grep -E "^FAIL|실패|통과" /tmp/smoke.out | tail -8
 (cd "$APP" && node scripts/check-personal.mjs > /tmp/pers.out 2>&1); P=$?; tail -1 /tmp/pers.out
+# DB 에러가 수강생이 읽을 수 있는 말로 나오나 (리허설에서 날코드가 화면에 그대로 떴던 건)
+node db-error-unit.mjs > /tmp/dberr.out 2>&1; D=$?; tail -1 /tmp/dberr.out
 
 (fuser -k 4330/tcp 2>/dev/null || true)
 
@@ -84,6 +86,7 @@ FAILED=""
 [ $N -ne 0 ] && FAILED="$FAILED 노션이관"
 [ $U -ne 0 ] && FAILED="$FAILED 단위점검"
 [ $P -ne 0 ] && FAILED="$FAILED 개인정보"
+[ $D -ne 0 ] && FAILED="$FAILED DB에러문구"
 if [ -z "$FAILED" ]; then
   echo "
 ✅ 전면 검수 통과"
@@ -91,6 +94,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out"
   exit 1
 fi
