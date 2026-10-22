@@ -10,7 +10,13 @@ const APP = path.resolve(import.meta.dirname, "../..");
 process.env.SUPABASE_URL = "http://fake-supabase";
 process.env.SUPABASE_SERVICE_KEY = "fake";
 // 알림톡·AI 는 키 없음 = 세미나 당일 "아직 승인 안 난" 수강생과 같은 상태로 검사
-delete process.env.SOLAPI_API_KEY; delete process.env.ANTHROPIC_API_KEY;
+delete process.env.SOLAPI_API_KEY;
+// AI 키도 지웁니다 — 검수가 진짜 Anthropic 으로 나가면 돈이 듭니다.
+// 다만 **가짜 서버(localhost)를 가리킬 때만** 남겨둡니다. 그래야 월말평가서
+// 생성까지 끝까지 돌려볼 수 있습니다 (scripts/verify/anthropic-mock.mjs).
+if (!/^https?:\/\/(localhost|127\.0\.0\.1)[:/]/.test(process.env.ANTHROPIC_BASE_URL || "")) {
+  delete process.env.ANTHROPIC_API_KEY;
+}
 
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, opts = {}) => {

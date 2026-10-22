@@ -49,6 +49,19 @@ curl -s -o /dev/null -w "  서버 %{http_code}\n" localhost:4330/
 echo "── 3. API 전수 검사 ──"
 node e2e-api.mjs > /tmp/e2e.out 2>&1; A=$?; tail -4 /tmp/e2e.out
 
+echo "── 3-1. 월말평가서 · 진도 조정 (가짜 Anthropic) ──"
+#  간판 두 가지. AI 호출은 가짜 서버로 받아서 돈이 들지 않습니다.
+(fuser -k 4330/tcp 2>/dev/null || true); (fuser -k 4399/tcp 2>/dev/null || true); sleep 1
+nohup node anthropic-mock.mjs > mock-anthropic.log 2>&1 < /dev/null &
+disown 2>/dev/null || true
+TESTDB=tapp ANTHROPIC_API_KEY=sk-ant-fake-for-verify \
+  ANTHROPIC_BASE_URL=http://localhost:4399 \
+  nohup node app-server.mjs > app.log 2>&1 < /dev/null &
+disown 2>/dev/null || true
+sleep 3
+node report-progress-check.mjs > /tmp/report.out 2>&1; R=$?; tail -4 /tmp/report.out
+(fuser -k 4399/tcp 2>/dev/null || true)
+
 echo "── 3-2. 노션 이관 (가짜 노션) ──"
 (fuser -k 4330/tcp 2>/dev/null || true); sleep 1
 MOCK_NOTION=1 TESTDB=tapp NOTION_TOKEN=secret_fake \
@@ -83,6 +96,7 @@ FAILED=""
 [ $S -ne 0 ] && FAILED="$FAILED 스키마대조"
 [ $A -ne 0 ] && FAILED="$FAILED API"
 [ $B -ne 0 ] && FAILED="$FAILED 브라우저"
+[ $R -ne 0 ] && FAILED="$FAILED 월말평가서·진도조정"
 [ $N -ne 0 ] && FAILED="$FAILED 노션이관"
 [ $U -ne 0 ] && FAILED="$FAILED 단위점검"
 [ $P -ne 0 ] && FAILED="$FAILED 개인정보"
@@ -94,6 +108,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out"
   exit 1
 fi

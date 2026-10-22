@@ -5,3 +5,5 @@ node_modules
 .DS_Store
 scripts/verify/node_modules
 scripts/verify/app.log
+*.log
+scripts/verify/mock-anthropic.log

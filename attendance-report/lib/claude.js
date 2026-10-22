@@ -8,7 +8,9 @@
 //   세미나 자료실의 「클로드에게 말하기」에 바로 붙여 쓸 수 있는 지침 예시가 있습니다.
 
 const MODEL = "claude-sonnet-5"; // 품질↑ "claude-opus-5" / 저렴 "claude-haiku-4-5"
-const API = "https://api.anthropic.com/v1/messages";
+// 검수용으로만 주소를 바꿔 끼웁니다(ANTHROPIC_BASE_URL). 안 넣으면 진짜 Anthropic.
+// 월말평가서는 이 세미나의 간판인데, 진짜 키로 돌리면 돈이 들어서 검수에서 빠져 있었습니다.
+const API = (process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com") + "/v1/messages";
 
 export function claudeConfigured() {
   return Boolean(process.env.ANTHROPIC_API_KEY);
