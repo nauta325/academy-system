@@ -107,5 +107,29 @@ console.log("\n── 2. 월말평가서 (generate → save → 학부모 열람
   }
 }
 
+// ── 3. 설치 직후 첫 화면 ───────────────────────────────────
+// 세미나 당일(11/1)이 일요일입니다. 샘플 3명은 평일만 수업하도록 돼 있어서
+// 「주말엔 데일리 리포트가 빈 화면으로 뜬다」고 오래 믿고 자료에도 그렇게 적었는데,
+// 실제로는 setup.sql 이 **요일과 상관없이 오늘 행 3개**를 만듭니다(sql/setup.sql 의 마지막 insert).
+// 그 덕에 설치 직후 바로 화면이 찹니다. 이게 깨지면 세미나 첫 10분이 빈 화면이 됩니다.
+console.log("\n── 3. 설치 직후 첫 화면 (요일 무관) ──");
+{
+  const rows = await get("/api/attendance", `action=daily-rows&date=${today}`);
+  ck("★ 오늘 데일리 리포트에 학생이 있다", (rows.d.rows?.length ?? 0) >= 3, rows.d.rows?.length);
+
+  const board = await get("/api/attendance", "action=board");
+  ck("★ 현황판에도 학생이 있다", (board.d.students?.length ?? 0) >= 3, board.d.students?.length);
+
+  // 오늘 진도가 지난 수업보다 앞서 있어야 합니다 (뒤로 가면 수강생이 고장으로 봅니다).
+  const first = rows.d.rows?.[0];
+  const hist = await get("/api/attendance", `action=student-history&student_id=${first?.student_id}&days=365`);
+  const past = (hist.d.rows || [])
+    .filter((r) => r.date < today && r.progress?.문법?.code)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  const prev = past[0]?.progress?.문법?.code;
+  const now = first?.record?.progress?.문법?.code;
+  ck("★ 오늘 진도가 지난 수업보다 뒤로 가지 않는다", !prev || !now || prev !== now, { 지난: prev, 오늘: now });
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);
