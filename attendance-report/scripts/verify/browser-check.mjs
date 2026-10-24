@@ -251,6 +251,19 @@ await pg.waitForTimeout(900);
 ck("books.html 교재 목록 보임", (await pg.locator("body").innerText()).includes("그래머"), null);
 
 // 현황판
+// 🏠 홈 버튼 — 화면끼리 왔다 갔다 되는지. 넣어놓고 아무도 안 보던 것이라 여기서 봅니다.
+for (const path of ["/board.html", "/daily.html", "/students.html", "/books.html", "/report.html"]) {
+  await pg.goto(B + path, { waitUntil: "networkidle" });
+  const home = pg.locator('a[href="/"]').first();
+  const 있나 = (await home.count()) > 0;
+  ck(`${path} 에 🏠 홈 버튼이 있다`, 있나, null);
+  if (있나) {
+    await home.click();
+    await pg.waitForLoadState("networkidle");
+    ck(`${path} → 홈으로 간다`, new URL(pg.url()).pathname === "/", pg.url());
+  }
+}
+
 await pg.goto(B + "/board.html", { waitUntil: "networkidle" });
 await pg.waitForTimeout(900);
 ck("board.html 학생 보임", (await pg.locator("body").innerText()).includes("김민준"), null);
