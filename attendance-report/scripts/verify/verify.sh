@@ -60,7 +60,13 @@ TESTDB=tapp ANTHROPIC_API_KEY=sk-ant-fake-for-verify \
 disown 2>/dev/null || true
 sleep 3
 node report-progress-check.mjs > /tmp/report.out 2>&1; R=$?; tail -4 /tmp/report.out
-(fuser -k 4399/tcp 2>/dev/null || true)
+#  가짜 Anthropic 은 3-1-B 까지 쓰므로 여기서 죽이지 않습니다.
+
+echo "── 3-1-B. 학생 등록 → 키오스크 → 진도 수정 → 평가서 → 학부모 ──"
+#  수강생이 당일에 걷는 길을 처음부터 끝까지. 한 명씩 등록·붙여넣기 일괄등록이
+#  검수에 빠져 있어서 넣었습니다 (PART TWO 의 첫 단추).
+node student-flow-check.mjs > /tmp/flow.out 2>&1; F=$?; tail -3 /tmp/flow.out
+(fuser -k 4399/tcp 2>/dev/null)
 
 echo "── 3-2. 노션 이관 (가짜 노션) ──"
 (fuser -k 4330/tcp 2>/dev/null || true); sleep 1
@@ -97,6 +103,7 @@ FAILED=""
 [ $A -ne 0 ] && FAILED="$FAILED API"
 [ $B -ne 0 ] && FAILED="$FAILED 브라우저"
 [ $R -ne 0 ] && FAILED="$FAILED 월말평가서·진도조정"
+[ $F -ne 0 ] && FAILED="$FAILED 학생등록흐름"
 [ $N -ne 0 ] && FAILED="$FAILED 노션이관"
 [ $U -ne 0 ] && FAILED="$FAILED 단위점검"
 [ $P -ne 0 ] && FAILED="$FAILED 개인정보"
@@ -108,6 +115,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out"
   exit 1
 fi
