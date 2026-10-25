@@ -7,10 +7,15 @@ const get = async (q) => { const r = await fetch(`${B}/api/attendance?${q}`); re
 const post = async (p, b) => { const r = await fetch(`${B}${p}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }); return { s: r.status, d: await r.json() }; };
 
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+// 샘플이 들어 있는 달 = **지난달**. setup.sql 이 설치한 날 기준으로 넣으므로
+// 달을 박아두면 다음 달에 검수가 깨집니다.
+const 지난달 = (() => { const n = new Date(Date.now() + 9 * 3600e3);
+  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1)).toISOString().slice(0, 7); })();
+
 
 // ── 조회 계열 ──
 let r = await get("action=students");
-ck("students", r.s === 200 && r.d.students.length === 3, r.d);
+ck("students", r.s === 200 && r.d.students.length === 12, r.d);
 const stu = r.d.students;
 const byName = Object.fromEntries(stu.map((s) => [s.name, s]));
 
@@ -50,7 +55,7 @@ r = await get("action=teachers");
 ck("teachers", r.s === 200 && r.d.teachers.length === 2, r.d.teachers);
 
 r = await get(`action=tasks&date=${today}`);
-ck("tasks", r.s === 200 && r.d.tasks.length === 9, r.d.tasks?.length);
+ck("tasks", r.s === 200 && r.d.tasks.length === 36, r.d.tasks?.length);  // 12명 × 3개
 
 // ── 쓰기 계열 ──
 r = await post("/api/attendance", { action: "save-record", student_id: byName["김민준"].id, date: today, fields: { attitude: "중", homework: "상", note: "검수" } });
@@ -110,7 +115,7 @@ ck("데일리 발송 미리보기", r.s === 200 && Array.isArray(r.d.results), r
   const sid = byName["김민준"].id;
   r = await get(`action=student-history&student_id=${sid}&days=90`);
   ck("★ 학생 카드 이력", r.s === 200 && r.d.student?.name === "김민준" && Array.isArray(r.d.rows), { s: r.s, e: r.d.error });
-  ck("★ 과거 기록이 실제로 들어 있음 (2026-05 샘플)", (r.d.rows || []).length > 0, { n: r.d.rows?.length });
+  ck("★ 과거 기록이 실제로 들어 있음 (지난달 샘플)", (r.d.rows || []).length > 0, { n: r.d.rows?.length });
   ck("최신 날짜가 앞에 옴", (r.d.rows || []).length < 2 || r.d.rows[0].date >= r.d.rows[1].date, r.d.rows?.slice(0, 2).map((x) => x.date));
   ck("★ 과목 목록이 내려옴", Array.isArray(r.d.subjects) && r.d.subjects.length >= 1, r.d.subjects);
   ck("진도가 비어 있지 않음", (r.d.rows || []).some((x) => Object.keys(x.progress || {}).length), r.d.rows?.[0]?.progress);
@@ -141,18 +146,18 @@ ck("틀린 PIN 거절", r.s === 401, r.d);
 
 // ── 월말평가서 ──
 const rget = async (q) => { const x = await fetch(`${B}/api/report?${q}`); return { s: x.status, d: await x.json() }; };
-r = await rget("action=students&month=2026-05");
-ck("★ 월별 학생+통계 (2026-05)", r.s === 200 && Array.isArray(r.d.students) && r.d.students.length === 3, { s: r.s, n: r.d.students?.length, e: r.d.error });
+r = await rget(`action=students&month=${지난달}`);
+ck("★ 월별 학생+통계 (지난달)", r.s === 200 && Array.isArray(r.d.students) && r.d.students.length === 12, { s: r.s, n: r.d.students?.length, e: r.d.error });
 const p0 = r.d.students?.[0];
 ck("통계가 실제로 계산됨", !!p0 && typeof p0 === "object", p0);
 
-r = await post("/api/report", { action: "preview", student_id: byName["김민준"].id, month: "2026-05" });
+r = await post("/api/report", { action: "preview", student_id: byName["김민준"].id, month: 지난달 });
 ck("★ 미리보기 통계 집계", r.s === 200 && r.d && typeof r.d === "object" && !r.d.error, { s: r.s, e: r.d?.error, keys: r.d && Object.keys(r.d) });
 
-r = await post("/api/report", { action: "generate", student_id: byName["김민준"].id, month: "2026-05" });
+r = await post("/api/report", { action: "generate", student_id: byName["김민준"].id, month: 지난달 });
 ck("AI 키 없을 때 친절한 안내 (스택 아님)", r.s >= 400 && typeof r.d.error === "string" && !/\bat \//.test(r.d.error), r.d);
 
-r = await post("/api/report", { action: "save", student_id: byName["김민준"].id, month: "2026-05", body: "검수 본문", stats: { a: 1 }, progress: {} });
+r = await post("/api/report", { action: "save", student_id: byName["김민준"].id, month: 지난달, body: "검수 본문", stats: { a: 1 }, progress: {} });
 ck("평가서 저장 + share_token 발급", r.s === 200 && (r.d.share_token || r.d.report?.share_token), r.d);
 const tok = r.d.share_token || r.d.report?.share_token;
 
@@ -165,7 +170,7 @@ ck("★ PIN 틀리면 차단", r.s === 200 && r.d.needPin === true, r.d);
 r = await rget("action=parent&token=없는토큰");
 ck("없는 토큰 거절", r.s >= 400 || r.d.error || r.d.needPin !== true, r.d);
 
-r = await post("/api/report", { action: "send", month: "2026-05" });
+r = await post("/api/report", { action: "send", month: 지난달 });
 ck("열람 링크 목록 (솔라피 없음)", r.s === 200, r.d);
 
 // ── cron (새벽 행 생성) ──

@@ -24,6 +24,11 @@ const post = async (p, b) => {
 };
 
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+// 샘플이 들어 있는 달 = **지난달**. setup.sql 이 설치한 날 기준으로 넣으므로
+// 달을 박아두면 다음 달에 검수가 깨집니다.
+const 지난달 = (() => { const n = new Date(Date.now() + 9 * 3600e3);
+  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1)).toISOString().slice(0, 7); })();
+
 const weekday = "일월화수목금토"[new Date(today + "T00:00:00Z").getUTCDay()];
 const nextDay = (d, n) => new Date(new Date(d + "T00:00:00Z").getTime() + n * 86400e3).toISOString().slice(0, 10);
 
@@ -127,7 +132,7 @@ console.log("\n── 4. 손으로 고친 진도가 다음 수업일로 이어�
 // ── 5. 월말평가서 → 학부모 ────────────────────────────────
 console.log("\n── 5. 월말평가서 → 학부모 ──");
 {
-  const month = "2026-05";
+  const month = 지난달;
   const list = await get("/api/report", `action=students&month=${month}`);
   const target = (list.d.students || [])[0];
   ck("그 달 학생 목록이 온다", Boolean(target), list.d.students?.length);

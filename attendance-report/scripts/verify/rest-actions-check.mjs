@@ -23,6 +23,11 @@ const post = async (p, b) => {
   return { s: r.status, d: await r.json() };
 };
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+// 샘플이 들어 있는 달 = **지난달**. setup.sql 이 설치한 날 기준으로 넣으므로
+// 달을 박아두면 다음 달에 검수가 깨집니다.
+const 지난달 = (() => { const n = new Date(Date.now() + 9 * 3600e3);
+  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1)).toISOString().slice(0, 7); })();
+
 const weekday = "일월화수목금토"[new Date(today + "T00:00:00Z").getUTCDay()];
 
 // ── 1. 현황판에서 하원 처리 ───────────────────────────────
@@ -95,7 +100,7 @@ console.log("\n── 2. 교재 삭제 (delete-textbook) ──");
 // ── 3. 저장한 평가서를 다시 열기 ──────────────────────────
 console.log("\n── 3. 저장한 평가서 다시 열기 (get) ──");
 {
-  const month = "2026-05";
+  const month = 지난달;
   const list = (await get("/api/report", `action=students&month=${month}`)).d.students || [];
   const target = list[0];
 
@@ -122,7 +127,7 @@ console.log("\n── 3. 저장한 평가서 다시 열기 (get) ──");
 // ── 4. 한 학생의 지난 평가서 목록 ─────────────────────────
 console.log("\n── 4. 한 학생의 지난 평가서 (student-reports) ──");
 {
-  const list = (await get("/api/report", "action=students&month=2026-05")).d.students || [];
+  const list = (await get("/api/report", `action=students&month=${지난달}`)).d.students || [];
   const target = list[0];
   const r = await get("/api/report", `action=student-reports&student_id=${target.id}`);
   ck("★ 그 학생의 평가서 목록이 온다", r.s === 200 && Array.isArray(r.d.reports) && r.d.reports.length > 0, r.d.reports?.length);

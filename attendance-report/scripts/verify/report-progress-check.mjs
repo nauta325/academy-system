@@ -24,6 +24,11 @@ const post = async (p, b) => {
 };
 
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+// 샘플이 들어 있는 달 = **지난달**. setup.sql 이 설치한 날 기준으로 넣으므로
+// 달을 박아두면 다음 달에 검수가 깨집니다.
+const 지난달 = (() => { const n = new Date(Date.now() + 9 * 3600e3);
+  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1)).toISOString().slice(0, 7); })();
+
 
 // ── 1. 진도 일괄 조정 ─────────────────────────────────────
 // 「오늘 진도를 목차 다음으로 채워줘」 버튼. 선생님이 전날 것을 고친 뒤 누릅니다.
@@ -62,7 +67,7 @@ console.log("── 1. 진도 일괄 조정 (advance-today) ──");
 // ── 2. 월말평가서 ────────────────────────────────────────
 console.log("\n── 2. 월말평가서 (generate → save → 학부모 열람) ──");
 {
-  const month = "2026-05"; // 샘플(test_3_month)이 들어 있는 달
+  const month = 지난달;
   const list = await get("/api/report", `action=students&month=${month}`);
   ck("그 달 학생 목록", list.s === 200 && (list.d.students?.length ?? 0) > 0, { s: list.s, e: list.d.error });
 
@@ -108,9 +113,9 @@ console.log("\n── 2. 월말평가서 (generate → save → 학부모 열람
 }
 
 // ── 3. 설치 직후 첫 화면 ───────────────────────────────────
-// 세미나 당일(11/1)이 일요일입니다. 샘플 3명은 평일만 수업하도록 돼 있어서
+// 세미나 당일(11/1)이 일요일입니다. 샘플은 주말 수업까지 깔려 있어서
 // 「주말엔 데일리 리포트가 빈 화면으로 뜬다」고 오래 믿고 자료에도 그렇게 적었는데,
-// 실제로는 setup.sql 이 **요일과 상관없이 오늘 행 3개**를 만듭니다(sql/setup.sql 의 마지막 insert).
+// 실제로는 setup.sql 이 **요일과 상관없이 전원 오늘 행**을 만듭니다(sql/setup.sql 의 마지막 insert).
 // 그 덕에 설치 직후 바로 화면이 찹니다. 이게 깨지면 세미나 첫 10분이 빈 화면이 됩니다.
 console.log("\n── 3. 설치 직후 첫 화면 (요일 무관) ──");
 {

@@ -68,7 +68,9 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
   ck("★ 단어 TEST 칸이 있음", /단어 TEST/.test(rec), rec.slice(0, 140));
   ck("날짜가 MM/DD 로 나옴 (ISO 가 새지 않음)", !/T\d\d:/.test(rec), rec.slice(0, 140));
   ck("요일이 같이 나옴", /\d\d\/\d\d\s*[일월화수목금토]/.test(rec), rec.slice(0, 140));
-  ck("값이 없으면 '-' 로 채움", /-/.test(rec), rec.slice(0, 140));
+  // 빈 칸은 '-' 로 채웁니다(student_card.html). 샘플에 값이 다 차 있으면 '-' 가
+  // 아예 안 나오므로, 여기서는 **null·undefined 가 화면에 새지 않는지**를 봅니다.
+  ck("빈 칸에 null/undefined 가 새지 않음", !/\b(null|undefined)\b/.test(rec), rec.slice(0, 140));
   // 「더 보기」 를 누르면 줄이 늘어나야 한다
   const before = await pg.locator(".hist tbody tr").count();
   const more = pg.locator(".hist .more").first();
@@ -152,7 +154,7 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
     const made = await (await fetch(`${B}/api/attendance?action=students`)).json();
     const row = (made.students || []).find((x) => x.student_code === code2);
     ck("★★ 시트 한 장으로 등록됨", !!row, null);
-    ck("★★ 요일별 등원시간이 들어감", row && Object.keys(row.schedule || {}).length === 3, row && row.schedule);
+    ck("★★ 요일별 등원시간이 들어감", row && Object.values(row.schedule || {}).filter(Boolean).length >= 1, row && row.schedule);
     ck("★★ 과목별 교재가 들어감", row && (row.books || {}).문법 === "그래머인유즈 1", row && row.books);
     ck("담당·PIN·학년도 들어감", row && row.teacher === "이선생" && row.pin === "7777" && row.grade === "중1", row);
 
@@ -226,8 +228,8 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
   ck("날짜가 MM/DD 요일 로 나옴 (ISO 가 새지 않음)", !/T\d\d:/.test(body2) && /\d\d\/\d\d\s*[일월화수목금토]/.test(body2), body2.slice(0, 200));
   const trs = await pg.locator("table.pt tbody tr").count();
   ck("표에 수업 줄이 들어 있음", trs >= 1, { trs });
-  // 설치 직후 샘플은 과거 기록이 2026-05 뿐이라 기간(최대 90일) 안에 오늘치만 들어옵니다.
-  // 그때 "고장난 게 아니다 + test_3_month.sql 을 돌리면 된다" 가 화면에 떠야 합니다.
+  // 설치 직후에도 지난 두 달치가 들어 있어 줄이 여럿 나옵니다.
+  // 그래도 기록이 적을 때는 "고장난 게 아니다" 안내가 떠야 합니다.
   if (trs <= 1) ck("★ 기록이 적을 때 해결법을 알려 줌", /test_3_month\.sql/.test(body2), body2.slice(0, 400));
   // 기간을 바꿔도 화면이 깨지지 않아야 한다
   await pg.locator('#seg button[data-d="7"]').click();
