@@ -3,7 +3,7 @@
 // (가짜 메모리 DB로는 못 잡는 '쿼리 문법·타입' 오류를 여기서 잡는다)
 import pg from "pg";
 
-const pool = new pg.Pool({ host: "/tmp", port: 5433, user: "postgres", database: process.env.TESTDB || "tapp" });
+const pool = new pg.Pool({ host: process.env.PGSOCK || "/var/run/postgresql", port: 5433, user: "postgres", database: process.env.TESTDB || "tapp" });
 
 const OPS = { eq: "=", neq: "<>", lt: "<", lte: "<=", gt: ">", gte: ">=" };
 

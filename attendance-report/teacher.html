@@ -13,7 +13,12 @@
     body { font-family: 'Noto Sans KR', -apple-system, sans-serif; background: #f5f6fa; color: #333; }
     .header { background: var(--green); color: #fff; padding: 20px; }
     .header .wrap { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .header h1 { font-size: 18px; font-weight: 600; }
+    .header h1 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    /* 홈 버튼은 **머리글**에 둡니다 — 아래쪽 링크 줄에만 있으면 학생 목록이 길 때
+       스크롤해야 보여서 "홈으로 가는 버튼이 없다"는 말을 듣습니다. */
+    .header .home { color: #fff; text-decoration: none; background: rgba(255,255,255,.2);
+      border-radius: 8px; padding: 4px 10px; font-size: 14px; white-space: nowrap; }
+    .header .home:hover { background: rgba(255,255,255,.32); }
     .header .right { display: flex; align-items: center; gap: 8px; font-size: 13px; }
     .header select, .header input { padding: 8px 10px; border: none; border-radius: 8px; font-size: 14px; font-family: inherit; }
     .content { max-width: 900px; margin: 0 auto; padding: 18px 16px 60px; }
@@ -66,7 +71,7 @@
 </head>
 <body>
   <div class="header"><div class="wrap">
-    <h1>👩‍🏫 <span data-academy></span> 선생님앱</h1>
+    <h1><a class="home" href="/" title="홈으로">🏠 홈</a><span>👩‍🏫 <span data-academy></span> 선생님앱</span></h1>
     <div class="right">
       <select id="teacher" onchange="onTeacher()"></select>
       <input type="date" id="date" onchange="load()">
@@ -80,7 +85,6 @@
       <div class="stats" id="stats"></div>
       <div id="board"></div>
       <div class="links" style="margin-top:12px">
-        <a href="/" title="홈으로">🏠 홈</a>
         <a id="toDaily" href="/daily.html">📝 데일리 리포트 작성 →</a>
         <a href="/board.html">🖥 전체 현황판 →</a>
       </div>

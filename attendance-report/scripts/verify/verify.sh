@@ -5,7 +5,10 @@ set +m   # 백그라운드 서버를 죽일 때 "Killed" 알림이 뜨지 않게
 HERE="$(cd "$(dirname "$0")" && pwd)"   # 검수 스크립트 폴더
 APP="$(cd "$HERE/../.." && pwd)"        # attendance-report 루트
 cd "$HERE"
-PS="psql -h /tmp -p 5433 -U postgres"
+# ★ 소켓·데이터를 /tmp 에 두지 마세요. /tmp 가 정리되면서 소켓이 사라지고
+#   "PostgreSQL 이 안 떠 있습니다" 로 검수가 멈춥니다 (여러 번 겪음).
+export PGSOCK="${PGSOCK:-/var/run/postgresql}"
+PS="psql -h $PGSOCK -p 5433 -U postgres"
 
 # 검수용 패키지(앱 배포와 무관 — 이 폴더에만 설치)
 if [ ! -d node_modules ]; then
@@ -18,10 +21,10 @@ if ! $PS -tAc "select 1" >/dev/null 2>&1; then
   cat <<'MSG'
 ❌ 테스트용 PostgreSQL(5433)이 안 떠 있습니다. 아래로 먼저 띄우세요.
 
-  PGDATA=/tmp/pgtest
+  PGDATA=/var/lib/pgtest
   rm -rf $PGDATA && mkdir -p $PGDATA && chown postgres:postgres $PGDATA
   su postgres -s /bin/bash -c "/usr/lib/postgresql/16/bin/initdb -D $PGDATA -A trust -U postgres"
-  su postgres -s /bin/bash -c "/usr/lib/postgresql/16/bin/pg_ctl -D $PGDATA -o '-p 5433 -k /tmp' -l $PGDATA/log start"
+  su postgres -s /bin/bash -c "/usr/lib/postgresql/16/bin/pg_ctl -D $PGDATA -o '-p 5433 -k /var/run/postgresql' -l $PGDATA/log start"
 
 (설치가 안 돼 있으면: apt-get install -y postgresql)
 MSG
@@ -95,6 +98,9 @@ grep -E "^FAIL|실패|통과" /tmp/smoke.out | tail -8
 (cd "$APP" && node scripts/check-personal.mjs > /tmp/pers.out 2>&1); P=$?; tail -1 /tmp/pers.out
 # DB 에러가 수강생이 읽을 수 있는 말로 나오나 (리허설에서 날코드가 화면에 그대로 떴던 건)
 node db-error-unit.mjs > /tmp/dberr.out 2>&1; D=$?; tail -1 /tmp/dberr.out
+# Claude API 가 거절했을 때도 사람이 읽을 수 있는 말이 나오나
+#   (리허설에서 401 응답 JSON 이 화면에 그대로 떴던 건)
+node claude-error-unit.mjs > /tmp/clerr.out 2>&1; C=$?; tail -1 /tmp/clerr.out
 
 (fuser -k 4330/tcp 2>/dev/null || true)
 
@@ -112,6 +118,7 @@ FAILED=""
 [ $U -ne 0 ] && FAILED="$FAILED 단위점검"
 [ $P -ne 0 ] && FAILED="$FAILED 개인정보"
 [ $D -ne 0 ] && FAILED="$FAILED DB에러문구"
+[ $C -ne 0 ] && FAILED="$FAILED AI에러문구"
 if [ -z "$FAILED" ]; then
   echo "
 ✅ 전면 검수 통과"
@@ -119,6 +126,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out"
   exit 1
 fi

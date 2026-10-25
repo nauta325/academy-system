@@ -10,7 +10,8 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="$(cd "$HERE/../.." && pwd)"
-PS="psql -h /tmp -p 5433 -U postgres"
+export PGSOCK="${PGSOCK:-/var/run/postgresql}"   # /tmp 는 정리돼서 소켓이 사라집니다
+PS="psql -h $PGSOCK -p 5433 -U postgres"
 DB=pcheck
 FAIL=0
 note() { echo "  $1"; }
@@ -18,12 +19,12 @@ bad()  { echo "  ❌ $1"; FAIL=1; }
 
 # ── 0. 테스트용 PostgreSQL 준비 (없으면 만들고, 꺼져 있으면 켠다) ──────────
 if ! $PS -tAc "select 1" >/dev/null 2>&1; then
-  if [ ! -f /tmp/pgtest/PG_VERSION ]; then
-    rm -rf /tmp/pgtest && mkdir -p /tmp/pgtest && chown postgres:postgres /tmp/pgtest
-    su postgres -s /bin/bash -c "/usr/lib/postgresql/16/bin/initdb -D /tmp/pgtest -A trust -U postgres" >/dev/null 2>&1
+  if [ ! -f /var/lib/pgtest/PG_VERSION ]; then
+    rm -rf /var/lib/pgtest && mkdir -p /var/lib/pgtest && chown postgres:postgres /var/lib/pgtest
+    su postgres -s /bin/bash -c "/usr/lib/postgresql/16/bin/initdb -D /var/lib/pgtest -A trust -U postgres" >/dev/null 2>&1
   fi
   su postgres -s /bin/bash -c \
-    "/usr/lib/postgresql/16/bin/pg_ctl -D /tmp/pgtest -o '-p 5433 -k /tmp' -l /tmp/pgtest/log start" >/dev/null 2>&1
+    "/usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/pgtest -o '-p 5433 -k /var/run/postgresql' -l /var/lib/pgtest/log start" >/dev/null 2>&1
   sleep 3
 fi
 $PS -tAc "select 1" >/dev/null 2>&1 || { echo "❌ 테스트용 PostgreSQL(5433)을 못 띄웠습니다"; exit 1; }

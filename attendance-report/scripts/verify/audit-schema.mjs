@@ -8,7 +8,7 @@ const APP = path.resolve(import.meta.dirname, "../..");
 // DB 이름은 verify.sh 가 만드는 것과 같아야 합니다(기본 tapp).
 // 예전에 여기만 't1' 으로 박혀 있어서 이 검사가 매번 죽었고, verify.sh 가 그걸 무시했습니다.
 const DB = process.env.TESTDB || "tapp";
-const PSQL = `psql -h /tmp -p 5433 -U postgres -d ${DB} -tAc`;
+const PSQL = `psql -h ${process.env.PGSOCK || '/var/run/postgresql'} -p 5433 -U postgres -d ${DB} -tAc`;
 
 // 실제 스키마
 const rows = execSync(`${PSQL} "select table_name||'.'||column_name from information_schema.columns where table_schema='public' order by 1;"`)

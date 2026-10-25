@@ -253,8 +253,14 @@ await pg.waitForTimeout(900);
 ck("books.html 교재 목록 보임", (await pg.locator("body").innerText()).includes("그래머"), null);
 
 // 현황판
-// 🏠 홈 버튼 — 화면끼리 왔다 갔다 되는지. 넣어놓고 아무도 안 보던 것이라 여기서 봅니다.
-for (const path of ["/board.html", "/daily.html", "/students.html", "/books.html", "/report.html"]) {
+// 🏠 홈 버튼 — 화면끼리 왔다 갔다 되는지.
+//   ★ 여기에 화면을 빠뜨리면 그 화면만 홈 버튼 없이 나갑니다. 실제로 선생님앱이
+//     목록에 없어서 「홈으로 가는 버튼이 없다」는 말을 들었습니다.
+//     원장님이 쓰는 화면은 **전부** 넣으세요.
+//     (student.html·parent.html 은 학생·학부모 화면이라 홈으로 보내지 않습니다)
+for (const path of ["/board.html", "/daily.html", "/students.html", "/books.html",
+                    "/report.html", "/teacher.html", "/student_card.html",
+                    "/kiosk.html", "/import.html"]) {
   await pg.goto(B + path, { waitUntil: "networkidle" });
   const home = pg.locator('a[href="/"]').first();
   const 있나 = (await home.count()) > 0;

@@ -130,7 +130,44 @@ export async function generateReport({ student, month, planner, comment, dailyNo
     },
     body: JSON.stringify({ model: MODEL, max_tokens: 2000, system, messages: [{ role: "user", content: user }] }),
   });
-  if (!res.ok) throw new Error(`Claude 호출 실패: ${res.status} ${await res.text()}`);
+  if (!res.ok) throw new Error(await friendlyClaudeError(res));
   const d = await res.json();
   return (d.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+}
+
+// Claude API 가 거절했을 때 **사람이 읽을 수 있는 말**로 바꿔 줍니다.
+//   예전에는 응답 JSON 을 그대로 화면에 뿌려서
+//   `401 {"type":"error","error":{"type":"authentication_error",...}}` 이 떴습니다.
+//   수강생은 이걸 보면 앱이 고장난 줄 압니다. 무엇을 하면 되는지까지 적어 줍니다.
+async function friendlyClaudeError(res) {
+  const raw = await res.text().catch(() => "");
+  let kind = "";
+  try { kind = JSON.parse(raw)?.error?.type || ""; } catch { /* JSON 이 아니면 그냥 넘어갑니다 */ }
+
+  const 환경변수안내 =
+    "Vercel → Settings → Environment Variables 에서 ANTHROPIC_API_KEY 를 고친 뒤 " +
+    "**Redeploy** 하셔야 적용됩니다.";
+
+  if (res.status === 401 || kind === "authentication_error")
+    return "월말평가서 AI 키가 올바르지 않습니다 (401). " +
+      "console.anthropic.com → API Keys 에서 키를 새로 만들어 넣어 주세요. " +
+      "`sk-ant-` 로 시작해야 하고, 앞뒤에 공백이나 줄바꿈이 들어가면 안 됩니다. " + 환경변수안내;
+
+  if (res.status === 400 && kind === "invalid_request_error" && /credit|balance/i.test(raw))
+    return "Anthropic 크레딧이 부족합니다. console.anthropic.com → Billing 에서 충전해 주세요. " +
+      "(평가서 한 장에 수십 원 수준입니다)";
+
+  if (res.status === 403 || kind === "permission_error")
+    return "이 키로는 월말평가서 모델을 쓸 수 없습니다 (403). " +
+      "console.anthropic.com 에서 결제수단이 등록돼 있는지 보세요. " + 환경변수안내;
+
+  if (res.status === 429 || kind === "rate_limit_error")
+    return "요청이 몰렸습니다 (429). 1~2분 뒤에 다시 눌러 주세요. " +
+      "여러 명을 한꺼번에 돌리셨다면 나눠서 돌리시면 됩니다.";
+
+  if (res.status >= 500)
+    return `Anthropic 쪽이 잠시 불안정합니다 (${res.status}). 잠시 뒤 다시 눌러 주세요. ` +
+      "평가서 통계·저장·학부모 열람은 그대로 됩니다.";
+
+  return `월말평가서 생성에 실패했습니다 (${res.status}). ${String(raw).slice(0, 200)}`;
 }
