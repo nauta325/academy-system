@@ -223,19 +223,65 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
   <div class="card">
     <ul class="step-list">
       <li><b>vercel.com</b> → <b>Add New → Project</b> → 방금 복제한 리포 <b>Import</b>.</li>
-      <li>(하위 폴더 템플릿이면) <b>Root Directory</b> 를 <code>attendance-report</code> 로 지정.</li>
-      <li><b>Environment Variables</b> 에 아래 값을 입력:</li>
+      <li>🔴 <b>Root Directory</b> 를 <code>attendance-report</code> 로 바꾸세요. <b>기본값 <code>./</code> 그대로 두면 사이트가 404 납니다</b> — 제일 많이 틀리는 곳입니다.</li>
+      <li><b>Environment Variables</b> 를 펼치고 아래 값을 입력:</li>
     </ul>
     <table class="tb">
       <tr><th>이름</th><th>값</th><th>필수</th></tr>
       <tr><td><code>SUPABASE_URL</code></td><td><b>Project URL</b> (앞에서 복사)</td><td>✅</td></tr>
-      <tr><td><code>SUPABASE_SERVICE_KEY</code></td><td><b>service_role</b> 키</td><td>✅</td></tr>
+      <tr><td><code>SUPABASE_SERVICE_KEY</code></td><td><b>service_role</b> 키 (anon 아님)</td><td>✅</td></tr>
       <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Claude 키 (월말평가서 생성용)</td><td>선택</td></tr>
     </table>
     <ul class="step-list" style="margin-top:8px">
       <li><b>Deploy</b> 클릭 → 1~2분 후 <b>내 주소</b>(<code>https://내프로젝트.vercel.app</code>)가 생깁니다.</li>
       <li>주소 뒤에 <code>/</code> 를 붙여 홈을 열면 4개 화면 버튼이 보여요.</li>
     </ul>
+
+    <div class="sec-header" style="margin-top:28px"><div class="sec-num">03b</div><div><div class="sec-label">옆에 띄워놓고 쓰세요</div><div class="sec-title">환경변수 한 판 — 이름을 그대로 복사</div></div></div>
+    <p>변수 <b>이름</b>은 글자 하나라도 다르면 못 알아봅니다. 아래를 복사해 두고 이름 칸에 붙여넣으세요.
+      <b>값</b>은 각자 자기 것을 넣습니다. <b>필수 2개만 있으면 일단 돌아갑니다.</b></p>
+    <div class="copy-wrap">
+      <div class="copy-head"><span class="copy-label">필수 — 이것만 있으면 화면이 돕니다</span><button class="copy-btn" onclick="cp(this,'env1')">복사</button></div>
+      <div class="copy-body" id="env1">SUPABASE_URL
+SUPABASE_SERVICE_KEY</div>
+    </div>
+    <div class="copy-wrap">
+      <div class="copy-head"><span class="copy-label">선택 — 월말평가서 AI · 학원 이름/색</span><button class="copy-btn" onclick="cp(this,'env2')">복사</button></div>
+      <div class="copy-body" id="env2">ANTHROPIC_API_KEY
+ACADEMY_NAME
+BRAND_COLOR
+CRON_SECRET</div>
+    </div>
+    <div class="copy-wrap">
+      <div class="copy-head"><span class="copy-label">선택 — 알림톡(솔라피). 검수 끝난 분만</span><button class="copy-btn" onclick="cp(this,'env3')">복사</button></div>
+      <div class="copy-body" id="env3">SOLAPI_API_KEY
+SOLAPI_API_SECRET
+SOLAPI_SENDER
+SOLAPI_PFID
+TPL_CHECKIN
+TPL_CHECKOUT
+TPL_LATE
+TPL_DAILY
+TPL_REPORT
+TPL_RETEST</div>
+    </div>
+    <div class="copy-wrap">
+      <div class="copy-head"><span class="copy-label">선택 — 노션에서 옮겨올 분만 (1·2차 수강생)</span><button class="copy-btn" onclick="cp(this,'env4')">복사</button></div>
+      <div class="copy-body" id="env4">NOTION_TOKEN
+NOTION_STUDENTS_DB
+NOTION_DAILY_DB
+NOTION_TEXTBOOKS_DB
+NOTION_REPORTS_DB
+NOTION_COMMENTS_DB</div>
+    </div>
+
+    <div class="hl-box yellow"><strong>🔁 지금 못 넣었어도 괜찮습니다 — 나중에 얼마든지 추가됩니다</strong><br>
+      알림톡 검수가 안 끝났거나 키를 아직 못 받았으면 <b>비워두고 Deploy 하세요.</b> 없는 값은 조용히 건너뜁니다.<br><br>
+      <b>나중에 넣는 곳 —</b> Vercel → 내 프로젝트 → <b>Settings</b> → <b>Environment Variables</b> → <b>Add New</b> →
+      이름·값 넣고 <b>Save</b><br>
+      <b>🔴 그리고 반드시 — Deployments → 맨 위 것 <code>⋯</code> → Redeploy</b><br>
+      환경변수는 <b>이미 배포된 것에는 적용되지 않습니다.</b> 재배포를 안 해서
+      "분명히 넣었는데 안 돼요" 하는 경우가 제일 많아요.</div>
     <div class="hl-box green"><strong>✓ 주소가 바뀌지 않습니다.</strong> 코드를 고치면 알아서 다시 배포되는데 주소는 그대로라, 학부모에게 이미 보낸 링크가 계속 살아 있습니다.<span class="prev-note">1·2차 들으신 분께 — 앱스크립트에서 「새 배포」 누를 때마다 학부모 링크가 전멸하던 사고가 없습니다.</span></div>
     <div class="hl-box teal"><strong>🔑 Claude 키 없으면?</strong> 통계·저장·출결·학부모 열람은 다 됩니다. "AI 평가서 생성" 버튼만 비활성. 키는 나중에 넣어도 돼요.</div>
   </div>
@@ -432,15 +478,20 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
     <ul class="step-list">
       <li>솔라피 가입 → 카카오 비즈니스 채널 연동(<code>pfId</code>) → 발신번호 등록 → API 키/시크릿.</li>
       <li>템플릿 6종(등원/하원/미등원/<b>데일리리포트</b>/월말/<b>재시 안내</b>) 등록 → 검수 요청 → 승인되면 각 <b>템플릿 ID</b> 확보. <b>이전 세미나에서 등록한 템플릿은 그대로 재사용</b>하시면 됩니다(1차=데일리리포트, 2차=나머지 4종). 1·2차를 다 들으셨다면 <b>재시 안내 하나만</b> 새로 신청하시면 돼요.</li>
-      <li>Vercel 환경변수에 아래를 추가하고 재배포:</li>
+      <li>Vercel → <b>Settings → Environment Variables</b> 에 아래를 추가하고 <b>🔴 반드시 Redeploy</b>
+        (<b>03b</b> 의 「알림톡」 복사 블록을 쓰시면 이름을 안 틀립니다):</li>
     </ul>
     <table class="tb">
       <tr><th>변수</th><th>값</th></tr>
       <tr><td><code>SOLAPI_API_KEY</code> / <code>SOLAPI_API_SECRET</code></td><td>솔라피 API 키/시크릿</td></tr>
       <tr><td><code>SOLAPI_SENDER</code></td><td>등록한 발신번호</td></tr>
       <tr><td><code>SOLAPI_PFID</code></td><td>카카오 채널 pfId</td></tr>
-      <tr><td><code>TPL_CHECKIN</code> / <code>TPL_LATE</code> / <code>TPL_DAILY</code> / <code>TPL_REPORT</code></td><td>템플릿 ID (등원 · 미등원 · 데일리리포트 · 월말평가서)</td></tr>
+      <tr><td><code>TPL_CHECKIN</code> / <code>TPL_CHECKOUT</code> / <code>TPL_LATE</code></td><td>템플릿 ID (등원 · 하원 · 미등원)</td></tr>
+      <tr><td><code>TPL_DAILY</code> / <code>TPL_REPORT</code> / <code>TPL_RETEST</code></td><td>템플릿 ID (데일리리포트 · 월말평가서 · 재시 안내)</td></tr>
     </table>
+    <div class="hl-box red"><strong>⚠️ 샘플 학생 번호로 테스트하지 마세요</strong><br>
+      샘플 3명의 연락처는 가짜(<code>010-0000-000X</code>)입니다. 먼저 <b>학생 한 명의 번호를 내 번호로</b> 바꾸고
+      키오스크를 눌러보세요. 안 바꾸면 없는 번호로 나가서 실패만 쌓입니다.</div>
     <div class="hl-box teal"><strong>✓ 알림톡 없이도 완주 가능</strong><br>솔라피를 안 넣으면 발송만 조용히 건너뛰고 출결·평가서·학부모 열람은 전부 정상입니다. 검수 대기가 병목이 안 돼요.</div>
   </div>
 </div>
