@@ -111,6 +111,18 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
 .footer-left .ft-title{font-size:15px;font-weight:900;margin-bottom:4px}
 .footer-left .ft-sub{font-size:12px;color:var(--muted2)}
 .footer-right{font-size:12px;color:var(--muted);text-align:right;line-height:1.8}
+
+  /* 프롬프트 찾기 — 수업 중에 옆에 띄워놓고 쓰는 화면이라 빨리 찾는 게 제일 중요합니다 */
+  .pfind{display:flex;gap:10px;align-items:center;margin-top:12px}
+  .pfind input{flex:1;padding:13px 16px;border:2px solid #e6e2da;border-radius:12px;
+    font-size:15px;font-family:inherit;outline:none}
+  .pfind input:focus{border-color:var(--claude)}
+  .pcount{font-size:13px;color:var(--muted);white-space:nowrap}
+  .psec{margin-top:26px}
+  .ptitle{font-size:16px;font-weight:700;color:var(--ink);margin:0 0 10px;display:flex;gap:8px;align-items:center}
+  .ptitle span{font-size:12px;font-weight:600;color:var(--muted);background:#f1ede5;
+    border-radius:999px;padding:2px 9px}
+  .pnone{padding:22px;text-align:center;color:var(--muted);font-size:14px}
 </style>
 </head>
 <body>
@@ -364,34 +376,428 @@ NOTION_COMMENTS_DB</div>
 <div class="part-divider claude-part"><div class="pd-inner"><div class="pd-num">03</div><div><div class="pd-label">PART THREE · CLAUDE</div><div class="pd-title">이제부터가 진짜 — 말해서 고치기</div></div></div></div>
 
 <div class="content" id="vibe">
-  <div class="sec-header"><div class="sec-num claude-num">08</div><div><div class="sec-label">바이브 코딩</div><div class="sec-title">코드 안 열고, 말로 바꾼다</div></div></div>
+  <div class="sec-header"><div class="sec-num claude-num">08</div><div><div class="sec-label">바이브 코딩</div><div class="sec-title">코드 안 열고, 말로 바꾼다</div></div>
   <div class="card claude-card">
-    <p>바꾸고 싶은 게 생기면 <b>클로드(웹)에 내 리포를 연결</b>하고 아래처럼 말하면 됩니다. 클로드가 코드를 고치고 푸시하면 몇 분 뒤 내 사이트에 반영돼요. 아래 문장을 <b>그대로 복사</b>해서 시작해보세요.</p>
-    <div class="copy-wrap claude">
-      <div class="copy-head"><span class="copy-label">① 평가서 어투 바꾸기</span><button class="copy-btn" onclick="cp(this,'p1')">복사</button></div>
-      <div class="copy-body prompt" id="p1">월말평가서 어투를 더 따뜻하고 구체적으로 바꿔줘. 그리고 3문단으로 써지게 해줘. lib/claude.js 의 프롬프트를 고치면 돼.</div>
+    <p>고치고 싶은 게 생기면 <b>클로드에 내 저장소를 연결</b>하고 아래 문장을 <b>그대로 복사</b>해서 말하면 됩니다.
+      <b>51개</b>를 상황별로 모아뒀어요. 수업 중에 이 화면을 옆에 띄워두고 쓰세요.</p>
+    <div class="pfind">
+      <input id="pq" type="search" placeholder="찾기 — 예: 평가서, 진도, 알림톡, 교재"
+             oninput="pfilter(this.value)" autocomplete="off">
+      <span class="pcount" id="pcount">51개</span>
     </div>
-    <div class="copy-wrap claude">
-      <div class="copy-head"><span class="copy-label">② 현황판 지각생 강조</span><button class="copy-btn" onclick="cp(this,'p2')">복사</button></div>
-      <div class="copy-body prompt" id="p2">출결 현황판에서 지각한 학생 카드는 노란색 배경으로 눈에 띄게 표시해줘. board.html 을 고치면 돼.</div>
-    </div>
-    <div class="copy-wrap claude">
-      <div class="copy-head"><span class="copy-label">③ 우리 학원 요일 추가</span><button class="copy-btn" onclick="cp(this,'p3')">복사</button></div>
-      <div class="copy-body prompt" id="p3">우리 학원은 토요일도 수업해. 학생 관리 화면과 출결 판정에 토요일을 추가해줘.</div>
-    </div>
-    <div class="copy-wrap claude">
-      <div class="copy-head"><span class="copy-label">④ 미등원 판정 시간 조정</span><button class="copy-btn" onclick="cp(this,'p4')">복사</button></div>
-      <div class="copy-body prompt" id="p4">미등원 알림은 예정 등원시간에서 20분 지난 뒤에 뜨게 바꿔줘. 지각 유예도 20분으로 맞춰줘.</div>
-    </div>
-    <div class="copy-wrap claude">
-      <div class="copy-head"><span class="copy-label">⑤ 과목 추가 (수학)</span><button class="copy-btn" onclick="cp(this,'p5')">복사</button></div>
-      <div class="copy-body prompt" id="p5">우리 학원은 수학도 가르쳐. 학생 교재·진도에 수학 과목을 추가해줘. 데이터는 jsonb라 스키마는 안 바꿔도 될 거야.</div>
-    </div>
-    <div class="hl-box claude"><strong>막히면 그대로 물어보세요</strong><br>에러가 나면 <b>에러 메시지를 통째로 복사해서</b> 클로드에게 붙여넣고 "이 에러 고쳐줘"라고 하면 됩니다. FAQ를 뒤질 필요가 없어요.</div>
   </div>
-</div>
+  <div class="psec"><h3 class="ptitle">우리 학원 것으로 바꾸기 <span>5</span></h3>
+    <div class="copy-wrap claude pitem" data-k="우리 학원 것으로 바꾸기 ① 학원 이름과 색을 내 학원으로  config.js 에서 학원 이름을 &quot;○○영어학원&quot;으로, 대표 색을 남색으로 바꿔줘.
+모든 화면에 한 번에 적용돼야 해.">
+      <div class="copy-head"><span class="copy-label">① 학원 이름과 색을 내 학원으로</span><button class="copy-btn" onclick="cp(this,'pp1')">복사</button></div>
+      <div class="copy-body prompt" id="pp1">config.js 에서 학원 이름을 "○○영어학원"으로, 대표 색을 남색으로 바꿔줘.
+모든 화면에 한 번에 적용돼야 해.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="우리 학원 것으로 바꾸기 ② 과목이 우리랑 다를 때 (구문·듣기 등 추가)  우리 학원은 과목이 문법·리딩·단어 말고 '구문'이 하나 더 있어.
+데일리 리포트 화면과 알림톡 변수에 '구문'도 나오게 해줘.
+books 와 progress 는 jsonb 라 컬럼 추가 없이 키만 늘리면 될 거야.">
+      <div class="copy-head"><span class="copy-label">② 과목이 우리랑 다를 때 (구문·듣기 등 추가)</span><button class="copy-btn" onclick="cp(this,'pp2')">복사</button></div>
+      <div class="copy-body prompt" id="pp2">우리 학원은 과목이 문법·리딩·단어 말고 '구문'이 하나 더 있어.
+데일리 리포트 화면과 알림톡 변수에 '구문'도 나오게 해줘.
+books 와 progress 는 jsonb 라 컬럼 추가 없이 키만 늘리면 될 거야.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="우리 학원 것으로 바꾸기 ③ 영어 학원이 아닐 때  우리는 수학 학원이야. 문법/리딩/단어 대신 '연산'과 '교과' 두 과목으로 바꿔줘.
+화면(daily.html)·알림톡 변수·월말평가서까지 같이 맞춰줘.">
+      <div class="copy-head"><span class="copy-label">③ 영어 학원이 아닐 때</span><button class="copy-btn" onclick="cp(this,'pp3')">복사</button></div>
+      <div class="copy-body prompt" id="pp3">우리는 수학 학원이야. 문법/리딩/단어 대신 '연산'과 '교과' 두 과목으로 바꿔줘.
+화면(daily.html)·알림톡 변수·월말평가서까지 같이 맞춰줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="우리 학원 것으로 바꾸기 ④ 지각 기준이 우리와 다를 때  지각 유예를 10분이 아니라 5분으로 바꿔줘.
+api/attendance.js 의 GRACE 를 고치면 될 거야.">
+      <div class="copy-head"><span class="copy-label">④ 지각 기준이 우리와 다를 때</span><button class="copy-btn" onclick="cp(this,'pp4')">복사</button></div>
+      <div class="copy-body prompt" id="pp4">지각 유예를 10분이 아니라 5분으로 바꿔줘.
+api/attendance.js 의 GRACE 를 고치면 될 거야.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="우리 학원 것으로 바꾸기 ⑤ 하원 예정 시간 표시 기준  '곧 하원'을 수업 끝나기 15분 전이 아니라 10분 전부터 뜨게 해줘.">
+      <div class="copy-head"><span class="copy-label">⑤ 하원 예정 시간 표시 기준</span><button class="copy-btn" onclick="cp(this,'pp5')">복사</button></div>
+      <div class="copy-body prompt" id="pp5">'곧 하원'을 수업 끝나기 15분 전이 아니라 10분 전부터 뜨게 해줘.</div>
+    </div>
+  </div>
+  <div class="psec"><h3 class="ptitle">교재 목차 넣기 (제일 먼저 하실 것) <span>9</span></h3>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊷ 복사한 목차를 형식에 맞추기 ★ 가장 많이 씁니다 (목차를 여기 붙여넣고)
 
-<div class="part-divider claude-part"><div class="pd-inner"><div class="pd-num">04</div><div><div class="pd-label">PART FOUR · YOUR OWN</div><div class="pd-title">내 학원 프로그램으로 만들기</div></div></div></div>
+이 목차를 「유닛코드 | 제목」 형식으로 한 줄씩 정리해줘.
+우리 교재 코드는 CH1-1 처럼 써.">
+      <div class="copy-head"><span class="copy-label">㊷ 복사한 목차를 형식에 맞추기 · ★ 가장 많이 씁니다</span><button class="copy-btn" onclick="cp(this,'pp6')">복사</button></div>
+      <div class="copy-body prompt" id="pp6">(목차를 여기 붙여넣고)
+
+이 목차를 「유닛코드 | 제목」 형식으로 한 줄씩 정리해줘.
+우리 교재 코드는 CH1-1 처럼 써.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊸ 목차 사진에서 뽑기  (목차 쪽 사진을 올리고)
+
+이 사진의 목차를 읽어서 「유닛코드 | 제목」 한 줄씩으로 바꿔줘.">
+      <div class="copy-head"><span class="copy-label">㊸ 목차 사진에서 뽑기</span><button class="copy-btn" onclick="cp(this,'pp7')">복사</button></div>
+      <div class="copy-body prompt" id="pp7">(목차 쪽 사진을 올리고)
+
+이 사진의 목차를 읽어서 「유닛코드 | 제목」 한 줄씩으로 바꿔줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊹ 유닛 번호만 쭉 필요할 때  Unit 1부터 30까지 한 줄씩 만들어줘.">
+      <div class="copy-head"><span class="copy-label">㊹ 유닛 번호만 쭉 필요할 때</span><button class="copy-btn" onclick="cp(this,'pp8')">복사</button></div>
+      <div class="copy-body prompt" id="pp8">Unit 1부터 30까지 한 줄씩 만들어줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊺ 복습 주차를 끼워 넣기  이 목차에서 유닛 4개마다 「복습 | 앞 4개 다시」 줄을 하나씩 끼워 넣어줘.">
+      <div class="copy-head"><span class="copy-label">㊺ 복습 주차를 끼워 넣기</span><button class="copy-btn" onclick="cp(this,'pp9')">복사</button></div>
+      <div class="copy-body prompt" id="pp9">이 목차에서 유닛 4개마다 「복습 | 앞 4개 다시」 줄을 하나씩 끼워 넣어줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊼-A 모든 유닛에 같은 과제 (매일 똑같이 내주는 학원) 이 목차 전부에 집과제를 「단어 30개 암기」로 똑같이 넣어줘.
+「유닛코드 | 제목 | 집과제」 형식으로 다시 보여줘.">
+      <div class="copy-head"><span class="copy-label">㊼-A 모든 유닛에 같은 과제 · (매일 똑같이 내주는 학원)</span><button class="copy-btn" onclick="cp(this,'pp10')">복사</button></div>
+      <div class="copy-body prompt" id="pp10">이 목차 전부에 집과제를 「단어 30개 암기」로 똑같이 넣어줘.
+「유닛코드 | 제목 | 집과제」 형식으로 다시 보여줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊼-B 유닛마다 다른 과제 (워크북이 진도를 따라갈 때) 유닛마다 집과제를 「워크북 그 유닛 풀기」로 넣어줘. 유닛 번호는 각 줄에 맞춰서.
+학원과제는 전부 「본문 2회 소리내어 읽기」로.
+「유닛코드 | 제목 | 집과제 | 학원과제」 형식으로 보여줘.">
+      <div class="copy-head"><span class="copy-label">㊼-B 유닛마다 다른 과제 · (워크북이 진도를 따라갈 때)</span><button class="copy-btn" onclick="cp(this,'pp11')">복사</button></div>
+      <div class="copy-body prompt" id="pp11">유닛마다 집과제를 「워크북 그 유닛 풀기」로 넣어줘. 유닛 번호는 각 줄에 맞춰서.
+학원과제는 전부 「본문 2회 소리내어 읽기」로.
+「유닛코드 | 제목 | 집과제 | 학원과제」 형식으로 보여줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊼-C 챕터마다 다른 과제  5유닛이 한 챕터야. 챕터가 바뀔 때마다 집과제를 「Ch번호 워크북」으로 넣어줘.
+같은 챕터 안에서는 같은 과제로.">
+      <div class="copy-head"><span class="copy-label">㊼-C 챕터마다 다른 과제</span><button class="copy-btn" onclick="cp(this,'pp12')">복사</button></div>
+      <div class="copy-body prompt" id="pp12">5유닛이 한 챕터야. 챕터가 바뀔 때마다 집과제를 「Ch번호 워크북」으로 넣어줘.
+같은 챕터 안에서는 같은 과제로.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊼-D 일부만 예외로 바꾸기  Unit 7만 집과제를 「복습지 풀기」로 바꿔줘. 나머지는 그대로 두고.">
+      <div class="copy-head"><span class="copy-label">㊼-D 일부만 예외로 바꾸기</span><button class="copy-btn" onclick="cp(this,'pp13')">복사</button></div>
+      <div class="copy-body prompt" id="pp13">Unit 7만 집과제를 「복습지 풀기」로 바꿔줘. 나머지는 그대로 두고.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊻ 교재명이 안 맞아 진도가 멈출 때  데일리 리포트에 &quot;목차에 없어서 여기서 멈춥니다&quot; 가 떴어.
+학생DB 교재명과 교재DB 교재명이 다른 것 같은데, 다른 것들만 찾아서 알려줘.">
+      <div class="copy-head"><span class="copy-label">㊻ 교재명이 안 맞아 진도가 멈출 때</span><button class="copy-btn" onclick="cp(this,'pp14')">복사</button></div>
+      <div class="copy-body prompt" id="pp14">데일리 리포트에 "목차에 없어서 여기서 멈춥니다" 가 떴어.
+학생DB 교재명과 교재DB 교재명이 다른 것 같은데, 다른 것들만 찾아서 알려줘.</div>
+    </div>
+  </div>
+  <div class="psec"><h3 class="ptitle">진도 규칙 — 우리 학원 방식대로 <span>6</span></h3>
+    <div class="copy-wrap claude pitem" data-k="진도 규칙 — 우리 학원 방식대로 ⑥ 단어테스트를 안 봤으면 진도를 멈추고 싶을 때 ★ 가장 많이 쓰십니다 단어테스트 결과가 비어 있으면(테스트를 안 봤으면) 단어 진도를 다음으로
+넘기지 말고 같은 유닛으로 두게 해줘. lib/progress.js 의 advanceProgress() 를
+고치면 될 거야. 다른 과목은 지금처럼 그대로 넘어가야 해.">
+      <div class="copy-head"><span class="copy-label">⑥ 단어테스트를 안 봤으면 진도를 멈추고 싶을 때 · ★ 가장 많이 쓰십니다</span><button class="copy-btn" onclick="cp(this,'pp15')">복사</button></div>
+      <div class="copy-body prompt" id="pp15">단어테스트 결과가 비어 있으면(테스트를 안 봤으면) 단어 진도를 다음으로
+넘기지 말고 같은 유닛으로 두게 해줘. lib/progress.js 의 advanceProgress() 를
+고치면 될 거야. 다른 과목은 지금처럼 그대로 넘어가야 해.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="진도 규칙 — 우리 학원 방식대로 ⑦ 단어테스트에 떨어지면 재시험으로  단어테스트가 '불통과'면 다음 수업 단어 진도를 같은 유닛으로 두고
+제목 뒤에 &quot;-재시&quot;를 붙여줘.">
+      <div class="copy-head"><span class="copy-label">⑦ 단어테스트에 떨어지면 재시험으로</span><button class="copy-btn" onclick="cp(this,'pp16')">복사</button></div>
+      <div class="copy-body prompt" id="pp16">단어테스트가 '불통과'면 다음 수업 단어 진도를 같은 유닛으로 두고
+제목 뒤에 "-재시"를 붙여줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="진도 규칙 — 우리 학원 방식대로 ⑧ 하루에 두 유닛씩 나가는 과목  리딩은 하루에 두 유닛씩 나가. books.html 에서 교재마다 정한 '하루 진도'를
+2로 넣으면 되는지 확인하고, 안 되면 그렇게 동작하게 고쳐줘.">
+      <div class="copy-head"><span class="copy-label">⑧ 하루에 두 유닛씩 나가는 과목</span><button class="copy-btn" onclick="cp(this,'pp17')">복사</button></div>
+      <div class="copy-body prompt" id="pp17">리딩은 하루에 두 유닛씩 나가. books.html 에서 교재마다 정한 '하루 진도'를
+2로 넣으면 되는지 확인하고, 안 되면 그렇게 동작하게 고쳐줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="진도 규칙 — 우리 학원 방식대로 ⑨ 복습 주기를 자동으로  문법은 유닛 4개마다 복습을 한 번 넣고 싶어. 교재 목차에 복습 줄을 직접
+끼워 넣는 대신, 4개 나갈 때마다 자동으로 &quot;복습&quot; 유닛이 들어가게 해줘.">
+      <div class="copy-head"><span class="copy-label">⑨ 복습 주기를 자동으로</span><button class="copy-btn" onclick="cp(this,'pp18')">복사</button></div>
+      <div class="copy-body prompt" id="pp18">문법은 유닛 4개마다 복습을 한 번 넣고 싶어. 교재 목차에 복습 줄을 직접
+끼워 넣는 대신, 4개 나갈 때마다 자동으로 "복습" 유닛이 들어가게 해줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="진도 규칙 — 우리 학원 방식대로 ⑩ 교재를 다 끝냈을 때  교재 목차가 끝났을 때 마지막 유닛에서 멈추지 말고,
+학생DB에 지정한 다음 교재의 1번으로 자동으로 넘어가게 해줘.">
+      <div class="copy-head"><span class="copy-label">⑩ 교재를 다 끝냈을 때</span><button class="copy-btn" onclick="cp(this,'pp19')">복사</button></div>
+      <div class="copy-body prompt" id="pp19">교재 목차가 끝났을 때 마지막 유닛에서 멈추지 말고,
+학생DB에 지정한 다음 교재의 1번으로 자동으로 넘어가게 해줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="진도 규칙 — 우리 학원 방식대로 ⑪ 결석한 날은 진도를 건너뛰게  결석한 날은 진도가 나가지 않게 해줘. 다음 등원하는 날 그 유닛부터
+이어가야 해.">
+      <div class="copy-head"><span class="copy-label">⑪ 결석한 날은 진도를 건너뛰게</span><button class="copy-btn" onclick="cp(this,'pp20')">복사</button></div>
+      <div class="copy-body prompt" id="pp20">결석한 날은 진도가 나가지 않게 해줘. 다음 등원하는 날 그 유닛부터
+이어가야 해.</div>
+    </div>
+  </div>
+  <div class="psec"><h3 class="ptitle">과제 — 우리 학원 방식대로 <span>4</span></h3>
+    <div class="copy-wrap claude pitem" data-k="과제 — 우리 학원 방식대로 ⑫ 안 한 과제를 다음 수업으로 넘기기 ★ 선생님앱에서 과제 줄 옆에 &quot;다음 수업으로&quot; 버튼을 만들어줘.
+누르면 그 과제가 다음 수업일로 날짜만 바뀌어 옮겨가고,
+원래 날짜에는 '미완료'로 남아 있어야 해.">
+      <div class="copy-head"><span class="copy-label">⑫ 안 한 과제를 다음 수업으로 넘기기 · ★</span><button class="copy-btn" onclick="cp(this,'pp21')">복사</button></div>
+      <div class="copy-body prompt" id="pp21">선생님앱에서 과제 줄 옆에 "다음 수업으로" 버튼을 만들어줘.
+누르면 그 과제가 다음 수업일로 날짜만 바뀌어 옮겨가고,
+원래 날짜에는 '미완료'로 남아 있어야 해.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="과제 — 우리 학원 방식대로 ⑬ 집과제만 따로 보기  선생님앱 과제 현황에서 '집과제만' / '학원과제만' 으로 걸러 볼 수 있게 해줘.">
+      <div class="copy-head"><span class="copy-label">⑬ 집과제만 따로 보기</span><button class="copy-btn" onclick="cp(this,'pp22')">복사</button></div>
+      <div class="copy-body prompt" id="pp22">선생님앱 과제 현황에서 '집과제만' / '학원과제만' 으로 걸러 볼 수 있게 해줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="과제 — 우리 학원 방식대로 ⑭ 과제를 안 한 학생만 추려서  과제 체크 현황에서 오늘 과제를 하나도 안 한 학생만 위로 모아서 보여줘.">
+      <div class="copy-head"><span class="copy-label">⑭ 과제를 안 한 학생만 추려서</span><button class="copy-btn" onclick="cp(this,'pp23')">복사</button></div>
+      <div class="copy-body prompt" id="pp23">과제 체크 현황에서 오늘 과제를 하나도 안 한 학생만 위로 모아서 보여줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="과제 — 우리 학원 방식대로 ⑮ 과제 완료율을 학부모에게도  월말평가서 학부모 화면에서 '과제 체크' 비율을 도넛 그래프로도 보여줘.
+지금은 숫자만 나와.">
+      <div class="copy-head"><span class="copy-label">⑮ 과제 완료율을 학부모에게도</span><button class="copy-btn" onclick="cp(this,'pp24')">복사</button></div>
+      <div class="copy-body prompt" id="pp24">월말평가서 학부모 화면에서 '과제 체크' 비율을 도넛 그래프로도 보여줘.
+지금은 숫자만 나와.</div>
+    </div>
+  </div>
+  <div class="psec"><h3 class="ptitle">학생앱·선생님앱 꾸미기 <span>4</span></h3>
+    <div class="copy-wrap claude pitem" data-k="학생앱·선생님앱 꾸미기 ⑯ 학생이 더 하고 싶게  학생앱(student.html)에서 오늘 과제를 다 체크하면 축하 메시지와
+별 스티커가 뜨게 해줘.">
+      <div class="copy-head"><span class="copy-label">⑯ 학생이 더 하고 싶게</span><button class="copy-btn" onclick="cp(this,'pp25')">복사</button></div>
+      <div class="copy-body prompt" id="pp25">학생앱(student.html)에서 오늘 과제를 다 체크하면 축하 메시지와
+별 스티커가 뜨게 해줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="학생앱·선생님앱 꾸미기 ⑰ 밀린 과제를 눈에 띄게  학생앱에서 지난 과제 중 아직 안 한 게 있으면 맨 위에 빨간 띠로
+&quot;안 한 과제 N개&quot;라고 보여줘.">
+      <div class="copy-head"><span class="copy-label">⑰ 밀린 과제를 눈에 띄게</span><button class="copy-btn" onclick="cp(this,'pp26')">복사</button></div>
+      <div class="copy-body prompt" id="pp26">학생앱에서 지난 과제 중 아직 안 한 게 있으면 맨 위에 빨간 띠로
+"안 한 과제 N개"라고 보여줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="학생앱·선생님앱 꾸미기 ⑱ 학생 화면 글씨 크기  학생앱은 초등학생이 봐. 글씨를 한 단계 크게 하고 버튼도 손가락으로
+누르기 쉽게 키워줘.">
+      <div class="copy-head"><span class="copy-label">⑱ 학생 화면 글씨 크기</span><button class="copy-btn" onclick="cp(this,'pp27')">복사</button></div>
+      <div class="copy-body prompt" id="pp27">학생앱은 초등학생이 봐. 글씨를 한 단계 크게 하고 버튼도 손가락으로
+누르기 쉽게 키워줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="학생앱·선생님앱 꾸미기 ⑲ 선생님앱에 내 반 요약  선생님앱 맨 위에 &quot;오늘 내 담당 ○명 중 등원 ○명, 과제 미완료 ○명&quot;을
+한 줄로 보여줘.">
+      <div class="copy-head"><span class="copy-label">⑲ 선생님앱에 내 반 요약</span><button class="copy-btn" onclick="cp(this,'pp28')">복사</button></div>
+      <div class="copy-body prompt" id="pp28">선생님앱 맨 위에 "오늘 내 담당 ○명 중 등원 ○명, 과제 미완료 ○명"을
+한 줄로 보여줘.</div>
+    </div>
+  </div>
+  <div class="psec"><h3 class="ptitle">월말평가서 어투·내용 <span>5</span></h3>
+    <div class="copy-wrap claude pitem" data-k="월말평가서 어투·내용 ⑳-A ★ 실제로 쓰고 있는 지침 통째로 넣기 (제일 많이 쓰시게 될 것) ★★★ 절대 금지 사항 (최우선) ★★★
+1. 마크다운/서식 기호 일체 사용 금지: #, ##, ###, **, *, -, 글머리 기호 모두 금지.
+   제목도 기호 없이 순수 텍스트로만 쓰세요.
+2. 구체적 숫자/횟수 금지: &quot;18회 수업&quot;, &quot;15회 중 14회 통과&quot;, &quot;93%&quot; 같은 구체적 숫자를 쓰지 마세요.
+   대신 &quot;거의 매 수업 빠짐없이 출석&quot;, &quot;대부분의 단어 테스트를 통과&quot;, &quot;꾸준히 과제를 완료&quot;
+   같은 대략적 표현을 쓰세요.
+3. &quot;~학생&quot;이라는 호칭 금지. 반드시 &quot;~이는&quot; 또는 &quot;~는&quot; 형태로 부르세요.
+   두 글자 이름이면 &quot;~는&quot;(예: &quot;수호는&quot;), 세 글자 이름이면 &quot;~이는&quot;(예: &quot;태민이는&quot;).
+
+[기본 구조]
+첫 줄에 리포트 제목을 쓰되 기호 없이 텍스트로만.
+본문은 자연스러운 문단으로 이어서 작성. 섹션 제목이나 구분선 없이 흐르듯이.
+절대 포함 금지: &quot;최종 진도&quot; 섹션, &quot;데이터 검증&quot; 섹션, 담당교사 정보, 메타데이터 표.
+
+[날짜/진도 표기]
+금지: 구체적 날짜(1월 5일), 세부 유닛번호(Unit 12, Day 38, CH 3).
+사용: 시기 표현(초반, 중순, 후반), 내용 중심(비교급과 최상급을 학습).
+
+[교재 전환 표기 - 중요]
+교재 전환 내역이 제공되면 반드시 본문에 자연스럽게 언급하세요.
+예시: &quot;문법 교재인 시제스타터 1을 마무리하고, 시제스타터 2로 넘어가 학습을 이어가고 있습니다.&quot;
+교재명은 그대로 사용하되, 유닛번호나 Day번호는 언급하지 마세요.
+
+[영역별 작성]
+리딩: 교재명과 학습 방법 중심. 문장 해석, 주어·동사 찾기, 문단 요약 등.
+문법: 학습한 문법 개념을 자연스럽게 서술(챕터 번호 없이). 이해도와 문제점 중심.
+단어: &quot;꾸준히 통과하고 있습니다&quot;, &quot;간혹 재시험을 보기도 했습니다&quot; 같은 대략적 경향만.
+
+[출석/태도/과제 표현 방법]
+절대로 &quot;16회 수업 중 15회 정시 출석&quot; 같은 구체적 숫자를 쓰지 마세요.
+대신 &quot;거의 빠짐없이 정시에 등원하고 있습니다&quot;, &quot;수업 태도가 대체로 양호합니다&quot;,
+&quot;과제 완수율이 높은 편입니다&quot; 등 자연스러운 문장을 쓰세요.
+지각이나 결석이 거의 없으면 굳이 언급하지 마세요.
+
+[금지 사항]
+과제 미이행 1~2회, 교재 미지참, 지각 1~2회, 컨디션 문제 같은 일회성 지적 금지.
+재시험 날짜, 점수 세부(100점, 90점), 방학 특강 시간 금지.
+
+[중학생 대상]
+선생님 참고사항에 중학생이라고 표시된 경우: 내신 대비, 수행평가, 서술형 문제 대비 언급 필수.
+
+[다음달 계획]
+교재 진행 방향(구체적 챕터 없이), 학습 방향(복습/심화), 개선 목표 포함.
+
+[학부모 안내 멘트]
+리포트 마지막에 가정에서 도움이 될 실천 사항 1~2가지를 자연스럽게 안내.
+
+[형식]
+800~1000자. 순수 텍스트만(plain text). #, **, * 등 기호 일체 금지.
+선생님 1인칭. 자연스러운 문장 연결. 긍정적이되 개선점 명확히. 과도한 격려 문구 지양.
+단락 구분은 빈 줄로만 하세요.">
+      <div class="copy-head"><span class="copy-label">⑳-A ★ 실제로 쓰고 있는 지침 통째로 넣기 · (제일 많이 쓰시게 될 것)</span><button class="copy-btn" onclick="cp(this,'pp29')">복사</button></div>
+      <div class="copy-body prompt" id="pp29">★★★ 절대 금지 사항 (최우선) ★★★
+1. 마크다운/서식 기호 일체 사용 금지: #, ##, ###, **, *, -, 글머리 기호 모두 금지.
+   제목도 기호 없이 순수 텍스트로만 쓰세요.
+2. 구체적 숫자/횟수 금지: "18회 수업", "15회 중 14회 통과", "93%" 같은 구체적 숫자를 쓰지 마세요.
+   대신 "거의 매 수업 빠짐없이 출석", "대부분의 단어 테스트를 통과", "꾸준히 과제를 완료"
+   같은 대략적 표현을 쓰세요.
+3. "~학생"이라는 호칭 금지. 반드시 "~이는" 또는 "~는" 형태로 부르세요.
+   두 글자 이름이면 "~는"(예: "수호는"), 세 글자 이름이면 "~이는"(예: "태민이는").
+
+[기본 구조]
+첫 줄에 리포트 제목을 쓰되 기호 없이 텍스트로만.
+본문은 자연스러운 문단으로 이어서 작성. 섹션 제목이나 구분선 없이 흐르듯이.
+절대 포함 금지: "최종 진도" 섹션, "데이터 검증" 섹션, 담당교사 정보, 메타데이터 표.
+
+[날짜/진도 표기]
+금지: 구체적 날짜(1월 5일), 세부 유닛번호(Unit 12, Day 38, CH 3).
+사용: 시기 표현(초반, 중순, 후반), 내용 중심(비교급과 최상급을 학습).
+
+[교재 전환 표기 - 중요]
+교재 전환 내역이 제공되면 반드시 본문에 자연스럽게 언급하세요.
+예시: "문법 교재인 시제스타터 1을 마무리하고, 시제스타터 2로 넘어가 학습을 이어가고 있습니다."
+교재명은 그대로 사용하되, 유닛번호나 Day번호는 언급하지 마세요.
+
+[영역별 작성]
+리딩: 교재명과 학습 방법 중심. 문장 해석, 주어·동사 찾기, 문단 요약 등.
+문법: 학습한 문법 개념을 자연스럽게 서술(챕터 번호 없이). 이해도와 문제점 중심.
+단어: "꾸준히 통과하고 있습니다", "간혹 재시험을 보기도 했습니다" 같은 대략적 경향만.
+
+[출석/태도/과제 표현 방법]
+절대로 "16회 수업 중 15회 정시 출석" 같은 구체적 숫자를 쓰지 마세요.
+대신 "거의 빠짐없이 정시에 등원하고 있습니다", "수업 태도가 대체로 양호합니다",
+"과제 완수율이 높은 편입니다" 등 자연스러운 문장을 쓰세요.
+지각이나 결석이 거의 없으면 굳이 언급하지 마세요.
+
+[금지 사항]
+과제 미이행 1~2회, 교재 미지참, 지각 1~2회, 컨디션 문제 같은 일회성 지적 금지.
+재시험 날짜, 점수 세부(100점, 90점), 방학 특강 시간 금지.
+
+[중학생 대상]
+선생님 참고사항에 중학생이라고 표시된 경우: 내신 대비, 수행평가, 서술형 문제 대비 언급 필수.
+
+[다음달 계획]
+교재 진행 방향(구체적 챕터 없이), 학습 방향(복습/심화), 개선 목표 포함.
+
+[학부모 안내 멘트]
+리포트 마지막에 가정에서 도움이 될 실천 사항 1~2가지를 자연스럽게 안내.
+
+[형식]
+800~1000자. 순수 텍스트만(plain text). #, **, * 등 기호 일체 금지.
+선생님 1인칭. 자연스러운 문장 연결. 긍정적이되 개선점 명확히. 과도한 격려 문구 지양.
+단락 구분은 빈 줄로만 하세요.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="월말평가서 어투·내용 ⑳ 평가서 말투를 우리 학원 스타일로  월말평가서 말투를 조금 더 따뜻하고 구체적으로 바꿔줘.
+학부모님께 보내는 글이라 지적보다 성장한 점을 앞에 두고,
+마지막 문단에 다음 달 목표를 한 줄 넣어줘.
+lib/claude.js 의 reportGuideline() 을 고치면 될 거야.">
+      <div class="copy-head"><span class="copy-label">⑳ 평가서 말투를 우리 학원 스타일로</span><button class="copy-btn" onclick="cp(this,'pp30')">복사</button></div>
+      <div class="copy-body prompt" id="pp30">월말평가서 말투를 조금 더 따뜻하고 구체적으로 바꿔줘.
+학부모님께 보내는 글이라 지적보다 성장한 점을 앞에 두고,
+마지막 문단에 다음 달 목표를 한 줄 넣어줘.
+lib/claude.js 의 reportGuideline() 을 고치면 될 거야.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="월말평가서 어투·내용 ㉑ 길이 조절  월말평가서가 너무 길어. 지금의 2/3 정도로 줄이고 문단은 3개로 맞춰줘.">
+      <div class="copy-head"><span class="copy-label">㉑ 길이 조절</span><button class="copy-btn" onclick="cp(this,'pp31')">복사</button></div>
+      <div class="copy-body prompt" id="pp31">월말평가서가 너무 길어. 지금의 2/3 정도로 줄이고 문단은 3개로 맞춰줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="월말평가서 어투·내용 ㉒ 특정 내용을 꼭 넣거나 빼기  월말평가서에 지각 횟수는 쓰지 말고, 단어테스트 통과율은 꼭 넣어줘.">
+      <div class="copy-head"><span class="copy-label">㉒ 특정 내용을 꼭 넣거나 빼기</span><button class="copy-btn" onclick="cp(this,'pp32')">복사</button></div>
+      <div class="copy-body prompt" id="pp32">월말평가서에 지각 횟수는 쓰지 말고, 단어테스트 통과율은 꼭 넣어줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="월말평가서 어투·내용 ㉓ 중등부·초등부 말투를 다르게  중학생 평가서는 입시 관점을 한 줄 넣고, 초등학생 평가서는
+칭찬 위주로 써줘. 학년(grade)을 보고 나누면 돼.">
+      <div class="copy-head"><span class="copy-label">㉓ 중등부·초등부 말투를 다르게</span><button class="copy-btn" onclick="cp(this,'pp33')">복사</button></div>
+      <div class="copy-body prompt" id="pp33">중학생 평가서는 입시 관점을 한 줄 넣고, 초등학생 평가서는
+칭찬 위주로 써줘. 학년(grade)을 보고 나누면 돼.</div>
+    </div>
+  </div>
+  <div class="psec"><h3 class="ptitle">알림톡 <span>5</span></h3>
+    <div class="copy-wrap claude pitem" data-k="알림톡 ㉔ 보내는 시점 바꾸기  등원 알림톡을 등원할 때마다 보내지 말고, 지각일 때만 보내게 해줘.">
+      <div class="copy-head"><span class="copy-label">㉔ 보내는 시점 바꾸기</span><button class="copy-btn" onclick="cp(this,'pp34')">복사</button></div>
+      <div class="copy-body prompt" id="pp34">등원 알림톡을 등원할 때마다 보내지 말고, 지각일 때만 보내게 해줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="알림톡 ㉕ 리포트 카톡에 한 줄 더  데일리 리포트 카톡에 '오늘 과제' 한 줄을 추가하고 싶어.
+솔라피 템플릿에 #{오늘과제} 변수를 추가할 테니 그 값도 같이 보내줘.">
+      <div class="copy-head"><span class="copy-label">㉕ 리포트 카톡에 한 줄 더</span><button class="copy-btn" onclick="cp(this,'pp35')">복사</button></div>
+      <div class="copy-body prompt" id="pp35">데일리 리포트 카톡에 '오늘 과제' 한 줄을 추가하고 싶어.
+솔라피 템플릿에 #{오늘과제} 변수를 추가할 테니 그 값도 같이 보내줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="알림톡 ㉞ 재시 기준을 점수로 자동 판정  단어테스트 점수를 적으면 18/20 미만일 때 자동으로 '불통과'가 되게 해줘.
+그러면 재시 안내 큐에도 자동으로 올라가야 해. (api/attendance.js 의 save-record)">
+      <div class="copy-head"><span class="copy-label">㉞ 재시 기준을 점수로 자동 판정</span><button class="copy-btn" onclick="cp(this,'pp36')">복사</button></div>
+      <div class="copy-body prompt" id="pp36">단어테스트 점수를 적으면 18/20 미만일 때 자동으로 '불통과'가 되게 해줘.
+그러면 재시 안내 큐에도 자동으로 올라가야 해. (api/attendance.js 의 save-record)</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="알림톡 ㉟ 재시 안내를 문장 테스트에도  단어 말고 '문장 테스트' 결과도 불통과면 재시 안내 카톡이 나가게 해줘.
+템플릿은 따로 올릴 거야. 변수는 #{학생이름} #{날짜} #{구문교재} #{영작테스트} #{점수} 로.">
+      <div class="copy-head"><span class="copy-label">㉟ 재시 안내를 문장 테스트에도</span><button class="copy-btn" onclick="cp(this,'pp37')">복사</button></div>
+      <div class="copy-body prompt" id="pp37">단어 말고 '문장 테스트' 결과도 불통과면 재시 안내 카톡이 나가게 해줘.
+템플릿은 따로 올릴 거야. 변수는 #{학생이름} #{날짜} #{구문교재} #{영작테스트} #{점수} 로.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="알림톡 ㊱ 재시 안내를 모아서 저녁에 한 번만  재시 안내 카톡을 그때그때 보내지 말고, 하루치를 모아서 내가 버튼을 누를 때만 나가게 해줘.
+(지금도 버튼식이면 그대로 두고, 버튼에 '오늘 재시 n명'이 보이게 해줘)">
+      <div class="copy-head"><span class="copy-label">㊱ 재시 안내를 모아서 저녁에 한 번만</span><button class="copy-btn" onclick="cp(this,'pp38')">복사</button></div>
+      <div class="copy-body prompt" id="pp38">재시 안내 카톡을 그때그때 보내지 말고, 하루치를 모아서 내가 버튼을 누를 때만 나가게 해줘.
+(지금도 버튼식이면 그대로 두고, 버튼에 '오늘 재시 n명'이 보이게 해줘)</div>
+    </div>
+  </div>
+  <div class="psec"><h3 class="ptitle">화면·디자인 <span>3</span></h3>
+    <div class="copy-wrap claude pitem" data-k="화면·디자인 ㉖ 자주 쓰는 칸을 위로  데일리 리포트 카드에서 '단어테스트' 칸을 맨 위로 올려줘.
+선생님이 제일 먼저 적는 칸이라서.">
+      <div class="copy-head"><span class="copy-label">㉖ 자주 쓰는 칸을 위로</span><button class="copy-btn" onclick="cp(this,'pp39')">복사</button></div>
+      <div class="copy-body prompt" id="pp39">데일리 리포트 카드에서 '단어테스트' 칸을 맨 위로 올려줘.
+선생님이 제일 먼저 적는 칸이라서.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="화면·디자인 ㉗ 인쇄  월말평가서를 A4 한 장으로 인쇄할 수 있게 인쇄 버튼을 만들어줘.">
+      <div class="copy-head"><span class="copy-label">㉗ 인쇄</span><button class="copy-btn" onclick="cp(this,'pp40')">복사</button></div>
+      <div class="copy-body prompt" id="pp40">월말평가서를 A4 한 장으로 인쇄할 수 있게 인쇄 버튼을 만들어줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="화면·디자인 ㉘ 현황판을 교실 TV에  출석 현황판을 교실 TV에 띄울 거야. 글씨를 크게 하고 30초마다
+자동 새로고침되게 해줘.">
+      <div class="copy-head"><span class="copy-label">㉘ 현황판을 교실 TV에</span><button class="copy-btn" onclick="cp(this,'pp41')">복사</button></div>
+      <div class="copy-body prompt" id="pp41">출석 현황판을 교실 TV에 띄울 거야. 글씨를 크게 하고 30초마다
+자동 새로고침되게 해줘.</div>
+    </div>
+  </div>
+  <div class="psec"><h3 class="ptitle">학생 카드 (지난 진도 보기) <span>5</span></h3>
+    <div class="copy-wrap claude pitem" data-k="학생 카드 (지난 진도 보기) ㊲ 보는 기간 바꾸기  학생 카드의 기간 버튼을 1주/1달/3달 말고 1달/3달/6달로 바꿔줘.">
+      <div class="copy-head"><span class="copy-label">㊲ 보는 기간 바꾸기</span><button class="copy-btn" onclick="cp(this,'pp42')">복사</button></div>
+      <div class="copy-body prompt" id="pp42">학생 카드의 기간 버튼을 1주/1달/3달 말고 1달/3달/6달로 바꿔줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="학생 카드 (지난 진도 보기) ㊳ 표에 칸 더하기  학생 카드의 📅 진도 표에 '등원시간' 칸을 하나 더 넣어줘.">
+      <div class="copy-head"><span class="copy-label">㊳ 표에 칸 더하기</span><button class="copy-btn" onclick="cp(this,'pp43')">복사</button></div>
+      <div class="copy-body prompt" id="pp43">학생 카드의 📅 진도 표에 '등원시간' 칸을 하나 더 넣어줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="학생 카드 (지난 진도 보기) ㊴ 월말평가서 쓸 때 옆에 띄우기  월말평가서 화면(report.html)에서 학생을 고르면, 그 학생의 학생 카드로 가는 링크가 같이 보이게 해줘.
+평가서를 쓰면서 지난 진도를 확인하고 싶어.">
+      <div class="copy-head"><span class="copy-label">㊴ 월말평가서 쓸 때 옆에 띄우기</span><button class="copy-btn" onclick="cp(this,'pp44')">복사</button></div>
+      <div class="copy-body prompt" id="pp44">월말평가서 화면(report.html)에서 학생을 고르면, 그 학생의 학생 카드로 가는 링크가 같이 보이게 해줘.
+평가서를 쓰면서 지난 진도를 확인하고 싶어.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="학생 카드 (지난 진도 보기) ㊵ 인쇄해서 상담에 쓰기  학생 카드를 A4 한 장으로 인쇄하면 깔끔하게 나오게 해줘.
+메뉴·버튼은 인쇄에서 빼고, 📊 과목별 진도와 📅 진도 표만 나오면 돼.">
+      <div class="copy-head"><span class="copy-label">㊵ 인쇄해서 상담에 쓰기</span><button class="copy-btn" onclick="cp(this,'pp45')">복사</button></div>
+      <div class="copy-body prompt" id="pp45">학생 카드를 A4 한 장으로 인쇄하면 깔끔하게 나오게 해줘.
+메뉴·버튼은 인쇄에서 빼고, 📊 과목별 진도와 📅 진도 표만 나오면 돼.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="학생 카드 (지난 진도 보기) ㊶ 멈춘 아이만 모아 보기  같은 진도가 3번 넘게 이어진 학생만 모아서 보여주는 화면을 만들어줘.
+학생 카드의 📊 과목별 진도에서 쓰는 계산을 그대로 쓰면 될 거야.">
+      <div class="copy-head"><span class="copy-label">㊶ 멈춘 아이만 모아 보기</span><button class="copy-btn" onclick="cp(this,'pp46')">복사</button></div>
+      <div class="copy-body prompt" id="pp46">같은 진도가 3번 넘게 이어진 학생만 모아서 보여주는 화면을 만들어줘.
+학생 카드의 📊 과목별 진도에서 쓰는 계산을 그대로 쓰면 될 거야.</div>
+    </div>
+  </div>
+  <div class="psec"><h3 class="ptitle">막혔을 때 <span>5</span></h3>
+    <div class="copy-wrap claude pitem" data-k="막혔을 때 ㉙ 에러가 났을 때 ★ 제일 많이 쓰십니다 이 에러 원인을 찾아서 고쳐줘:
+(에러 화면을 그대로 붙여넣기)">
+      <div class="copy-head"><span class="copy-label">㉙ 에러가 났을 때 · ★ 제일 많이 쓰십니다</span><button class="copy-btn" onclick="cp(this,'pp47')">복사</button></div>
+      <div class="copy-body prompt" id="pp47">이 에러 원인을 찾아서 고쳐줘:
+(에러 화면을 그대로 붙여넣기)</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="막혔을 때 ㉚ 화면이 비어 있을 때  데일리 리포트에 학생이 한 명도 안 보여. 왜 그런지 확인하고 고쳐줘.">
+      <div class="copy-head"><span class="copy-label">㉚ 화면이 비어 있을 때</span><button class="copy-btn" onclick="cp(this,'pp48')">복사</button></div>
+      <div class="copy-body prompt" id="pp48">데일리 리포트에 학생이 한 명도 안 보여. 왜 그런지 확인하고 고쳐줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="막혔을 때 ㉛ 진도가 안 넘어갈 때  ○○ 학생의 문법 진도가 계속 같은 유닛에 멈춰 있어. 왜 그런지 찾아줘.">
+      <div class="copy-head"><span class="copy-label">㉛ 진도가 안 넘어갈 때</span><button class="copy-btn" onclick="cp(this,'pp49')">복사</button></div>
+      <div class="copy-body prompt" id="pp49">○○ 학생의 문법 진도가 계속 같은 유닛에 멈춰 있어. 왜 그런지 찾아줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="막혔을 때 ㉜ 되돌리고 싶을 때  방금 바꾼 거 되돌려줘.">
+      <div class="copy-head"><span class="copy-label">㉜ 되돌리고 싶을 때</span><button class="copy-btn" onclick="cp(this,'pp50')">복사</button></div>
+      <div class="copy-body prompt" id="pp50">방금 바꾼 거 되돌려줘.</div>
+    </div>
+    <div class="copy-wrap claude pitem" data-k="막혔을 때 ㉝ 뭘 고쳤는지 모르겠을 때  방금 무슨 파일을 어떻게 바꿨는지 쉬운 말로 설명해줘.">
+      <div class="copy-head"><span class="copy-label">㉝ 뭘 고쳤는지 모르겠을 때</span><button class="copy-btn" onclick="cp(this,'pp51')">복사</button></div>
+      <div class="copy-body prompt" id="pp51">방금 무슨 파일을 어떻게 바꿨는지 쉬운 말로 설명해줘.</div>
+    </div>
+  </div>
+  <div class="pnone" id="pnone" hidden>그런 말은 아직 없어요. 다른 낱말로 찾아보세요.</div>
+</div>
 
 <div class="content" id="mine">
   <div class="card claude-card">
@@ -541,6 +947,20 @@ NOTION_COMMENTS_DB</div>
 </div>
 
 <script>
+// 프롬프트 찾기 — 낱말이 들어간 것만 남깁니다
+function pfilter(q){
+  q=(q||"").trim().toLowerCase();
+  var items=document.querySelectorAll(".pitem"), n=0;
+  items.forEach(function(el){
+    var hit = !q || (el.getAttribute("data-k")||"").toLowerCase().indexOf(q)>-1;
+    el.hidden = !hit; if(hit) n++;
+  });
+  document.querySelectorAll(".psec").forEach(function(sec){
+    sec.hidden = !sec.querySelector(".pitem:not([hidden])");
+  });
+  document.getElementById("pcount").textContent = n + "개";
+  document.getElementById("pnone").hidden = n>0;
+}
 function cp(btn,id){
   var t=document.getElementById(id).innerText;
   navigator.clipboard.writeText(t).then(function(){

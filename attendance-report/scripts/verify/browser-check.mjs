@@ -21,7 +21,7 @@ const PAGES = [
   { p: "/teacher.html", wait: "body", must: null },
   { p: "/student.html", wait: "body", must: null },
   { p: "/import.html", wait: "body", must: null },
-  { p: "/handout.html", wait: "body", must: null },
+  { p: "/handout.html", wait: "body", must: "#pq" },   // 프롬프트 찾기 상자
   { p: "/parent.html", wait: "body", must: null },
 ];
 
@@ -253,6 +253,25 @@ await pg.waitForTimeout(900);
 ck("books.html 교재 목록 보임", (await pg.locator("body").innerText()).includes("그래머"), null);
 
 // 현황판
+// 수업 중에 **옆에 띄워놓고 복사**하는 화면 — 프롬프트가 다 있고 찾기가 되나.
+//   예전에는 51개 중 8개만 있었고 나머지는 노션에서 긁어야 했습니다.
+{
+  await pg.goto(B + "/handout.html", { waitUntil: "networkidle" });
+  await pg.waitForTimeout(900);
+  const n = await pg.locator(".pitem").count();
+  ck("핸드아웃에 프롬프트가 다 있다 (50개 이상)", n >= 50, { n });
+  await pg.fill("#pq", "평가서");
+  await pg.waitForTimeout(400);
+  const hit = await pg.locator(".pitem:not([hidden])").count();
+  ck("찾기가 걸러준다", hit > 0 && hit < n, { 전체: n, 걸러진것: hit });
+  await pg.fill("#pq", "");
+  await pg.waitForTimeout(300);
+  const btn = pg.locator(".pitem .copy-btn").first();
+  await btn.click();
+  await pg.waitForTimeout(500);
+  ck("복사 버튼이 눌린다", /복사됨/.test(await btn.innerText()), await btn.innerText());
+}
+
 // 🏠 홈 버튼 — 화면끼리 왔다 갔다 되는지.
 //   ★ 여기에 화면을 빠뜨리면 그 화면만 홈 버튼 없이 나갑니다. 실제로 선생님앱이
 //     목록에 없어서 「홈으로 가는 버튼이 없다」는 말을 들었습니다.
