@@ -19,12 +19,49 @@ export async function tocByBook() {
   const books = await select("textbooks", "select=name,units,step");
   const map = {};
   for (const b of books) {
+    const raw = Array.isArray(b.units) ? b.units : [];
     map[b.name] = {
-      units: (Array.isArray(b.units) ? b.units : []).map(normUnit).filter(Boolean),
+      units: raw.map(normUnit).filter(Boolean),
       step: Number(b.step) > 0 ? Number(b.step) : 1,
+      // 유닛에 적어둔 과제. normUnit 이 code·title 만 남기므로 여기 따로 담습니다
+      // (진도 기록에는 과제를 넣지 않습니다 — 교재 과제를 고쳐도 지난 기록이 안 바뀌게)
+      hwByCode: hwIndex(raw),
     };
   }
   return map;
+}
+
+// 「쉼표로 여러 개」를 배열로. 운영(code.gs)의 집과제 파싱과 같은 규칙입니다.
+function toList(v) {
+  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
+  return String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
+}
+
+// 유닛코드 → { 집과제: [...], 학원과제: "..." }
+function hwIndex(units) {
+  const out = {};
+  for (const u of units) {
+    if (!u || typeof u !== "object" || !u.code) continue;
+    const 집 = toList(u.집과제);
+    const 학원 = String(u.학원과제 || "").trim();
+    if (집.length || 학원) out[String(u.code)] = { 집과제: 집, 학원과제: 학원 };
+  }
+  return out;
+}
+
+// 그날 진도에 맞는 **자동 과제**를 만듭니다.
+//   진도가 Unit 5 면 교재 목차의 Unit 5 칸에 적힌 과제가 그 학생에게 들어갑니다.
+//   유닛에 과제를 안 적어둔 교재는 아무것도 안 나옵니다 (지금까지와 똑같이 동작).
+export function tasksForProgress({ progress, books, toc, student_id, date }) {
+  const rows = [];
+  for (const [subject, unit] of Object.entries(progress || {})) {
+    const bookName = (books || {})[subject];
+    const hw = bookName && toc?.[bookName]?.hwByCode?.[String(unit?.code ?? unit ?? "")];
+    if (!hw) continue;
+    for (const title of hw.집과제) rows.push({ student_id, date, kind: "집", subject, title, auto: true });
+    if (hw.학원과제) rows.push({ student_id, date, kind: "학원", subject, title: hw.학원과제, auto: true });
+  }
+  return rows;
 }
 
 // 비교용 키 — 공백·대소문자·구두점을 지운다.

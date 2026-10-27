@@ -30,7 +30,7 @@
 import { select, insert, patch, remove, dbConfigured } from "../lib/db.js";
 import { kstNow, toMinutes, addMinutes } from "../lib/time.js";
 import { sendAlimtalk, TPL } from "../lib/solapi.js";
-import { tocByBook, advanceProgress, normUnit, linkStatus } from "../lib/progress.js";
+import { tocByBook, advanceProgress, normUnit, linkStatus, tasksForProgress } from "../lib/progress.js";
 
 const GRACE = 10;       // 지각 유예(분)
 const LEAVE_SOON = 15;  // "곧 하원" 판단(예상 하원시간 15분 전부터)
@@ -130,6 +130,19 @@ function lateness(scheduled, actual) {
   const a = toMinutes(actual);
   if (s === null || a === null) return "정시"; // 예정시간 없으면 정시 처리
   return a > s + GRACE ? "지각" : "정시";
+}
+
+// 그날 진도에 맞는 **자동 과제**를 다시 깝니다.
+//   · auto=true (진도에서 나온 것) 만 지우고 새로 만듭니다.
+//   · 선생님이 손으로 낸 과제(auto=false)는 **절대 건드리지 않습니다.**
+//   · 유닛에 과제를 안 적어둔 교재는 아무것도 안 생깁니다 (기존 설치와 동일).
+async function syncAutoTasks(student, date, progress, toc) {
+  const rows = tasksForProgress({
+    progress, books: student.books, toc, student_id: student.id, date,
+  });
+  await remove("tasks", `student_id=eq.${student.id}&date=eq.${date}&auto=is.true`);
+  if (rows.length) await insert("tasks", rows);
+  return rows.length;
 }
 
 export default async function handler(req, res) {
@@ -248,6 +261,14 @@ export default async function handler(req, res) {
         const created = isFuture
           ? toCreate.map((r) => ({ ...r, preview: true }))
           : await insert("daily_records", toCreate);
+        // 진도가 정해지는 바로 이 지점에서 **그 유닛의 과제**를 깔아줍니다.
+        //   미래 날짜는 행을 저장하지 않으므로 과제도 만들지 않습니다.
+        if (!isFuture) {
+          for (const r of toCreate) {
+            const stu = missing.find((x) => x.id === r.student_id);
+            if (stu) await syncAutoTasks(stu, date, r.progress, toc);
+          }
+        }
         records = records.concat(created);
         recBy = Object.fromEntries(records.map((r) => [r.student_id, r]));
       }
@@ -590,6 +611,12 @@ export default async function handler(req, res) {
       const q = retestQueueValue(row.retest_sent, "voca_test" in (fields || {}) ? fields.voca_test : row.voca_test);
       if (q !== undefined) body.retest_sent = q;
       const upd = (await patch("daily_records", `id=eq.${row.id}`, body))[0];
+      // 진도를 고쳤으면 그 유닛의 자동 과제도 따라 바뀌어야 합니다.
+      //   (선생님이 손으로 낸 과제는 syncAutoTasks 가 건드리지 않습니다)
+      if ("progress" in body) {
+        const stu = (await select("students", `id=eq.${student_id}&limit=1`))[0];
+        if (stu) await syncAutoTasks(stu, d, body.progress, await tocByBook());
+      }
       return res.status(200).json({ record: upd });
     }
 
@@ -752,6 +779,7 @@ export default async function handler(req, res) {
           id: t.id, student_id: t.student_id, name: nameBy[t.student_id] || "",
           date: t.date, kind: t.kind, subject: t.subject, title: t.title,
           done: t.done, done_at: t.done_at,
+          auto: t.auto === true,   // 진도에서 저절로 생긴 과제인지 (화면에 표시)
         })),
       });
     }

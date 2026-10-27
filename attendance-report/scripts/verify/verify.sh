@@ -71,6 +71,11 @@ echo "── 3-1-B. 학생 등록 → 키오스크 → 진도 수정 → 평가�
 node student-flow-check.mjs > /tmp/flow.out 2>&1; F=$?; tail -3 /tmp/flow.out
 (fuser -k 4399/tcp 2>/dev/null)
 
+echo "── 3-1-D. 유닛 과제 자동 배정 ──"
+#  교재 목차에 적어둔 과제가 **그 학생 진도에 맞춰** 나가나.
+#  특히 「선생님이 손으로 낸 과제는 안 지워진다」가 깨지면 수업이 틀어집니다.
+node auto-task-check.mjs > /tmp/auto.out 2>&1; T=$?; tail -3 /tmp/auto.out
+
 echo "── 3-1-C. 나머지 동작 (하원·교재삭제·평가서 다시열기) ──"
 node rest-actions-check.mjs > /tmp/rest.out 2>&1; X=$?; tail -3 /tmp/rest.out
 
@@ -114,6 +119,7 @@ FAILED=""
 [ $R -ne 0 ] && FAILED="$FAILED 월말평가서·진도조정"
 [ $F -ne 0 ] && FAILED="$FAILED 학생등록흐름"
 [ $X -ne 0 ] && FAILED="$FAILED 나머지동작"
+[ $T -ne 0 ] && FAILED="$FAILED 유닛과제자동"
 [ $N -ne 0 ] && FAILED="$FAILED 노션이관"
 [ $U -ne 0 ] && FAILED="$FAILED 단위점검"
 [ $P -ne 0 ] && FAILED="$FAILED 개인정보"
@@ -126,6 +132,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out"
   exit 1
 fi

@@ -27,6 +27,13 @@ function buildWhere(params, vals) {
       parts.push(`"${k}" in (${ph.join(",")})`);
       continue;
     }
+    // is.true / is.false / is.null — 진짜 PostgREST 가 지원하는 형태라 검수 서버도 받습니다.
+    //   (없으면 "검수에서만 안 되는" 상황이 생겨서 실제와 어긋납니다)
+    if (op === "is") {
+      const t = String(raw).toLowerCase();
+      if (t === "true" || t === "false" || t === "null") { parts.push(`"${k}" is ${t}`); continue; }
+      throw new Error(`is 뒤에는 true/false/null 만 옵니다 (${k}=${v})`);
+    }
     if (!OPS[op]) throw new Error(`지원 안 하는 연산자: ${op} (${k}=${v})`);
     if (raw === "null") { parts.push(`"${k}" is ${op === "eq" ? "" : "not "}null`); continue; }
     vals.push(raw);

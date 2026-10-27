@@ -64,6 +64,7 @@
 
     .empty { text-align: center; color: #aaa; font-size: 13px; padding: 20px 0; }
     .links a { color: var(--green); font-size: 13px; margin-right: 14px; }
+    .tag.auto { background: #eef4ff; color: #2b5fd9; border-color: #d4e1fb; }
     .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(120px); background: #333; color: #fff; padding: 11px 22px; border-radius: 10px; font-size: 13px; z-index: 300; transition: transform .3s; }
     .toast.show { transform: translateX(-50%) translateY(0); }
   </style>
@@ -284,7 +285,11 @@
     $('tasks').innerHTML = t.map(function (x) {
       return '<div class="tline' + (x.done ? ' done' : '') + '"><div class="who">' + esc(x.name) + '</div>'
         + '<div class="ti">' + esc(x.title) + ' <span class="tag' + (x.kind === '집' ? ' home' : '') + '">' + esc(x.kind) + '</span>'
-        + (x.subject ? ' <span class="tag">' + esc(x.subject) + '</span>' : '') + '</div>'
+        + (x.subject ? ' <span class="tag">' + esc(x.subject) + '</span>' : '')
+        // 교재 목차에서 저절로 나온 과제는 표시해 둡니다. 지워도 **진도를 고치면 다시**
+        // 생기기 때문에, 선생님이 "왜 또 생겼지?" 하지 않도록 구분해 줍니다.
+        + (x.auto ? ' <span class="tag auto" title="교재 목차의 과제에서 자동으로 나온 것입니다">자동</span>' : '')
+        + '</div>'
         + '<div class="st ' + (x.done ? 'y' : 'n') + '">' + (x.done ? '완료' : '미완료') + '</div>'
         + '<button class="x" title="삭제" onclick="del(\'' + x.id + '\')">✕</button></div>';
     }).join('');

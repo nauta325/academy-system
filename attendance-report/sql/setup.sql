@@ -111,6 +111,10 @@ create table tasks (
   title      text not null,                  -- 과제 내용 (예: "Unit 5 워크북 p.42~45")
   done       boolean not null default false, -- 학생이 체크했는지
   done_at    timestamptz,                    -- 체크한 시각
+  -- 교재 목차의 유닛에 적어둔 과제에서 **저절로** 만들어진 것인지.
+  --   true  = 진도가 그 유닛에 닿아서 생긴 것 → 진도가 바뀌면 지우고 다시 만듭니다
+  --   false = 선생님이 손으로 낸 것 → 절대 자동으로 지우지 않습니다
+  auto       boolean not null default false,
   created_at timestamptz not null default now()
 );
 
