@@ -3,6 +3,12 @@
 // (가짜 메모리 DB로는 못 잡는 '쿼리 문법·타입' 오류를 여기서 잡는다)
 import pg from "pg";
 
+// ★ 진짜 Supabase(PostgREST)는 date 컬럼을 "2026-10-27" **문자열**로 돌려줍니다.
+//   node-postgres 는 기본값이 JS Date 라 JSON 으로 나갈 때 "2026-10-27T00:00:00.000Z" 가 됩니다.
+//   그대로 두면 **검수 환경과 실제가 달라져서**, 화면이 날짜를 어떻게 다루는지 제대로 못 봅니다
+//   (실제로 학생앱에서 날짜가 ISO 로 새는 걸 이것 때문에 놓칠 뻔했습니다).
+pg.types.setTypeParser(1082, (v) => v);   // 1082 = date
+
 const pool = new pg.Pool({ host: process.env.PGSOCK || "/var/run/postgresql", port: 5433, user: "postgres", database: process.env.TESTDB || "tapp" });
 
 const OPS = { eq: "=", neq: "<>", lt: "<", lte: "<=", gt: ">", gte: ">=" };

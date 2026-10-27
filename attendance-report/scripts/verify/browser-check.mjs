@@ -315,6 +315,12 @@ await pg.click("button.btn");
 await pg.waitForTimeout(1500);
 ck("★ 학생앱 로그인 성공", (await pg.locator("#home").isVisible()), await pg.locator("#err").innerText());
 ck("학생앱 과제 보임", (await pg.locator(".task").count()) >= 1, { n: await pg.locator(".task").count() });
+  // 날짜가 "10-27T00:00:00.000Z" 처럼 새면 아이가 보는 화면이 망가집니다.
+  //   학생카드에는 이 점검이 있었는데 학생앱에는 없어서, 스크린샷 찍다가 발견했습니다.
+  {
+    const body = await pg.locator("body").innerText();
+    ck("학생앱 날짜에 ISO 가 안 샌다", !/T\d\d:\d\d/.test(body), body.slice(0, 200));
+  }
 
 ck("조작 중 JS 오류 없음", errs.length === 0, errs.slice(0, 3));
 await b.close();

@@ -214,13 +214,17 @@
     }).join('') : '<div class="empty">아직 진도 기록이 없어요.</div>';
   }
 
+  // 날짜를 MM-DD 로. 서버가 '2026-10-27' 로 주든 ISO 로 주든 둘 다 되게
+  //   (학생카드 student_card.html 의 md() 와 같은 방식)
+  function md(d) { return String(d || '').slice(0, 10).slice(5); }
+
   function renderRecent(rows) {
     if (!rows.length) { $('recent').innerHTML = '<div class="empty">아직 수업 기록이 없어요.</div>'; return; }
     $('recent').innerHTML = '<table><tr><th>날짜</th><th>등원</th><th>태도</th><th>과제</th><th>단어</th></tr>'
       + rows.map(function (r) {
           var v = r.voca_test ? '<span class="' + (r.voca_test === '통과' ? 'ok' : 'no') + '">' + esc(r.voca_test) + '</span>'
                   + (r.voca_score ? '<br><span style="color:#aaa;font-size:10px">' + esc(r.voca_score) + '</span>' : '') : '-';
-          return '<tr><td class="d">' + esc(r.date.slice(5)) + '</td><td>' + esc(r.lateness || '-') + '</td>'
+          return '<tr><td class="d">' + esc(md(r.date)) + '</td><td>' + esc(r.lateness || '-') + '</td>'
             + '<td>' + esc(r.attitude || '-') + '</td><td>' + esc(r.homework || '-') + '</td><td>' + v + '</td></tr>';
         }).join('') + '</table>';
   }
