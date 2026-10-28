@@ -56,6 +56,20 @@ ck("teachers", r.s === 200 && r.d.teachers.length === 2, r.d.teachers);
 
 r = await get(`action=tasks&date=${today}`);
 ck("tasks", r.s === 200 && r.d.tasks.length === 36, r.d.tasks?.length);  // 12명 × 3개
+// 과제 목록은 **학생별로 묶여** 있어야 합니다. 예전에는 집/학원 으로만 줄을 세워서
+//   한 아이 과제가 목록 네 군데에 흩어졌고, 선생님이 "민준이 건 어디 있지" 를 하게 됐습니다.
+{
+  const seq = (r.d.tasks || []).map((t) => t.student_id);
+  const 본적있음 = new Set();
+  let 흩어짐 = null, 직전 = null;
+  for (const id of seq) {
+    if (id !== 직전) { if (본적있음.has(id)) { 흩어짐 = id; break; } 본적있음.add(id); 직전 = id; }
+  }
+  ck("★ 한 학생 과제가 한 덩어리로 모여 있음", !흩어짐,
+     흩어짐 && (r.d.tasks.find((t) => t.student_id === 흩어짐)?.name + " 것이 떨어져 있음"));
+  const 이름들 = [...new Set((r.d.tasks || []).map((t) => t.name))];
+  ck("학생 순서가 명단(가나다) 순", JSON.stringify(이름들) === JSON.stringify([...이름들].sort((a, b) => a.localeCompare(b))), 이름들);
+}
 
 // ── 쓰기 계열 ──
 r = await post("/api/attendance", { action: "save-record", student_id: byName["김민준"].id, date: today, fields: { attitude: "중", homework: "상", note: "검수" } });

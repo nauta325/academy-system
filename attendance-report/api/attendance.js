@@ -765,6 +765,18 @@ export default async function handler(req, res) {
       let tasks = all.filter((t) => ids.has(t.student_id)); // 담당 학생 것만
       if (student_id) tasks = tasks.filter((t) => t.student_id === student_id);
       const nameBy = Object.fromEntries(students.map((s) => [s.id, s.name]));
+      // 같은 학생 과제가 **한 덩어리로** 보이게 묶어 줍니다.
+      //   예전에는 집/학원 으로만 줄을 세워서, 한 아이 과제가 목록 여기저기에
+      //   흩어졌습니다(12명 42줄이면 민준이 것이 네 군데에 떨어집니다).
+      //   학생 순서는 위 명단(name.asc)을 그대로 따릅니다 — 화면의 학생 드롭다운과 같은 순서.
+      const rank = Object.fromEntries(students.map((s, i) => [s.id, i]));
+      tasks.sort((a, b) =>
+        // 기간 조회(과제 이력)는 날짜를 먼저 봅니다 — 최근 것부터 읽는 화면이라서
+        (ranged ? String(b.date).localeCompare(String(a.date)) : 0) ||
+        (rank[a.student_id] ?? 0) - (rank[b.student_id] ?? 0) ||
+        String(a.kind || "").localeCompare(String(b.kind || "")) ||   // 집 → 학원
+        String(a.title || "").localeCompare(String(b.title || ""))
+      );
       // 기간 조회면 완료율을 같이 계산해 준다 (화면에서 다시 세지 않게)
       const summary = ranged
         ? (() => {
