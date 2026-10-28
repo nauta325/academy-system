@@ -97,6 +97,12 @@ sleep 3
 echo "── 4. 브라우저에서 전 화면 ──"
 if [ -f browser-check.mjs ]; then node browser-check.mjs > /tmp/br.out 2>&1; B=$?; tail -4 /tmp/br.out; else echo "  (생략)"; B=0; fi
 
+echo "── 4-1. 시나리오 (깨질 만한 자리) ──"
+#  전면 검수는 **되는 길**을 봅니다. 사고는 그 바깥에서 납니다 —
+#  날짜를 잘못 치고, 없는 걸 지우고, 수기 진도를 적어두고, 남의 링크를 열어보는 자리.
+#  자기 DB(tapp_sc)·자기 포트(4332)로 돌아서 위 단계 데이터를 흐리지 않습니다.
+bash scenarios/run.sh > /tmp/sc.out 2>&1; SC=$?; tail -12 /tmp/sc.out
+
 echo "── 5. 단위 점검 ──"
 (cd "$APP" && node scripts/smoke-test.mjs > /tmp/smoke.out 2>&1); U=$?
 grep -E "^FAIL|실패|통과" /tmp/smoke.out | tail -8
@@ -125,6 +131,7 @@ FAILED=""
 [ $P -ne 0 ] && FAILED="$FAILED 개인정보"
 [ $D -ne 0 ] && FAILED="$FAILED DB에러문구"
 [ $C -ne 0 ] && FAILED="$FAILED AI에러문구"
+[ $SC -ne 0 ] && FAILED="$FAILED 시나리오"
 if [ -z "$FAILED" ]; then
   echo "
 ✅ 전면 검수 통과"
