@@ -354,6 +354,17 @@ ck("학생앱 과제 보임", (await pg.locator(".task").count()) >= 1, { n: awa
     ck(`${name} 잠시 뒤 다시 숨는다`, !(await page.locator("#toast").isVisible()), null);
   }
 
+// 학부모·선생님 화면에서 **같은 말로 다른 숫자**를 보여주던 자리.
+//   도넛은 결석까지 포함한 「총 수업일」(22), 아래 타일은 나온 날(20) 인데
+//   둘 다 「수업일」이라고 적혀 있어서 학부모가 보기에 엇갈렸습니다.
+for (const [path, 이름] of [["/parent.html", "학부모 화면"], ["/report.html", "월말평가서 화면"]]) {
+  const src = await (await fetch(B + path)).text();
+  ck(`${이름}: 결석 포함 숫자는 「총 수업일」로 적는다`, src.includes("총 수업일"), null);
+  // 「'수업일'」 처럼 라벨로 홀로 쓰인 자리가 남아 있으면 또 엇갈립니다.
+  const 홀로 = src.match(/['"]수업일['"]/g) || [];
+  ck(`${이름}: 그냥 「수업일」이라고만 적힌 라벨이 없다`, 홀로.length === 0, 홀로);
+}
+
 ck("조작 중 JS 오류 없음", errs.length === 0, errs.slice(0, 3));
 await b.close();
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");

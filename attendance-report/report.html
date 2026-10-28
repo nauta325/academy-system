@@ -107,7 +107,7 @@
         <div class="chart-row">
           <div class="chart-box"><div class="chart-box-title">📌 출석 현황</div>
             <div class="donut-wrap"><canvas id="attendChart" width="140" height="140"></canvas>
-              <div class="donut-center"><div class="num" id="attendNum">0</div><div class="unit">수업일</div></div></div>
+              <div class="donut-center"><div class="num" id="attendNum">0</div><div class="unit">총 수업일</div></div></div>
             <div class="donut-legend" id="attendLegend"></div></div>
           <div class="chart-box"><div class="chart-box-title">🎯 수업 태도</div>
             <div class="donut-wrap"><canvas id="attitudeChart" width="140" height="140"></canvas>
@@ -269,7 +269,7 @@
           var label = parts[0]+'년 '+parseInt(parts[1])+'월';
           return '<div class="rli" onclick="openSaved(\''+id+'\',\''+r.month+'\')">'+
             '<div><div class="m">'+label+(r.kakao_sent?'<span class="badge">카톡 전송</span>':'')+'</div>'+
-            '<div class="meta">수업 '+(st.classDays||0)+'일 · 단어 '+(st.vocaRate||0)+'% · 과제(상) '+(st.hwRate||0)+'%</div></div>'+
+            '<div class="meta">출석 '+(st.classDays||0)+'일 · 단어 '+(st.vocaRate||0)+'% · 과제(상) '+(st.hwRate||0)+'%</div></div>'+
             '<button class="btn-icon" onclick="event.stopPropagation();openSaved(\''+id+'\',\''+r.month+'\')">열람</button></div>';
         }).join('');
       } catch(e){ $('existingList').innerHTML = '<div class="no-data">'+esc(e.message)+'</div>'; }
@@ -289,7 +289,7 @@
       $('resultIcon').textContent = o.isNew ? '✅' : '📄';
       $('resultTitle').textContent = (stu?stu.name:'') + ' ' + o.month + ' 학습 리포트';
       var st = o.stats||{};
-      $('resultSubtitle').textContent = '수업 '+(st.classDays||0)+'일 · 단어 '+(st.vocaRate||0)+'% · 과제(상) '+(st.hwRate||0)+'%';
+      $('resultSubtitle').textContent = '출석 '+(st.classDays||0)+'일 · 단어 '+(st.vocaRate||0)+'% · 과제(상) '+(st.hwRate||0)+'%';
       $('reportPreview').textContent = curBody;
       $('viewMode').style.display='block'; $('editMode').style.display='none'; $('editBtn').style.display='';
       $('deleteBtn').style.display = curSaved ? '' : 'none';
@@ -320,7 +320,7 @@
       var box = $('resultCharts');
       if (!p){ box.innerHTML=''; return; }
       box.innerHTML =
-        '<div class="chart-row">'+cbox('📌 출석 현황','rA',p.총수업일수,'수업일')+cbox('🎯 수업 태도','rT',rate(p.태도)+'%','상 비율')+'</div>'+
+        '<div class="chart-row">'+cbox('📌 출석 현황','rA',p.총수업일수,'총 수업일')+cbox('🎯 수업 태도','rT',rate(p.태도)+'%','상 비율')+'</div>'+
         '<div class="chart-row">'+cbox('📝 단어 테스트','rW',(p.단어테스트.총횟수>0?Math.round(p.단어테스트.통과/p.단어테스트.총횟수*100):0)+'%','통과율')+cbox('📚 과제 수행도','rH',rate(p.과제)+'%','상 비율')+'</div>';
       setTimeout(function(){
         drawDonut('rA',[p.출석.정시등원,p.출석.지각,p.출석.결석],['#4caf50','#ff9800','#f44336']); lg('rA',['정시 '+p.출석.정시등원,'지각 '+p.출석.지각,'결석 '+p.출석.결석],['#4caf50','#ff9800','#f44336']);

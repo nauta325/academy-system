@@ -156,7 +156,10 @@
             '<div class="report-toggle">▼</div>' +
           '</div>' +
           '<div class="chart-row">' +
-            chartBox('📌 출석 현황', 'a'+idx, p.총수업일수||0, '수업일') +
+            // 도넛은 **수업이 있었던 날 전부**(결석 포함)입니다. 아래 미니 통계는
+            //   **나온 날**(정시+지각)이라 숫자가 다릅니다 — 둘 다 「수업일」로 적어
+            //   두었더니 학부모가 보기에 22 와 20 이 같은 이름으로 엇갈렸습니다.
+            chartBox('📌 출석 현황', 'a'+idx, p.총수업일수||0, '총 수업일') +
             chartBox('🎯 수업 태도', 't'+idx, (atTot>0?Math.round(p.태도.상/atTot*100):0)+'%', '상 비율') +
           '</div>' +
           '<div class="chart-row">' +
@@ -165,7 +168,7 @@
           '</div>' +
           progressBlock(p) +
           '<div class="mini-stats">' +
-            ms((p.출석?p.출석.정시등원+p.출석.지각:0), '수업일', '') +
+            ms((p.출석?p.출석.정시등원+p.출석.지각:0), '출석', '') +
             ms(vocaRate + '%', '단어', cl(vocaRate)) +
             ms(hwRate + '%', '과제(상)', cl(hwRate)) +
             // 아이가 앱에서 직접 체크한 과제 — 과제를 안 내준 달이면 아예 안 보입니다
