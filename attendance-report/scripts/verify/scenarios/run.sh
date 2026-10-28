@@ -15,6 +15,16 @@ VERIFY="$(cd "$HERE/.." && pwd)"
 APP="$(cd "$VERIFY/../.." && pwd)"
 cd "$VERIFY"
 
+# 서버가 **진짜 응답할 때까지** 기다립니다 (고정 sleep 은 바쁠 때 모자랍니다).
+wait_up() {   # wait_up <url> <최대초>
+  local url="$1" max="${2:-40}" i=0
+  while [ $i -lt "$max" ]; do
+    curl -s -o /dev/null --max-time 2 "$url" && return 0
+    i=$((i+1)); sleep 1
+  done
+  return 1
+}
+
 PGSOCK="${PGSOCK:-/var/run/postgresql}"
 PS="psql -h $PGSOCK -p 5433 -U postgres"
 DB=tapp_sc
@@ -32,7 +42,7 @@ fi
 (fuser -k 4399/tcp 2>/dev/null || true); sleep 1
 nohup node anthropic-mock.mjs > sc-mock.log 2>&1 < /dev/null &
 disown 2>/dev/null || true
-sleep 1
+sleep 1   # 가짜 Anthropic 은 요청이 와야 응답하므로 기다릴 대상이 없습니다
 
 LIST="1_진도규칙 2_유닛과제 3_권한과비밀값 4_엉뚱한입력 5_등록과평가서
       6_전원_진도과제학생앱 7_전원_출결선생님평가서 8_전원_지각재시학생카드 9_전원_실제화면"
@@ -50,15 +60,24 @@ for f in $LIST; do
     ANTHROPIC_BASE_URL=http://127.0.0.1:4399 \
     nohup node app-server.mjs > sc-app.log 2>&1 < /dev/null &
   disown 2>/dev/null || true
-  sleep 3
+  if ! wait_up "$SC_BASE/" 40; then
+    printf "  %-30s %s\n" "$f" "❌ 서버가 안 떴습니다 (sc-app.log 확인)"
+    BROKEN="$BROKEN $f"; FAILS=$((FAILS+1)); continue
+  fi
 
   # 7~9부는 앞 단계가 깔아둔 교재 과제·출결이 있어야 뜻이 있습니다.
+  SETUP_OK=1
   case "$f" in
-    7_*|8_*|9_*) node scenarios/6_전원_진도과제학생앱.mjs >/dev/null 2>&1 ;;
+    7_*|8_*|9_*) node scenarios/6_전원_진도과제학생앱.mjs >/dev/null 2>&1 || SETUP_OK=0 ;;
   esac
   case "$f" in
-    8_*|9_*) node scenarios/7_전원_출결선생님평가서.mjs >/dev/null 2>&1 ;;
+    8_*|9_*) node scenarios/7_전원_출결선생님평가서.mjs >/dev/null 2>&1 || SETUP_OK=0 ;;
   esac
+  if [ $SETUP_OK -eq 0 ]; then
+    # 밑작업이 깨지면 뒤 결과는 못 믿습니다. 「실패 6건」 으로 보이지만 원인은 여기입니다.
+    printf "  %-30s %s\n" "$f" "❌ 밑작업(6·7부)이 실패해 건너뜀"
+    BROKEN="$BROKEN $f"; FAILS=$((FAILS+1)); continue
+  fi
 
   OUT=$(node "scenarios/$f.mjs" 2>&1)
   LINE=$(echo "$OUT" | grep -E '^점검 [0-9]+개' | tail -1)

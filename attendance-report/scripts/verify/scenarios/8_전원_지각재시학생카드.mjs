@@ -4,13 +4,16 @@ let fail=0,n=0; const bad=[];
 const ck=(name,ok,d)=>{n++; if(!ok){fail++;bad.push(name+"  → "+JSON.stringify(d));} return ok;};
 const get=async(p,q)=>{const r=await fetch(`${B}${p}?${q}`);return{s:r.status,d:await r.json().catch(()=>({}))};};
 const post=async(p,b)=>{const r=await fetch(`${B}${p}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)});return{s:r.status,d:await r.json().catch(()=>({}))};};
-const TODAY=new Date().toISOString().slice(0,10);
-const 지난달=(()=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return d.toISOString().slice(0,7);})();
+// ★ 「오늘」은 **한국시간** 입니다. 앱이 KST 로 판단하기 때문에,
+//   UTC 로 계산하면 저녁(한국 자정 이후)에 **하루 어긋나** 전부 엉뚱한 날을 봅니다.
+const TODAY = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const 지난달 = (() => { const d = new Date(Date.now() + 9 * 3600 * 1000); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
 const students=(await get("/api/attendance","action=students")).d.students.sort((a,b)=>a.name.localeCompare(b.name));
 
 // ── 1. 지각 판정
 console.log("── 지각 판정 ──");
 const rows=(await get("/api/attendance",`action=daily-rows&date=${TODAY}`)).d.rows||[];
+const GRACE = 10;   // api/attendance.js 의 지각 유예와 같은 값
 let 지각수=0, 정시수=0;
 for (const r of rows) {
   const ci=r.record?.check_in, lt=r.record?.lateness;
@@ -21,8 +24,17 @@ for (const r of rows) {
   console.log(`  ${r.name.padEnd(5)} 예정 ${예정||"-"} 등원 ${ci} → ${lt||"정시"}`);
   ck(`${r.name}: 등원했으면 지각/정시가 정해진다`, lt==="지각"||lt==="정시", lt);
   if (!r.scheduled) ck(`${r.name}: 예정 시간이 없으면(보강) 지각이 아니다`, lt==="정시", lt);
+
+  // ★ 시계에 기대지 않고 **규칙 자체**를 봅니다.
+  //   예전에는 "지각이 한 명은 나와야 한다" 로 적었는데, 한국시간 자정에 돌리면
+  //   16~19시 수업에 지각일 수가 없어 **멀쩡한데도 실패**했습니다.
+  const 분 = (t) => { const [h,m]=String(t).split(":").map(Number); return h*60+m; };
+  if (r.scheduled) {
+    const 늦었나 = 분(ci) > 분(r.scheduled) + GRACE;
+    ck(`${r.name}: 예정 ${r.scheduled} + 유예 ${GRACE}분 기준으로 ${늦었나?"지각":"정시"} 가 맞다`,
+       lt === (늦었나 ? "지각" : "정시"), { 예정:r.scheduled, 등원:ci, 판정:lt });
+  }
 }
-ck("★ 등원한 학생 중 지각 판정이 돈다 (예정시간이 지났으므로)", 지각수>0, {지각수,정시수});
 
 // ── 2. 단어 불통과 → 재시 큐 → 발송
 console.log("\n── 단어 테스트 불통과 → 재시 안내 ──");

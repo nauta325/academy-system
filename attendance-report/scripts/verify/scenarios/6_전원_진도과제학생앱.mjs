@@ -10,8 +10,10 @@ const ck = (name, ok, detail) => {
 const get = async (p, q) => { const r = await fetch(`${B}${p}?${q}`); return { s: r.status, d: await r.json().catch(()=>({})) }; };
 const post = async (p, body) => { const r = await fetch(`${B}${p}`, { method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify(body) }); return { s: r.status, d: await r.json().catch(()=>({})) }; };
 
-const TODAY = new Date().toISOString().slice(0,10);
-const WD = "일월화수목금토"[new Date().getDay()];
+// ★ 「오늘」은 **한국시간** 입니다. 앱이 KST 로 판단하기 때문에,
+//   UTC 로 계산하면 저녁(한국 자정 이후)에 **하루 어긋나** 전부 엉뚱한 날을 봅니다.
+const TODAY = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const WD = "일월화수목금토"[new Date(Date.now()+9*3600*1000).getUTCDay()];   // 요일도 KST
 console.log(`오늘 ${TODAY} (${WD})\n`);
 
 // ── 0. 교재 목차에 과제 심기 (수강생이 세미나에서 하는 그 작업)
@@ -29,6 +31,13 @@ console.log(`교재 ${tb.length}권에 과제를 심었습니다.\n`);
 const students = (await get("/api/attendance","action=students")).d.students
   .sort((a,b)=>a.name.localeCompare(b.name));
 ck("학생이 12명", students.length===12, students.length);
+
+// ★ 앱은 「오늘」을 **한국시간**으로 봅니다. 검수가 UTC 로 보면 한국 자정 이후에
+//   하루가 어긋나 전부 엉뚱한 날을 검사합니다 (실제로 그렇게 헛걸렸습니다).
+{
+  const 앱오늘 = (await get("/api/attendance", "action=board")).d.date;
+  ck("★ 앱이 보는 오늘과 검수가 보는 오늘이 같다", 앱오늘 === TODAY, { 앱: 앱오늘, 검수: TODAY });
+}
 
 // ── 1. 학생 한 명씩
 const 요약 = [];

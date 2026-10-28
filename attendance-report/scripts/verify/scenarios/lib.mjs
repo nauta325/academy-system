@@ -1,6 +1,8 @@
 export const B = process.env.SC_BASE || "http://127.0.0.1:4331";
-export const TODAY = new Date().toISOString().slice(0, 10);
-export const 지난달 = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); })();
+export // ★ 「오늘」은 **한국시간** 입니다. 앱이 KST 로 판단하기 때문에,
+//   UTC 로 계산하면 저녁(한국 자정 이후)에 **하루 어긋나** 전부 엉뚱한 날을 봅니다.
+const TODAY = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+export const 지난달 = (() => { const d = new Date(Date.now() + 9 * 3600 * 1000); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
 export const state = { n: 0, fail: 0, bad: [], 시나리오: "" };
 
 export function 시작(name) { state.시나리오 = name; console.log(`\n── ${name} ──`); }

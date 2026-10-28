@@ -68,7 +68,7 @@ for (const nm of 고를이) {
     const 아이디=(onclick.match(/'([0-9a-f-]{36})'/)||[])[1];
     const 제목=((await 안한.locator(".title").textContent())||"").trim();
     await 안한.click(); await ph.waitForTimeout(1200);
-    const t=await (await fetch(`${B}/api/attendance?action=tasks&date=${new Date().toISOString().slice(0,10)}`)).json();
+    const t=await (await fetch(`${B}/api/attendance?action=tasks&date=${new Date(Date.now()+9*3600*1000).toISOString().slice(0,10)}`)).json();
     const 그것=(t.tasks||[]).find(x=>x.id===아이디);
     ck(`${nm}: ★ 체크가 선생님 화면에 반영된다`, 그것?.done===true, {제목, 아이디, 그것});
   }

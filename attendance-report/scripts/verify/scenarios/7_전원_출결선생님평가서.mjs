@@ -4,8 +4,10 @@ let fail=0, n=0; const bad=[];
 const ck=(name,ok,d)=>{ n++; if(!ok){fail++;bad.push(name+"  → "+JSON.stringify(d));} return ok; };
 const get=async(p,q)=>{const r=await fetch(`${B}${p}?${q}`);return{s:r.status,d:await r.json().catch(()=>({}))};};
 const post=async(p,b)=>{const r=await fetch(`${B}${p}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)});return{s:r.status,d:await r.json().catch(()=>({}))};};
-const TODAY=new Date().toISOString().slice(0,10);
-const 지난달=(()=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return d.toISOString().slice(0,7);})();
+// ★ 「오늘」은 **한국시간** 입니다. 앱이 KST 로 판단하기 때문에,
+//   UTC 로 계산하면 저녁(한국 자정 이후)에 **하루 어긋나** 전부 엉뚱한 날을 봅니다.
+const TODAY = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const 지난달 = (() => { const d = new Date(Date.now() + 9 * 3600 * 1000); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
 
 const students=(await get("/api/attendance","action=students")).d.students.sort((a,b)=>a.name.localeCompare(b.name));
 console.log(`학생 ${students.length}명 · 지난달 ${지난달}\n`);

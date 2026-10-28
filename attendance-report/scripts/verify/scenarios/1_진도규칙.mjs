@@ -1,7 +1,8 @@
 // 시나리오 1 — 진도 자동 전환. 운영에서 제일 자주 깨지는 자리.
 import { ck, get, post, 시작, 끝, TODAY } from "./lib.mjs";
 
-const 어제 = (n=1)=>{const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);};
+// 「어제」도 KST 기준 — TODAY 와 같은 시계를 써야 하루가 안 어긋납니다.
+const 어제 = (n=1)=>{const d=new Date(Date.now()+9*3600*1000);d.setUTCDate(d.getUTCDate()-n);return d.toISOString().slice(0,10);};
 const 교재 = async (name, units, step=1) =>
   (await post("/api/attendance", { action:"save-textbook", textbook:{ name, subject:"문법", units, step } })).d.textbook;
 const 학생 = async (name, books) =>
