@@ -27,7 +27,7 @@
 // ※ students · board · daily-rows · tasks 는 `&teacher=이선생` 을 붙이면 그 선생님 담당 학생만.
 //    선생님앱(teacher.html)이 이 필터를 쓴다. 안 붙이면 전체(원장님 화면과 동일).
 
-import { select, insert, patch, remove, dbConfigured } from "../lib/db.js";
+import { select, insert, patch, remove, dbConfigured, DbInputError } from "../lib/db.js";
 import { kstNow, toMinutes, addMinutes } from "../lib/time.js";
 import { sendAlimtalk, TPL } from "../lib/solapi.js";
 import { tocByBook, advanceProgress, normUnit, linkStatus, tasksForProgress } from "../lib/progress.js";
@@ -231,6 +231,8 @@ export default async function handler(req, res) {
     // 오늘 등원을 판단해 행이 없으면 다음 진도를 적용해 새로 만든다.
     if (action === "daily-rows") {
       const date = req.query.date || now.date;
+      // 날짜를 먼저 막습니다. 안 막으면 그대로 DB 로 가서 PostgreSQL 원문이 화면에 뜹니다.
+      if (!okDate(date)) throw new BadRequest(`날짜가 올바르지 않아요: ${date}`);
       const weekday = date === now.date ? now.weekday : "일월화수목금토"[new Date(date + "T00:00:00Z").getUTCDay()];
       const students = await select("students", `status=eq.재원&order=name.asc${teacherFilter(req)}`);
       let records = await select("daily_records", `date=eq.${date}`);
@@ -832,7 +834,8 @@ export default async function handler(req, res) {
   } catch (e) {
     // 입력이 잘못된 것(BadRequest)은 400 으로, 진짜 서버 사고만 500 으로.
     // 500 에는 PostgREST 원문이 그대로 실려 화면에 내부 메시지가 노출되므로 구분합니다.
-    if (e instanceof BadRequest) return res.status(400).json({ error: e.message });
+    if (e instanceof BadRequest || e instanceof DbInputError)
+      return res.status(400).json({ error: e.message });
     return res.status(500).json({ error: String(e.message || e) });
   }
 }

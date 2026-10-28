@@ -8,7 +8,7 @@
 //   GET  ?action=parent&token=xxx         → 학부모 열람 (해당 학생 월별 이력)
 //   POST {action:"send", month}           → 저장된 평가서들의 학부모 열람 링크 목록
 
-import { select, upsert, patch, remove, dbConfigured } from "../lib/db.js";
+import { select, upsert, patch, remove, dbConfigured, DbInputError } from "../lib/db.js";
 import { normUnit } from "../lib/progress.js";
 import { generateReport, claudeConfigured } from "../lib/claude.js";
 import { sendAlimtalk, solapiConfigured, TPL } from "../lib/solapi.js";
@@ -21,7 +21,15 @@ import { sendAlimtalk, solapiConfigured, TPL } from "../lib/solapi.js";
 //    `date/time field value out of range` (400) 를 돌려줍니다.
 //    → 4·6·9·11·2월 평가서에서 학부모 화면·선생님 화면이 전부 깨졌습니다.
 //    마지막 날을 계산하는 대신 **다음 달 1일 미만(lt)** 으로 두면 어떤 달이든 안전합니다.
+// 「2026-09」 형식인지. 아니면 그대로 DB 로 가서 PostgreSQL 원문이 화면에 뜹니다.
+export function okMonth(v) {
+  const m = /^(\d{4})-(\d{2})$/.exec(String(v || ""));
+  return Boolean(m) && Number(m[2]) >= 1 && Number(m[2]) <= 12;
+}
+
 export function monthFilter(month) {
+  // DbInputError 로 던지면 아래 catch 가 **400** 으로 돌려줍니다 (500 이면 화면에 DB 원문이 뜸).
+  if (!okMonth(month)) throw new DbInputError(`연월이 올바르지 않아요: ${month} (예: 2026-09)`);
   const [y, m] = String(month).split("-").map(Number);
   const ny = m === 12 ? y + 1 : y;
   const nm = m === 12 ? 1 : m + 1;
@@ -419,6 +427,8 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: `알 수 없는 action: ${action}` });
   } catch (e) {
+    // 입력이 잘못된 것은 400 으로. 500 으로 내보내면 화면에 DB 원문이 그대로 뜹니다.
+    if (e instanceof DbInputError) return res.status(400).json({ error: e.message });
     return res.status(500).json({ error: String(e.message || e) });
   }
 }

@@ -15,6 +15,29 @@ export function dbConfigured() {
 //   select tasks 실패: 404 {"code":"PGRST205","message":"Could not find the table
 //   'public.tasks' in the schema cache"}
 // 세미나 당일에 이게 뜨면 아무도 못 고칩니다. 원인별로 할 일을 한 줄로 알려줍니다.
+// 입력이 잘못돼서 DB가 거절한 것. 서버 사고(500)가 아니라 **400** 으로 돌려줘야 합니다.
+//   예전에는 이것도 500 으로 나가서, 화면에 PostgreSQL 원문이 그대로 떴습니다
+//   ("invalid input syntax for type uuid …"). 원장님이 보기엔 그냥 고장입니다.
+export class DbInputError extends Error {
+  constructor(message) { super(message); this.name = "DbInputError"; }
+}
+
+// 입력 때문에 난 오류인지 (그렇다면 안내문과 함께 400). 아니면 null.
+function 입력오류(text) {
+  const t = String(text || "");
+  if (/invalid input syntax for type uuid/i.test(t))
+    return "그 학생·과제를 찾을 수 없어요. 화면을 새로고침한 뒤 다시 해주세요.";
+  if (/invalid input syntax for type date|date\/time field value out of range/i.test(t))
+    return "날짜가 올바르지 않아요. 달력에서 다시 골라주세요.";
+  if (/invalid input syntax/i.test(t))
+    return "입력한 값의 형식이 맞지 않아요. 다시 확인해 주세요.";
+  if (/foreign key constraint/i.test(t))
+    return "이미 지워졌거나 없는 학생·교재예요. 화면을 새로고침한 뒤 다시 해주세요.";
+  if (/duplicate key value|unique constraint/i.test(t))
+    return "같은 값이 이미 있어요 (출결번호·학생ID가 겹치지 않는지 보세요).";
+  return null;
+}
+
 function friendlyDbError(op, table, status, text) {
   const t = String(text || "");
   const has = (...xs) => xs.some((x) => t.includes(x));
@@ -55,6 +78,14 @@ function friendlyDbError(op, table, status, text) {
   return `${op} ${table} 실패: ${status} ${t}`;
 }
 
+// 한 곳에서만 던집니다 — 입력 때문이면 DbInputError(→400), 아니면 Error(→500).
+async function dbError(op, table, res) {
+  const text = await res.text();
+  const 안내 = 입력오류(text);
+  if (안내) return new DbInputError(안내);
+  return new Error(friendlyDbError(op, table, res.status, text));
+}
+
 function headers(extra = {}) {
   return {
     apikey: KEY,
@@ -69,7 +100,7 @@ export async function select(table, query = "") {
   const res = await fetch(`${URL}/rest/v1/${table}?${query}`, {
     headers: headers(),
   });
-  if (!res.ok) throw new Error(friendlyDbError("select", table, res.status, await res.text()));
+  if (!res.ok) throw await dbError("select", table, res);
   return res.json();
 }
 
@@ -81,7 +112,7 @@ export async function upsert(table, rows, onConflict) {
     headers: headers({ Prefer: "resolution=merge-duplicates,return=representation" }),
     body: JSON.stringify(Array.isArray(rows) ? rows : [rows]),
   });
-  if (!res.ok) throw new Error(friendlyDbError("upsert", table, res.status, await res.text()));
+  if (!res.ok) throw await dbError("upsert", table, res);
   return res.json();
 }
 
@@ -92,7 +123,7 @@ export async function insert(table, rows) {
     headers: headers({ Prefer: "return=representation" }),
     body: JSON.stringify(Array.isArray(rows) ? rows : [rows]),
   });
-  if (!res.ok) throw new Error(friendlyDbError("insert", table, res.status, await res.text()));
+  if (!res.ok) throw await dbError("insert", table, res);
   return res.json();
 }
 
@@ -103,7 +134,7 @@ export async function patch(table, query, body) {
     headers: headers({ Prefer: "return=representation" }),
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(friendlyDbError("patch", table, res.status, await res.text()));
+  if (!res.ok) throw await dbError("patch", table, res);
   return res.json();
 }
 
@@ -113,6 +144,6 @@ export async function remove(table, query) {
     method: "DELETE",
     headers: headers(),
   });
-  if (!res.ok) throw new Error(friendlyDbError("delete", table, res.status, await res.text()));
+  if (!res.ok) throw await dbError("delete", table, res);
   return true;
 }
