@@ -63,8 +63,8 @@
     .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200; align-items:center; justify-content:center; }
     .overlay.show { display:flex; }
     .modal { background:#fff; border-radius:16px; padding:28px; width:90%; max-width:360px; text-align:center; }
-    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #333; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 300; transition: transform .3s; }
-    .toast.show { transform: translateX(-50%) translateY(0); } .toast.error { background: #d32f2f; } .toast.success { background: #2e7d32; }
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #333; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 300; transition: transform .3s, visibility 0s .3s; visibility: hidden; }
+    .toast.show { transform: translateX(-50%) translateY(0);  visibility: visible; transition: transform .3s; } .toast.error { background: #d32f2f; } .toast.success { background: #2e7d32; }
     @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } .chart-row { grid-template-columns: 1fr; } }
   </style>
   <script src="/config.js"></script>

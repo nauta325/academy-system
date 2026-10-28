@@ -65,8 +65,8 @@
     .empty { text-align: center; color: #aaa; font-size: 13px; padding: 20px 0; }
     .links a { color: var(--green); font-size: 13px; margin-right: 14px; }
     .tag.auto { background: #eef4ff; color: #2b5fd9; border-color: #d4e1fb; }
-    .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(120px); background: #333; color: #fff; padding: 11px 22px; border-radius: 10px; font-size: 13px; z-index: 300; transition: transform .3s; }
-    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(120px); background: #333; color: #fff; padding: 11px 22px; border-radius: 10px; font-size: 13px; z-index: 300; transition: transform .3s, visibility 0s .3s; visibility: hidden; }
+    .toast.show { transform: translateX(-50%) translateY(0);  visibility: visible; transition: transform .3s; }
   </style>
   <script src="/config.js"></script>
 </head>

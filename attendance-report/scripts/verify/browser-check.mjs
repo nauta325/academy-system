@@ -340,6 +340,19 @@ ck("학생앱 과제 보임", (await pg.locator(".task").count()) >= 1, { n: awa
     const body = await pg.locator("body").innerText();
     ck("학생앱 날짜에 ISO 가 안 샌다", !/T\d\d:\d\d/.test(body), body.slice(0, 200));
   }
+  // 알림 말풍선(toast)은 화면 밖으로 밀어두기만 해서, 전체 캡처·녹화에
+  //   **글자 없는 까만 알약**으로 찍혔습니다. 평소엔 아예 안 보여야 합니다.
+  for (const [page, name] of [[pg, "학생앱"]]) {
+    ck(`${name} 알림 말풍선이 평소엔 안 보인다`, !(await page.locator("#toast").isVisible()), null);
+    // 말풍선은 **체크할 때만** 뜹니다. 이미 체크된 걸 누르면 해제라 안 떠요 —
+    //   그래서 아직 안 한 과제를 골라야 합니다 (처음에 이걸로 헛걸렸습니다).
+    await page.locator(".task:not(.done)").first().click();
+    await page.waitForTimeout(500);
+    ck(`${name} 체크하면 알림 말풍선이 뜬다`, await page.locator("#toast").isVisible(),
+       await page.locator("#toast").innerText().catch(() => ""));
+    await page.waitForTimeout(2000);
+    ck(`${name} 잠시 뒤 다시 숨는다`, !(await page.locator("#toast").isVisible()), null);
+  }
 
 ck("조작 중 JS 오류 없음", errs.length === 0, errs.slice(0, 3));
 await b.close();

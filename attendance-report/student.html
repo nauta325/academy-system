@@ -68,8 +68,8 @@
     .btn { width: 100%; padding: 14px; background: var(--green); color: #fff; border: none; border-radius: 11px; font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer; }
     .err { color: #d9534f; font-size: 13px; margin-top: 10px; min-height: 16px; }
     .logout { display: block; margin: 0 auto; background: none; border: none; color: #aaa; font-size: 12px; font-family: inherit; cursor: pointer; text-decoration: underline; }
-    .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(120px); background: #333; color: #fff; padding: 11px 22px; border-radius: 10px; font-size: 13px; z-index: 300; transition: transform .3s; }
-    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(120px); background: #333; color: #fff; padding: 11px 22px; border-radius: 10px; font-size: 13px; z-index: 300; transition: transform .3s, visibility 0s .3s; visibility: hidden; }
+    .toast.show { transform: translateX(-50%) translateY(0);  visibility: visible; transition: transform .3s; }
   </style>
   <script src="/config.js"></script>
 </head>
