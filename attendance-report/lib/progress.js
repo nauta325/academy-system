@@ -74,6 +74,17 @@ function numOf(s) {
   return m ? m[0] : "";
 }
 
+// 「숫자 + 단위어」로만 된 진도 표기인가.
+//   붙습니다  : 5 · 5과 · 제5과 · unit5 · u5 · day38 · ch3 · lesson5 · 3장 · 3주차 · 3차시
+//   안 붙습니다: 특강3회차 · 보충2일차 · 레벨테스트1차 — 교재와 상관없는 수기 메모라서,
+//               숫자 하나로 목차에 끌어다 붙이면 다음 날 진도가 엉뚱하게 넘어갑니다.
+const 단위어 = /^(unit|lesson|chapter|week|day|part|test|u|l|c|d|p|w|ch|wk|제|과|장|강|권|단원|주차|차시|회차|회|차|일|번)*$/;
+function 숫자표기만(code) {
+  const k = keyOf(code);
+  if (!/\d/.test(k)) return false;
+  return 단위어.test(k.replace(/\d+/g, ""));
+}
+
 // ★ 목차에서 '지금 진도'가 몇 번째인지 찾는다. 못 찾으면 -1.
 //   2차 세미나 수강생은 진도를 **수기로** 써왔기 때문에 글자가 목차와 정확히 같을 일이 거의 없다.
 //   ("Unit 5 현재완료", "unit5", "5과", "5" …) 그래서 단계적으로 느슨하게 찾는다.
@@ -103,7 +114,11 @@ export function findUnitIndex(units, last) {
 
   // 4) 숫자만 같은 경우 ("5", "5과" ↔ "Unit 5").
   //    같은 숫자를 가진 유닛이 **하나뿐일 때만** — 여럿이면 어느 것인지 알 수 없으니 포기.
-  const n = numOf(u.code);
+  //    ★ 그리고 「숫자 + 단위어」 로만 된 표기일 때만 봅니다.
+  //      예전에는 숫자 하나만 보고 붙여서, 교재와 상관없는 수기 메모
+  //      (「특강 3회차」·「보충 2일차」)까지 목차 유닛으로 끌려가 다음 날 진도가
+  //      엉뚱하게 넘어갔습니다. 자료에 적힌 「손으로 쓴 진도는 그대로 둡니다」와 어긋났습니다.
+  const n = 숫자표기만(u.code) ? numOf(u.code) : "";
   if (n) {
     const hits = list.map((x, idx) => ({ idx, n: numOf(x.code) })).filter((x) => x.n === n);
     if (hits.length === 1) return hits[0].idx;
