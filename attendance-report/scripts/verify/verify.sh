@@ -112,6 +112,8 @@ node db-error-unit.mjs > /tmp/dberr.out 2>&1; D=$?; tail -1 /tmp/dberr.out
 # Claude API 가 거절했을 때도 사람이 읽을 수 있는 말이 나오나
 #   (리허설에서 401 응답 JSON 이 화면에 그대로 떴던 건)
 node claude-error-unit.mjs > /tmp/clerr.out 2>&1; C=$?; tail -1 /tmp/clerr.out
+# 재시 안내 판정 — 점수만 적어도 큐에 올라가나, 기준이 0% 로 죽지 않았나
+node retest-unit.mjs > /tmp/retest.out 2>&1; RT=$?; tail -1 /tmp/retest.out
 
 (fuser -k 4330/tcp 2>/dev/null || true)
 
@@ -132,6 +134,7 @@ FAILED=""
 [ $D -ne 0 ] && FAILED="$FAILED DB에러문구"
 [ $C -ne 0 ] && FAILED="$FAILED AI에러문구"
 [ $SC -ne 0 ] && FAILED="$FAILED 시나리오"
+[ $RT -ne 0 ] && FAILED="$FAILED 재시판정"
 if [ -z "$FAILED" ]; then
   echo "
 ✅ 전면 검수 통과"
@@ -139,6 +142,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out"
   exit 1
 fi

@@ -33,7 +33,12 @@
 - 월말 통계 집계 → `api/report.js` 의 `computePlanner()` / `displayStats()`
 - 데일리 리포트 행/저장/발송 → `api/attendance.js` 의 `daily-rows`·`save-record`·`send-daily`
 - 학생 카드 화면 → `student_card.html` / 데이터 → `api/attendance.js` 의 `student-history`
-- 재시 안내 카톡 → `api/attendance.js` 의 `send-retest` · 큐 규칙은 `retestQueueValue()`(save-record 가 자동 호출)
+- 재시 안내 카톡 → `api/attendance.js` 의 `send-retest` · **판정·큐 규칙은 `lib/retest.js` 한 곳**
+  (「불통과」 버튼 **또는 점수 기준 미달** → `save-record` 가 자동으로 큐에 올림)
+- **재시 통과 기준(%)·만점 → `lib/retest.js` 맨 위 두 줄** (`PASS_DEFAULT`=80, `FULL_DEFAULT`=0)
+  환경변수 `RETEST_PASS_PERCENT`/`VOCA_FULL_SCORE` 가 있으면 그게 이깁니다.
+  `FULL_DEFAULT`=0 은 **「18」처럼 만점 없이 적은 점수는 판정하지 않는다**는 뜻 —
+  18점인지 18/20인지 모르는 채로 학부모에게 재시 카톡을 보내는 게 더 나쁩니다.
 - 학생앱 화면·문구 → `student.html` / 학생앱이 주는 데이터 → `api/student.js`
 - 선생님앱 화면 → `teacher.html` / 과제 내주기·현황 → `api/attendance.js` 의 `save-tasks`·`tasks`
 - 담당 선생님 범위 → 학생DB의 `teacher` 칸. API는 `&teacher=이선생` 을 붙이면 그 선생님 것만

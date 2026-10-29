@@ -108,7 +108,7 @@ function wdOf(d){
   return isNaN(t.getTime()) ? "" : WD[t.getUTCDay()];
 }
 function dateLabel(d){ return md(d) + " " + wdOf(d); }
-function isFail(v){ return /불통과|미통과/.test(String(v||"")); }
+function isFail(v){ return /불통과|미통과|재시/.test(String(v||"")); }
 // 유닛 {code,title} → "코드 — 제목" (daily.html 과 같은 표기)
 function normU(u){ if(!u) return {code:"",title:""}; if(typeof u==="string") return {code:u,title:""}; return {code:u.code||"",title:u.title||""}; }
 function unitLabel(u){ u = normU(u); return u.code + (u.title ? " — " + u.title : ""); }
@@ -236,7 +236,10 @@ function daysHtml(){
       r.lateness ? `<span class="pill${/지각|결석/.test(r.lateness) ? " late" : " ok"}">${esc(r.lateness)}</span>` : "",
       r.check_in ? `<span class="pill">🕒 ${esc(r.check_in)}${r.check_out ? "~" + esc(r.check_out) : ""}</span>` : "",
       r.report_sent === "전송" ? '<span class="pill ok">카톡 전송</span>' : "",
-      r.retest_sent === "미전송" ? '<span class="pill late">🔁 재시 안내 대기</span>' : "",
+      // 재시 대상 판정은 서버(lib/retest.js) — 「불통과」 또는 점수 기준 미달.
+      //   노션에서 옮겨와 큐를 안 거친 행도 needs_retest 로 잡힙니다.
+      (r.retest_sent === "미전송" || (r.needs_retest && r.retest_sent !== "전송"))
+        ? '<span class="pill late">🔁 재시 안내 대기</span>' : "",
       r.retest_sent === "전송" ? '<span class="pill ok">🔁 재시 안내 전송</span>' : "",
     ].join("");
     const prog = DATA.subjects.filter(s => (r.progress||{})[s])

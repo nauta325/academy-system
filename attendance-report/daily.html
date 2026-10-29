@@ -53,6 +53,10 @@
               font-size:11.5px;color:#6b7280;cursor:pointer;}
   .retest{background:#fde8e8;color:#b91c1c;border-radius:8px;padding:5px 9px;
           font-size:12.5px;font-weight:800;margin:4px 0;}
+  /* 점수칸 밑 한 줄 — 「지금 재시 대상인가」 를 눈으로 보여줍니다.
+     조용히 안 올라가는 게 제일 나빠서, 판정 못 한 경우도 적어줍니다. */
+  .rhint { font-size:11px; line-height:1.4; color:var(--muted); margin-top:3px; min-height:14px; }
+  .rhint.hit { color:#b91c1c; font-weight:700; }
   .warn { grid-column:1/-1; font-size:11.5px; line-height:1.5; color:#8a5d0f; background:#fff8e6;
           border:1px solid #f0dca8; border-radius:7px; padding:6px 8px; margin:4px 0 2px; }
   .warn a { color:#7a500c; font-weight:700; }
@@ -106,7 +110,8 @@
     매일 새벽, 오늘 등원할 학생의 리포트가 <b>다음 진도까지 채워져 자동 생성</b>돼요. 바뀐 것만 고치면 됩니다 · 칸을 고치면 자동 저장 · 추가사항은 학부모 카톡에 나갑니다.<br>
     <b>안 온 학생(결석)</b>은 따로 추가하지 않아요 — 오늘 수업 예정이면 <b>안 와도 이미 목록에 있습니다.</b> 그 학생 칸의 <b>결석</b>만 누르세요.<br>
     <b>➕ 보강 학생 추가</b>는 반대 경우예요 — <b>정규 수업일이 아닌 날 온 학생</b>(결석 보강). 그날 행을 만들면 진도가 다음으로 이어집니다.<br>
-    단어테스트를 <b>불통과</b>로 저장하면 <b>🔁 재시 안내</b> 버튼에 자동으로 올라옵니다 (학부모에게 "다음 시간 재시" 안내) ·
+    단어테스트를 <b>불통과</b>로 누르거나 <b>점수만 「12/20」처럼 적어도</b> (기준 미달이면) <b>🔁 재시 안내</b> 버튼에 자동으로 올라옵니다 —
+    점수칸 밑에 <b>지금 대상인지</b>가 한 줄로 나와요. 통과/불통과를 직접 누르면 <b>그게 점수보다 우선</b>입니다 ·
     학생 이름을 누르면 <b>📋 학생 카드</b>에서 지난 진도를 쭉 볼 수 있어요.
   </div>
   <div id="msg" class="err"></div>
@@ -159,12 +164,14 @@ function wdOf(d){
   const t = new Date(String(d||"").slice(0,10) + "T00:00:00Z");
   return isNaN(t.getTime()) ? "" : WD[t.getUTCDay()];
 }
-function isFail(v){ return /불통과|미통과/.test(String(v||"")); }
-// 재시 안내를 보내야 하는 행인가 — **서버(api/attendance.js 의 needsRetest)와 같은 규칙**.
-//  · 이미 '전송' 이면 끝 · '미전송'(큐에 올라간 것) 이거나 결과가 불통과면 대상
-//  (노션에서 옮겨와 큐를 안 거친 행도 놓치지 않으려고 결과까지 같이 봅니다)
+function isFail(v){ return /불통과|미통과|재시/.test(String(v||"")); }
+// 재시 안내를 보내야 하는 행인가 — **판정은 서버(lib/retest.js)가 합니다.**
+//   화면이 규칙을 따로 들고 있으면 둘이 어긋나서, 버튼에 뜬 숫자와 실제 발송 대상이
+//   달라집니다. 그래서 서버가 준 needs_retest 를 그대로 믿습니다.
+//   (옛 배포본이 그 값을 안 주면 아래 한 줄로 버텁니다)
 function needsRetest(rec){
   if (!rec || rec.retest_sent === "전송") return false;
+  if (typeof rec.needs_retest === "boolean") return rec.needs_retest;
   return rec.retest_sent === "미전송" || isFail(rec.voca_test);
 }
 function resTxt(res, score){
@@ -177,7 +184,8 @@ function resTxt(res, score){
 // 재시를 놓치면 그 학생은 같은 유닛에서 계속 멈춥니다.
 function retestNote(r){
   const h = (r.recent || [])[0];
-  if (!h || !isFail(h.voca_test)) return "";
+  const 못넘김 = h && (typeof h.needs_retest === "boolean" ? h.needs_retest : isFail(h.voca_test));
+  if (!못넘김) return "";
   const unit = unitLabel((h.progress||{})["단어"]);
   return `<div class="retest">🔁 오늘 재시? — 지난 수업(${esc(md(h.date))}) 단어${unit ? " " + esc(unit) : ""} 미통과</div>`;
 }
@@ -341,7 +349,7 @@ function cardHtml(i){
       <a class="nm" href="/student_card.html?student_id=${encodeURIComponent(r.student_id)}" target="_blank"
          title="학생 카드 — 지난 진도 쭉 보기">${esc(r.name)}</a>
       ${r.record.check_in?`<span class="pill">🕒 등원 ${esc(r.record.check_in)}</span>`:(r.scheduled?`<span class="pill">예정 ${esc(r.scheduled)}</span>`:"")}
-      ${late} ${sent}${needsRetest(rec)?'<span class="pill late">🔁 재시 안내 대기</span>':""}
+      ${late} ${sent}<span id="rpill-${i}">${needsRetest(rec)?'<span class="pill late">🔁 재시 안내 대기</span>':""}</span>
       <button class="btn" style="padding:5px 10px;font-size:12px" onclick="sendOne(${i})">📨 이 학생</button>
       <span class="savemsg" id="save-${i}"></span>
     </div>
@@ -354,7 +362,8 @@ function cardHtml(i){
       <div class="fld"><label>단어테스트</label>${segHtml(i,"voca_test",[{v:"통과",t:"통과"},{v:"불통과",t:"불통과"},{v:"",t:"없음"}],rec.voca_test||"")}</div>
     </div>
     <div class="grid">
-      <div class="fld"><label>단어테스트 점수</label><input class="score" data-i="${i}" data-field="voca_score" value="${esc(rec.voca_score||"")}" placeholder="예: 18/20"></div>
+      <div class="fld"><label>단어테스트 점수</label><input class="score" data-i="${i}" data-field="voca_score" value="${esc(rec.voca_score||"")}" placeholder="예: 18/20">
+        <div class="rhint${/재시 안내 대상/.test(rec.retest_hint||"") ? " hit" : ""}" id="rhint-${i}">${esc(rec.retest_hint||"")}</div></div>
     </div>
     <div class="note parent"><label>추가사항 (학부모 카톡에 나가는 내용)</label><textarea data-i="${i}" data-field="parent_note">${esc(rec.parent_note||"")}</textarea></div>
     <div class="note"><label>지적사항 (내부 기록 — 학부모에게 안 나감)</label><textarea data-i="${i}" data-field="note">${esc(rec.note||"")}</textarea></div>
@@ -407,7 +416,15 @@ async function saveRow(i){
   const m = $("#save-"+i);
   try {
     const d = await api({ action:"save-record", student_id:r.student_id, date:$("#date").value, fields });
-    r.record = { ...r.record, ...d.record };
+    r.record = { ...r.record, ...d.record, needs_retest: d.needs_retest, retest_hint: d.retest_hint };
+    // 점수만 적어도 재시 대상이 되므로, 저장될 때마다 점수칸 안내와
+    // 「🔁 재시 안내 (n)」 숫자를 서버 판정으로 다시 그립니다.
+    // (예전에는 여기서 다시 안 그려서, 불통과를 눌러도 버튼 숫자가 새로고침 전까지 옛 값이었습니다)
+    const h = $("#rhint-"+i);
+    if (h){ h.textContent = d.retest_hint || ""; h.className = "rhint" + (/재시 안내 대상/.test(d.retest_hint||"") ? " hit" : ""); }
+    const p = $("#rpill-"+i);
+    if (p) p.innerHTML = needsRetest(r.record) ? '<span class="pill late">🔁 재시 안내 대기</span>' : "";
+    renderRetestBtn();
     if (m){ m.className="savemsg ok"; m.textContent="저장됨 ✓"; setTimeout(()=>{ if(m.textContent==="저장됨 ✓") m.textContent=""; }, 2000); }
   } catch(e){ if (m){ m.className="savemsg err"; m.textContent="저장 실패: "+e.message; } }
 }
@@ -483,7 +500,8 @@ $("#doSend").onclick = async () => {
 };
 
 // ── 🔁 재시 안내 발송 (미리보기 → 선택 → 발송) ──
-// 데일리 리포트 카톡과 **다른 템플릿**(TPL_RETEST)으로 나갑니다 — 불통과한 학생만.
+// 데일리 리포트 카톡과 **다른 템플릿**(TPL_RETEST)으로 나갑니다 — 단어를 못 넘긴 학생만.
+// 대상 판정은 서버(lib/retest.js)가 합니다 — 「불통과」 버튼 또는 점수 기준 미달.
 let RPREVIEW = [];
 $("#retest").onclick = async () => {
   $("#rResult").textContent = "";
@@ -491,7 +509,8 @@ $("#retest").onclick = async () => {
     const d = await api({ action:"send-retest", date:$("#date").value, dryRun:true, teacher:TEACHER||undefined });
     RPREVIEW = d.results || [];
     if (!RPREVIEW.length){ alert("재시 안내를 보낼 학생이 없어요."); load(); return; }
-    $("#rSub").textContent = `${d.date} — 단어테스트 불통과 ${RPREVIEW.length}명`
+    $("#rSub").textContent = `${d.date} — 단어테스트 못 넘긴 ${RPREVIEW.length}명`
+      + (d.pass ? ` (「불통과」 누른 학생 + 점수 ${d.pass}% 미달)` : "")
       + (d.solapi ? "" : " · ⚠️ TPL_RETEST(재시 안내 템플릿) 미설정 상태라 실제 발송은 안 됩니다");
     $("#rList").innerHTML = RPREVIEW.map((p, idx) => {
       const dis = !p.ok && p.reason === "연락처 없음";

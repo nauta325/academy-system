@@ -31,6 +31,7 @@ import { select, insert, patch, remove, dbConfigured, DbInputError } from "../li
 import { kstNow, toMinutes, addMinutes } from "../lib/time.js";
 import { sendAlimtalk, TPL } from "../lib/solapi.js";
 import { tocByBook, advanceProgress, normUnit, linkStatus, tasksForProgress } from "../lib/progress.js";
+import { isFail, retestQueueValue, needsRetest, retestHint, RETEST_PASS } from "../lib/retest.js";
 
 const GRACE = 10;       // 지각 유예(분)
 const LEAVE_SOON = 15;  // "곧 하원" 판단(예상 하원시간 15분 전부터)
@@ -54,24 +55,8 @@ function vocaText(rec) {
   return rec.voca_score ? `${rec.voca_test} (${rec.voca_score})` : rec.voca_test;
 }
 
-// 단어테스트 "못 넘어갔다" 판정 — 운영은 '불통과', 노션에서 옮겨오면 '미통과' 로 적힌 행도 있다.
-const isFailText = (v) => /불통과|미통과/.test(String(v || ""));
-
-// 재시 안내 카톡 큐 — 운영(studyplanner admin-api 의 `단어카톡`)과 같은 규칙.
-//   · 단어테스트가 불통과 → '미전송'(발송 대기)
-//   · 통과로 고쳐지면     → 비움 (대기 해제)
-//   · 이미 '전송' 인 행은 건드리지 않음 (두 번 보내지 않게)
-// 바꿀 필요가 없으면 undefined 를 돌려줘서 호출하는 쪽이 아무것도 안 하게 한다.
-function retestQueueValue(cur, vocaTest) {
-  if (cur === "전송") return undefined;
-  if (isFailText(vocaTest)) return cur === "미전송" ? undefined : "미전송";
-  return cur === "미전송" ? null : undefined;
-}
-// 화면에서 "재시 안내를 보내야 하는 행" 판정 (서버·화면이 같은 규칙을 쓰게 여기서 한 번만)
-function needsRetest(rec) {
-  if (!rec || rec.retest_sent === "전송") return false;
-  return rec.retest_sent === "미전송" || isFailText(rec.voca_test);
-}
+// 단어테스트 판정·재시 큐 규칙은 lib/retest.js 한 곳에 모여 있습니다
+// (「불통과」 버튼 + 점수칸 둘 다 봅니다 — 기준 %·만점도 거기 맨 위 두 줄).
 
 // 오늘 행 없으면 만들어 반환 (진도는 교재 목차의 다음 유닛으로 자동 전환)
 // 학생 한 명의 그날 데일리리포트 행을 찾고, 없으면 다음 진도로 만들어 돌려준다.
@@ -313,6 +298,10 @@ export default async function handler(req, res) {
             report_sent: rec.report_sent,
             // 재시 안내 카톡 상태 — 화면의 「🔁 재시 안내」 개수를 이걸로 셉니다
             retest_sent: rec.retest_sent || null,
+            // 판정은 **서버에서만** 합니다 (화면이 규칙을 따로 들고 있으면 둘이 어긋납니다).
+            //   needs_retest = 재시 안내 대상인가 / retest_hint = 점수칸 밑에 띄울 한 줄
+            needs_retest: needsRetest(rec),
+            retest_hint: retestHint(rec.voca_test, rec.voca_score),
           },
           prev: prev[0] ? { date: prev[0].date, progress: prev[0].progress || {} } : null,
           // 지난 수업 (최근 것이 앞) — 진도·단어테스트·태도·과제·지적
@@ -325,6 +314,8 @@ export default async function handler(req, res) {
             homework: h.homework || null,
             lateness: h.lateness || null,
             note: h.note || null,
+            // 「🔁 오늘 재시?」 를 띄울지 — 지난 수업도 같은 규칙으로 서버가 판정
+            needs_retest: isFail(h.voca_test, h.voca_score),
           })),
           // 진도가 교재 목차와 연결됐는지 — 화면에서 "왜 안 넘어가지?" 를 바로 보여주려고.
           link: linkStatus(rec.progress, s.books, toc),
@@ -480,7 +471,8 @@ export default async function handler(req, res) {
           results.push({ ...preview, ok: false, reason: send.reason || (send.skipped ? "솔라피/TPL_RETEST 미설정" : "발송 실패") });
         }
       }
-      return res.status(200).json({ date, total: results.length, sent, dryRun, results, solapi: Boolean(TPL.retest) });
+      // pass = 통과 기준(%) — 미리보기 모달이 "무슨 기준으로 고른 건지" 를 적어줍니다
+      return res.status(200).json({ date, total: results.length, sent, dryRun, results, pass: RETEST_PASS, solapi: Boolean(TPL.retest) });
     }
 
     // ── 학생 저장(추가/수정) ──
@@ -607,10 +599,13 @@ export default async function handler(req, res) {
                      "note", "parent_note", "lateness", "check_out"];
       const body = {};
       for (const k of allow) if (k in (fields || {})) body[k] = fields[k];
-      // ★ 단어테스트 결과를 「불통과」로 적으면 재시 안내 카톡 큐에 자동으로 올린다.
-      //   (운영과 같은 방식 — 선생님이 따로 "재시 보내기" 를 기억하지 않아도 되게.
-      //    retest_sent 는 선생님이 직접 고치는 칸이 아니라서 allow 목록에 없습니다)
-      const q = retestQueueValue(row.retest_sent, "voca_test" in (fields || {}) ? fields.voca_test : row.voca_test);
+      // ★ 단어테스트를 「불통과」로 누르거나 **점수가 기준 미달**이면 재시 안내 카톡 큐에
+      //   자동으로 올린다. (운영과 같은 방식 — 선생님이 따로 "재시 보내기" 를 기억하지
+      //   않아도 되게. retest_sent 는 선생님이 직접 고치는 칸이 아니라서 allow 에 없습니다)
+      //   점수만 적고 통과/불통과를 안 누르는 게 흔해서 점수까지 같이 봅니다.
+      const 새결과 = "voca_test" in (fields || {}) ? fields.voca_test : row.voca_test;
+      const 새점수 = "voca_score" in (fields || {}) ? fields.voca_score : row.voca_score;
+      const q = retestQueueValue(row.retest_sent, 새결과, 새점수);
       if (q !== undefined) body.retest_sent = q;
       const upd = (await patch("daily_records", `id=eq.${row.id}`, body))[0];
       // 진도를 고쳤으면 그 유닛의 자동 과제도 따라 바뀌어야 합니다.
@@ -619,7 +614,12 @@ export default async function handler(req, res) {
         const stu = (await select("students", `id=eq.${student_id}&limit=1`))[0];
         if (stu) await syncAutoTasks(stu, d, body.progress, await tocByBook());
       }
-      return res.status(200).json({ record: upd });
+      // 화면이 바로 「🔁 재시 안내」 개수와 점수칸 안내를 고칠 수 있게 같이 돌려줍니다
+      return res.status(200).json({
+        record: upd,
+        needs_retest: needsRetest(upd),
+        retest_hint: retestHint(upd.voca_test, upd.voca_score),
+      });
     }
 
     // ── 교재(목차) 저장/삭제 ──
@@ -728,6 +728,7 @@ export default async function handler(req, res) {
           parent_note: r.parent_note || null,
           report_sent: r.report_sent || null,
           retest_sent: r.retest_sent || null,
+          needs_retest: needsRetest(r),
           tasks: taskBy[r.date] || null,
         })),
         // 수업이 없던 날 낸 과제도 빠뜨리지 않게 날짜별 과제를 통째로 같이 보낸다

@@ -103,6 +103,8 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
 .copy-btn.done{background:var(--accent2);color:#fff}
 .copy-body{padding:14px 16px;font-size:13px;line-height:1.85;white-space:pre;overflow-x:auto;font-family:'Space Mono',monospace;color:#2a3440}
 .copy-body.prompt{white-space:pre-wrap;font-family:'Noto Sans KR',sans-serif;font-size:13.5px;line-height:1.9;color:#333}
+/* 프롬프트 위 한 줄 메모 — 「이건 이미 들어 있습니다」 처럼 짚어줄 때 */
+.pnote{padding:9px 16px;background:#f3f8f5;border-bottom:1px solid #e3ece7;font-size:12.5px;line-height:1.7;color:#35594c}
 
 .recap-list{list-style:none}
 .recap-list li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;font-size:14px;line-height:1.6;color:#444;border-bottom:1px solid var(--border)}
@@ -774,11 +776,12 @@ lib/claude.js 의 reportGuideline() 을 고치면 될 거야.</div>
       <div class="copy-body prompt" id="pp35">데일리 리포트 카톡에 '오늘 과제' 한 줄을 추가하고 싶어.
 솔라피 템플릿에 #{오늘과제} 변수를 추가할 테니 그 값도 같이 보내줘.</div>
     </div>
-    <div class="copy-wrap claude pitem" data-k="알림톡 ㉞ 재시 기준을 점수로 자동 판정  단어테스트 점수를 적으면 18/20 미만일 때 자동으로 '불통과'가 되게 해줘.
-그러면 재시 안내 큐에도 자동으로 올라가야 해. (api/attendance.js 의 save-record)">
-      <div class="copy-head"><span class="copy-label">㉞ 재시 기준을 점수로 자동 판정</span><button class="copy-btn" onclick="cp(this,'pp36')">복사</button></div>
-      <div class="copy-body prompt" id="pp36">단어테스트 점수를 적으면 18/20 미만일 때 자동으로 '불통과'가 되게 해줘.
-그러면 재시 안내 큐에도 자동으로 올라가야 해. (api/attendance.js 의 save-record)</div>
+    <div class="copy-wrap claude pitem" data-k="알림톡 ㉞ 재시 기준(%) 바꾸기 점수 자동 판정은 이미 들어 있음  재시 통과 기준을 70%로 바꿔줘. (lib/retest.js 맨 위 PASS_DEFAULT)
+우리는 점수를 늘 100점 만점으로 적으니까 FULL_DEFAULT 도 100 으로 바꿔줘.">
+      <div class="copy-head"><span class="copy-label">㉞ 재시 기준(%) 바꾸기</span><button class="copy-btn" onclick="cp(this,'pp36')">복사</button></div>
+      <div class="pnote">✅ <b>점수로 자동 판정은 이미 들어 있습니다</b> — 점수만 「12/20」처럼 적어도 기준(기본 80%) 미달이면 재시 큐에 올라갑니다. 기준만 바꾸세요.</div>
+      <div class="copy-body prompt" id="pp36">재시 통과 기준을 70%로 바꿔줘. (lib/retest.js 맨 위 PASS_DEFAULT)
+우리는 점수를 늘 100점 만점으로 적으니까 FULL_DEFAULT 도 100 으로 바꿔줘.</div>
     </div>
     <div class="copy-wrap claude pitem" data-k="알림톡 ㉟ 재시 안내를 문장 테스트에도  단어 말고 '문장 테스트' 결과도 불통과면 재시 안내 카톡이 나가게 해줘.
 템플릿은 따로 올릴 거야. 변수는 #{학생이름} #{날짜} #{구문교재} #{영작테스트} #{점수} 로.">

@@ -49,6 +49,41 @@ await post("/api/attendance",{action:"save-record",student_id:대상.id,date:TOD
 rr=(await get("/api/attendance",`action=daily-rows&date=${TODAY}`)).d.rows.find(x=>x.student_id===대상.id);
 ck(`${대상.name}: ★ 통과로 고치면 큐에서 내려온다`, !rr?.record?.retest_sent, rr?.record?.retest_sent);
 
+// ── 2-B. ★ 점수만 적었을 때 (선생님이 통과/불통과를 안 누르는 게 실제로 더 흔합니다)
+//    예전에는 점수만 적으면 **조용히** 재시 안내가 안 나갔습니다.
+console.log("\n── 점수만 적어도 재시 안내가 올라가나 ──");
+const 점수만 = students[1];
+const 저장 = async (f) => (await post("/api/attendance",{action:"save-record",student_id:점수만.id,date:TODAY,fields:f})).d;
+const 행 = async () => (await get("/api/attendance",`action=daily-rows&date=${TODAY}`)).d.rows.find(x=>x.student_id===점수만.id)?.record || {};
+
+let d = await 저장({voca_test:null, voca_score:"12/20"});
+console.log("  save-record 응답키:", Object.keys(d).join(","), "· 안내:", d.retest_hint);
+ck("점수 12/20 만 적어도 큐에 올라간다", (await 행()).retest_sent==="미전송", await 행());
+ck("서버가 화면용 판정을 같이 준다 (needs_retest)", d.needs_retest===true, d);
+ck("서버가 점수칸 안내 한 줄을 준다", /재시 안내 대상/.test(d.retest_hint||""), d.retest_hint);
+ck("daily-rows 도 같은 판정을 준다", (await 행()).needs_retest===true, await 행());
+
+// 발송 대상에 **실제로** 들어가나 — 큐만 차고 미리보기에서 빠지면 아무 의미가 없습니다
+const 미리보기 = await post("/api/attendance",{action:"send-retest",date:TODAY,dryRun:true});
+ck("점수만 적은 학생이 재시 발송 대상에 들어간다",
+   (미리보기.d.results||[]).some(x=>x.student_id===점수만.id), (미리보기.d.results||[]).map(x=>x.name));
+ck("미리보기가 기준(%)을 같이 알려준다", 미리보기.d.pass>0, 미리보기.d.pass);
+
+d = await 저장({voca_score:"18/20"});
+ck("점수를 고쳐 기준을 넘기면 큐에서 내려온다", !(await 행()).retest_sent, await 행());
+ck("그때 안내도 「통과」 로 바뀐다", /통과/.test(d.retest_hint||""), d.retest_hint);
+
+// 선생님 판단이 점수보다 우선 — 「통과」를 눌러두면 점수가 낮아도 안 보냅니다
+d = await 저장({voca_test:"통과", voca_score:"3/20"});
+ck("★ 「통과」 를 눌러두면 점수가 낮아도 재시가 아니다", !(await 행()).retest_sent, await 행());
+ck("그 이유를 화면에 적어준다", /우선/.test(d.retest_hint||""), d.retest_hint);
+
+// 만점을 모르는 숫자는 **잘못 보내지 않는다** (18 이 18점인지 18/20 인지 알 수 없음)
+d = await 저장({voca_test:null, voca_score:"18"});
+ck("★ 숫자만 적으면 짐작해서 보내지 않는다", !(await 행()).retest_sent, await 행());
+ck("대신 왜 판정 못 했는지 화면에 적어준다", /판정 못/.test(d.retest_hint||""), d.retest_hint);
+await 저장({voca_test:null, voca_score:null});
+
 // ── 3. 학생 카드 — 열두 명 전원
 console.log("\n── 학생 카드 (지난 진도) ──");
 for (const s of students) {
