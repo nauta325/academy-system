@@ -150,9 +150,9 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
   <a class="nav-item" href="#supabase">Supabase</a>
   <a class="nav-item" href="#vercel">Vercel</a>
   <a class="nav-item" href="#screens">화면</a>
-  <a class="nav-item claude-nav" href="#vibe">바이브코딩</a>
-  <a class="nav-item claude-nav" href="#mine">내것만들기</a>
   <a class="nav-item" href="#apps">학생·선생님앱</a>
+  <a class="nav-item claude-nav" href="#vibe">바이브코딩 <span style="opacity:.7">(프롬프트 51)</span></a>
+  <a class="nav-item claude-nav" href="#mine">내것만들기</a>
   <a class="nav-item" href="#alimtalk">알림톡</a>
   <a class="nav-item" href="#trouble">막힐때</a>
 </div></div>
@@ -321,6 +321,39 @@ NOTION_COMMENTS_DB</div>
     <div class="hl-box red"><strong>⚠️ 실제 학생 정보는 신중히</strong><br>연습 중엔 위 같은 <b>가짜 이름·번호</b>로 하세요. 실제 학생 실명·연락처는 우리 학원 실제 배포에서만, 그리고 학부모 동의 하에.</div>
   </div>
 
+  <div class="sec-header" style="margin-top:32px"><div class="sec-num">04b</div><div><div class="sec-label">교재 · 목차</div><div class="sec-title">★ 진도 자동 전환의 재료 — 과제까지 같이</div></div></div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-title"><div class="num">★</div> 교재 목차 = 진도 자동 전환 (데일리리포트가 쉬워지는 핵심)</div>
+    <p>데일리리포트가 매일 생겨도 <b>진도를 손으로 못 채워서</b> 밀리는 게 가장 큰 문제였죠. 그래서 <b>교재 목차를 순서대로</b> 한 번 넣어두면, 매일 진도가 <b>다음 목차로 자동 전환</b>됩니다.</p>
+    <ul class="step-list">
+      <li><code>/books.html</code> <b>교재 관리</b>에서 교재별 <b>목차를 붙여넣기</b>(한 줄에 하나). 교재명은 학생 교재명과 똑같이.</li>
+      <li><b>속도</b>는 교재별 <b>하루 진도(유닛 수)</b>로: 1=매 수업 한 유닛, 2=두 유닛씩.</li>
+      <li><b>복습</b>은 목차에 <b>"복습 Unit 1~4" 같은 줄</b>을 끼워 넣으면 그 날 복습에서 머뭅니다(코드 수정 없이).</li>
+      <li>매일 새벽 데일리 리포트가 자동 생성될 때, 진도가 <b>다음 단계</b>로 이미 채워져 나옵니다(따로 누를 필요 없음). 그날 다르게 나갔으면 그 학생만 수정.</li>
+    </ul>
+    <div class="hl-box green"><strong>✓ 진도를 매일 안 써도 되니 데일리리포트가 안 밀리고, 그게 쌓여 월말평가서가 굴러갑니다.</strong></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title"><div class="num">★</div> 같은 목차에 과제까지 — 그러면 매일 안 적어도 됩니다</div>
+    <p>진도가 자동으로 넘어가는 것과 <b>똑같은 원리</b>를 과제에도 씁니다. 목차 줄 뒤에 과제를 적어두면 <b>그 유닛에 진도가 닿는 날 그 학생에게만</b> 과제가 들어갑니다. 아이마다 진도가 다르니 과제도 아이마다 다르게 나가는데, <b>아무도 고르지 않습니다.</b></p>
+    <div class="copy-wrap"><div class="copy-head"><span class="copy-label">목차 칸은 네 칸까지 받습니다</span><button class="copy-btn" onclick="cp(this,'hwfmt')">복사</button></div>
+      <div class="copy-body" id="hwfmt">유닛코드 | 제목 | 집과제(쉼표로 여러 개) | 학원과제</div></div>
+    <ul class="step-list" style="margin-top:12px">
+      <li><b>3번째 칸 = 집과제</b> — 집에서 할 것. 쉼표로 여러 개 (<code>워크북 U10, 단어 30개</code>)</li>
+      <li><b>4번째 칸 = 학원과제</b> — 학원에서 할 것. 하나만 (<code>본문 2회 소리내어 읽기</code>)</li>
+      <li><b>적지 않은 유닛은 아무 일도 안 일어납니다.</b> 쓰던 교재를 그대로 두셔도 됩니다.</li>
+      <li><b>치지 마세요</b> — 과제를 어떻게 낼지만 말씀하시면 목차 전체가 한 번에 채워집니다. 아래 09번 「교재 목차 넣기」의 ㊼-A/B/C/D 를 복사해 쓰세요.</li>
+    </ul>
+    <div class="copy-wrap"><div class="copy-head"><span class="copy-label">이렇게 됩니다 — 두 칸만 늘어났을 뿐</span><button class="copy-btn" onclick="cp(this,'hwex')">복사</button></div>
+      <div class="copy-body" id="hwex">CH1-1 | be동사 | 워크북 CH1-1, 단어 30개 | 본문 2회 읽기
+CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
+복습 | CH1-1~1-3 다시 | 복습지 풀기 |</div></div>
+    <div class="hl-box green"><strong>✓ 선생님앱</strong>에는 아이마다 오늘 과제가 이미 들어와 있고(자동으로 생긴 것은 <b>「자동」 표시</b>), <strong>학생앱</strong>에서 아이가 폰으로 보고 체크합니다. 학부모 카톡에는 과제 내용이 안 들어갑니다.</div>
+    <div class="hl-box teal"><strong>🔧 언제 들어오나</strong> 과제는 <b>진도가 정해지는 순간</b>에 깔립니다 — <b>① 새벽에 그날 행이 생길 때</b> · <b>② 선생님이 진도를 적어 저장할 때</b>, 둘뿐입니다. 오늘 행이 이미 있는데 목차를 고치셨으면, 데일리에서 <b>그 학생 진도를 한 번 고르면</b> 들어옵니다. 날짜를 <b>내일로 넘겨 보면 안 보이는데</b>, 미래는 미리보기라 저장하지 않아서예요 — 고장이 아닙니다.</div>
+    <div class="hl-box yellow"><strong>⚠️ 손으로 낸 과제는 지워지지 않습니다.</strong> 선생님이 그날 직접 내준 과제는 진도가 바뀌어도 그대로 남습니다. 그리고 <b>과제를 했는지 채점은 아직 사람이</b> 합니다 — 아이가 체크는 하지만 확인은 선생님이 하셔야 해요.</div>
+  </div>
+
   <div class="sec-header" style="margin-top:32px"><div class="sec-num">05</div><div><div class="sec-label">키오스크</div><div class="sec-title">PIN으로 등·하원</div></div></div>
   <div class="card">
     <p><code>/kiosk.html</code> — 학원 태블릿/PC에 띄워두는 화면.</p>
@@ -350,37 +383,6 @@ NOTION_COMMENTS_DB</div>
     <div class="hl-box green"><strong>✓ 매일의 데일리 리포트가 월말평가서의 재료</strong>입니다. 진도가 자동으로 굴러가니 밀리지 않아요.</div>
   </div>
 
-  <div class="card" style="margin-top:16px">
-    <div class="card-title"><div class="num">★</div> 교재 목차 = 진도 자동 전환 (데일리리포트가 쉬워지는 핵심)</div>
-    <p>데일리리포트가 매일 생겨도 <b>진도를 손으로 못 채워서</b> 밀리는 게 가장 큰 문제였죠. 그래서 <b>교재 목차를 순서대로</b> 한 번 넣어두면, 매일 진도가 <b>다음 목차로 자동 전환</b>됩니다.</p>
-    <ul class="step-list">
-      <li><code>/books.html</code> <b>교재 관리</b>에서 교재별 <b>목차를 붙여넣기</b>(한 줄에 하나). 교재명은 학생 교재명과 똑같이.</li>
-      <li><b>속도</b>는 교재별 <b>하루 진도(유닛 수)</b>로: 1=매 수업 한 유닛, 2=두 유닛씩.</li>
-      <li><b>복습</b>은 목차에 <b>"복습 Unit 1~4" 같은 줄</b>을 끼워 넣으면 그 날 복습에서 머뭅니다(코드 수정 없이).</li>
-      <li>매일 새벽 데일리 리포트가 자동 생성될 때, 진도가 <b>다음 단계</b>로 이미 채워져 나옵니다(따로 누를 필요 없음). 그날 다르게 나갔으면 그 학생만 수정.</li>
-    </ul>
-    <div class="hl-box green"><strong>✓ 진도를 매일 안 써도 되니 데일리리포트가 안 밀리고, 그게 쌓여 월말평가서가 굴러갑니다.</strong></div>
-  </div>
-
-  <div class="card" style="margin-top:16px">
-    <div class="card-title"><div class="num">★</div> 같은 목차에 과제까지 — 그러면 매일 안 적어도 됩니다</div>
-    <p>진도가 자동으로 넘어가는 것과 <b>똑같은 원리</b>를 과제에도 씁니다. 목차 줄 뒤에 과제를 적어두면 <b>그 유닛에 진도가 닿는 날 그 학생에게만</b> 과제가 들어갑니다. 아이마다 진도가 다르니 과제도 아이마다 다르게 나가는데, <b>아무도 고르지 않습니다.</b></p>
-    <div class="copy-wrap"><div class="copy-head"><span class="copy-label">목차 칸은 네 칸까지 받습니다</span><button class="copy-btn" onclick="cp(this,'hwfmt')">복사</button></div>
-      <div class="copy-body" id="hwfmt">유닛코드 | 제목 | 집과제(쉼표로 여러 개) | 학원과제</div></div>
-    <ul class="step-list" style="margin-top:12px">
-      <li><b>3번째 칸 = 집과제</b> — 집에서 할 것. 쉼표로 여러 개 (<code>워크북 U10, 단어 30개</code>)</li>
-      <li><b>4번째 칸 = 학원과제</b> — 학원에서 할 것. 하나만 (<code>본문 2회 소리내어 읽기</code>)</li>
-      <li><b>적지 않은 유닛은 아무 일도 안 일어납니다.</b> 쓰던 교재를 그대로 두셔도 됩니다.</li>
-      <li><b>치지 마세요</b> — 과제를 어떻게 낼지만 말씀하시면 목차 전체가 한 번에 채워집니다. 아래 08번 「교재 목차 넣기」의 ㊼-A/B/C/D 를 복사해 쓰세요.</li>
-    </ul>
-    <div class="copy-wrap"><div class="copy-head"><span class="copy-label">이렇게 됩니다 — 두 칸만 늘어났을 뿐</span><button class="copy-btn" onclick="cp(this,'hwex')">복사</button></div>
-      <div class="copy-body" id="hwex">CH1-1 | be동사 | 워크북 CH1-1, 단어 30개 | 본문 2회 읽기
-CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
-복습 | CH1-1~1-3 다시 | 복습지 풀기 |</div></div>
-    <div class="hl-box green"><strong>✓ 선생님앱</strong>에는 아이마다 오늘 과제가 이미 들어와 있고(자동으로 생긴 것은 <b>「자동」 표시</b>), <strong>학생앱</strong>에서 아이가 폰으로 보고 체크합니다. 학부모 카톡에는 과제 내용이 안 들어갑니다.</div>
-    <div class="hl-box teal"><strong>🔧 언제 들어오나</strong> 과제는 <b>진도가 정해지는 순간</b>에 깔립니다 — <b>① 새벽에 그날 행이 생길 때</b> · <b>② 선생님이 진도를 적어 저장할 때</b>, 둘뿐입니다. 오늘 행이 이미 있는데 목차를 고치셨으면, 데일리에서 <b>그 학생 진도를 한 번 고르면</b> 들어옵니다. 날짜를 <b>내일로 넘겨 보면 안 보이는데</b>, 미래는 미리보기라 저장하지 않아서예요 — 고장이 아닙니다.</div>
-    <div class="hl-box yellow"><strong>⚠️ 손으로 낸 과제는 지워지지 않습니다.</strong> 선생님이 그날 직접 내준 과제는 진도가 바뀌어도 그대로 남습니다. 그리고 <b>과제를 했는지 채점은 아직 사람이</b> 합니다 — 아이가 체크는 하지만 확인은 선생님이 하셔야 해요.</div>
-  </div>
 
   <div class="sec-header" style="margin-top:32px"><div class="sec-num">07</div><div><div class="sec-label">월말평가서</div><div class="sec-title">AI 생성 → 학부모 링크</div></div></div>
   <div class="card">
@@ -397,8 +399,51 @@ CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
 
 <div class="part-divider claude-part"><div class="pd-inner"><div class="pd-num">03</div><div><div class="pd-label">PART THREE · CLAUDE</div><div class="pd-title">이제부터가 진짜 — 말해서 고치기</div></div></div></div>
 
+<div class="content" id="apps">
+  <div class="sec-header"><div class="sec-num claude-num">08</div><div><div class="sec-label">선생님앱 · 학생앱</div><div class="sec-title">과제를 내주고, 학생이 체크한다</div></div></div>
+
+  <div class="card">
+    <div class="card-title"><div class="num">1</div> 선생님앱 <code>/teacher.html</code></div>
+    <ul class="step-list">
+      <li>상단에서 <b>담당 선생님</b>을 고르면 <b>그 담당 학생만</b> 보입니다. (담당은 학생관리의 「담당 선생님」 칸)</li>
+      <li>학생을 체크 → <b>「진도로 채우기」</b> → 오늘 진도가 과제 제목에 자동으로 들어갑니다. 내용은 고쳐도 됩니다.</li>
+      <li><b>「과제 내주기」</b> → 고른 학생 전원에게 같은 과제가 한 번에 들어갑니다.</li>
+      <li>아래 <b>「과제 체크 현황」</b>에서 누가 했는지 바로 보입니다.</li>
+      <li>「데일리 리포트 작성 →」을 누르면 <b>담당 학생만 나오는</b> 작성 화면으로 넘어갑니다.</li>
+    </ul>
+    <div class="hl-box yellow"><strong>⚠️ 학생이 안 보이면</strong><br>학생관리에서 그 학생의 <b>담당 선생님 칸이 비어 있는</b> 겁니다. 채우면 바로 보입니다. (가장 흔한 막힘)</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><div class="num">2</div> 학생앱 <code>/student.html</code></div>
+    <ul class="step-list">
+      <li>학생이 폰으로 열어 <b>학생ID + 출결번호</b>로 로그인. <b>키오스크에서 누르는 그 번호</b>라 새로 외울 게 없습니다.</li>
+      <li>오늘 할 일을 <b>탭해서 체크</b> → 진행바가 찹니다. 선생님 화면에 바로 반영됩니다.</li>
+      <li>내 진도 · 최근 수업 기록 · 월말평가서도 볼 수 있습니다.</li>
+      <li>한 번 로그인하면 <b>그 폰에 기억</b>돼서 다음부터 바로 들어옵니다.</li>
+    </ul>
+    <div class="hl-box teal"><strong>💡 지금 해보세요</strong> 본인 폰으로 <code>/student.html</code> 을 열고 샘플 학생(<b>demo01 / 1111</b>)로 로그인 → 과제 체크 → 선생님앱 새로고침. <b>「완료」로 바뀌는 걸 확인</b>하면 끝입니다.</div>
+    <div class="hl-box yellow"><strong>⚠️ 출결번호는 학생 본인에게만</strong><br>주소를 아는 사람은 로그인 화면까지 볼 수 있습니다. 기록을 보려면 <b>학생ID + 출결번호</b>가 둘 다 필요해요. 바꾸고 싶으면 학생관리에서 PIN을 고치면 됩니다.</div>
+  </div>
+
+  <div class="card claude-card">
+    <div class="card-title"><div class="num">3</div> 이 두 화면이 바이브 코딩 실습에 제일 좋습니다</div>
+    <p>고친 결과가 <b>폰에 바로 보여서</b> 재미있습니다. 이렇게 말해보세요 👇</p>
+    <div class="copy-wrap claude">
+      <div class="copy-head"><span class="copy-label">① 학생앱 꾸미기</span><button class="copy-btn" onclick="cp(this,'app1')">복사</button></div>
+      <div class="copy-body prompt" id="app1">student.html 에서 과제를 다 체크하면 축하 메시지랑 별 스티커가 뜨게 해줘. 학생이 초등학생이라 좀 귀엽게 해줘.</div>
+    </div>
+    <div class="copy-wrap claude">
+      <div class="copy-head"><span class="copy-label">② 선생님앱 보기 바꾸기</span><button class="copy-btn" onclick="cp(this,'app2')">복사</button></div>
+      <div class="copy-body prompt" id="app2">teacher.html 의 과제 체크 현황에서 아직 안 한 학생만 위로 모아서 보여줘. 그리고 30초마다 자동으로 새로고침 되게 해줘.</div>
+    </div>
+    <div class="hl-box red"><strong>★ 이것만은 지우지 마세요</strong><br><code>api/student.js</code> 안의 <code>student_id=eq.</code> 조건은 학생이 <b>자기 것만</b> 보게 막아주는 장치입니다. 지우면 다른 학생 기록이 보입니다. 클로드에게 고쳐달라고 할 때 <b>"이 조건은 유지해줘"</b>라고 같이 말해주세요.</div>
+  </div>
+</div>
+
+
 <div class="content" id="vibe">
-  <div class="sec-header"><div class="sec-num claude-num">08</div><div><div class="sec-label">바이브 코딩</div><div class="sec-title">코드 안 열고, 말로 바꾼다</div></div></div>
+  <div class="sec-header"><div class="sec-num claude-num">09</div><div><div class="sec-label">바이브 코딩</div><div class="sec-title">코드 안 열고, 말로 바꾼다</div></div></div>
   <div class="card claude-card">
     <p>고치고 싶은 게 생기면 <b>클로드에 내 저장소를 연결</b>하고 아래 문장을 <b>그대로 복사</b>해서 말하면 됩니다.
       <b>51개</b>를 상황별로 모아뒀어요. 수업 중에 이 화면을 옆에 띄워두고 쓰세요.</p>
@@ -854,48 +899,6 @@ lib/claude.js 의 reportGuideline() 을 고치면 될 거야.</div>
       <li><b>결석·보강 관리</b> — 결석 시 보강일 자동 제안</li>
     </ul>
     <div class="hl-box teal"><strong>포인트</strong><br>파일이 짧고 주석이 있어 <b>어디를 바꾸는지 보이고</b>, 말하면 <b>그 자리에서 바뀝니다</b>. 이제 이 시스템은 강사 것이 아니라 <b>원장님 것</b>이에요 — 학원이 크는 만큼 같이 키우면 됩니다.</div>
-  </div>
-</div>
-
-<div class="content" id="apps">
-  <div class="sec-header"><div class="sec-num claude-num">09</div><div><div class="sec-label">선생님앱 · 학생앱</div><div class="sec-title">과제를 내주고, 학생이 체크한다</div></div></div>
-
-  <div class="card">
-    <div class="card-title"><div class="num">1</div> 선생님앱 <code>/teacher.html</code></div>
-    <ul class="step-list">
-      <li>상단에서 <b>담당 선생님</b>을 고르면 <b>그 담당 학생만</b> 보입니다. (담당은 학생관리의 「담당 선생님」 칸)</li>
-      <li>학생을 체크 → <b>「진도로 채우기」</b> → 오늘 진도가 과제 제목에 자동으로 들어갑니다. 내용은 고쳐도 됩니다.</li>
-      <li><b>「과제 내주기」</b> → 고른 학생 전원에게 같은 과제가 한 번에 들어갑니다.</li>
-      <li>아래 <b>「과제 체크 현황」</b>에서 누가 했는지 바로 보입니다.</li>
-      <li>「데일리 리포트 작성 →」을 누르면 <b>담당 학생만 나오는</b> 작성 화면으로 넘어갑니다.</li>
-    </ul>
-    <div class="hl-box yellow"><strong>⚠️ 학생이 안 보이면</strong><br>학생관리에서 그 학생의 <b>담당 선생님 칸이 비어 있는</b> 겁니다. 채우면 바로 보입니다. (가장 흔한 막힘)</div>
-  </div>
-
-  <div class="card">
-    <div class="card-title"><div class="num">2</div> 학생앱 <code>/student.html</code></div>
-    <ul class="step-list">
-      <li>학생이 폰으로 열어 <b>학생ID + 출결번호</b>로 로그인. <b>키오스크에서 누르는 그 번호</b>라 새로 외울 게 없습니다.</li>
-      <li>오늘 할 일을 <b>탭해서 체크</b> → 진행바가 찹니다. 선생님 화면에 바로 반영됩니다.</li>
-      <li>내 진도 · 최근 수업 기록 · 월말평가서도 볼 수 있습니다.</li>
-      <li>한 번 로그인하면 <b>그 폰에 기억</b>돼서 다음부터 바로 들어옵니다.</li>
-    </ul>
-    <div class="hl-box teal"><strong>💡 지금 해보세요</strong> 본인 폰으로 <code>/student.html</code> 을 열고 샘플 학생(<b>demo01 / 1111</b>)로 로그인 → 과제 체크 → 선생님앱 새로고침. <b>「완료」로 바뀌는 걸 확인</b>하면 끝입니다.</div>
-    <div class="hl-box yellow"><strong>⚠️ 출결번호는 학생 본인에게만</strong><br>주소를 아는 사람은 로그인 화면까지 볼 수 있습니다. 기록을 보려면 <b>학생ID + 출결번호</b>가 둘 다 필요해요. 바꾸고 싶으면 학생관리에서 PIN을 고치면 됩니다.</div>
-  </div>
-
-  <div class="card claude-card">
-    <div class="card-title"><div class="num">3</div> 이 두 화면이 바이브 코딩 실습에 제일 좋습니다</div>
-    <p>고친 결과가 <b>폰에 바로 보여서</b> 재미있습니다. 이렇게 말해보세요 👇</p>
-    <div class="copy-wrap claude">
-      <div class="copy-head"><span class="copy-label">① 학생앱 꾸미기</span><button class="copy-btn" onclick="cp(this,'app1')">복사</button></div>
-      <div class="copy-body prompt" id="app1">student.html 에서 과제를 다 체크하면 축하 메시지랑 별 스티커가 뜨게 해줘. 학생이 초등학생이라 좀 귀엽게 해줘.</div>
-    </div>
-    <div class="copy-wrap claude">
-      <div class="copy-head"><span class="copy-label">② 선생님앱 보기 바꾸기</span><button class="copy-btn" onclick="cp(this,'app2')">복사</button></div>
-      <div class="copy-body prompt" id="app2">teacher.html 의 과제 체크 현황에서 아직 안 한 학생만 위로 모아서 보여줘. 그리고 30초마다 자동으로 새로고침 되게 해줘.</div>
-    </div>
-    <div class="hl-box red"><strong>★ 이것만은 지우지 마세요</strong><br><code>api/student.js</code> 안의 <code>student_id=eq.</code> 조건은 학생이 <b>자기 것만</b> 보게 막아주는 장치입니다. 지우면 다른 학생 기록이 보입니다. 클로드에게 고쳐달라고 할 때 <b>"이 조건은 유지해줘"</b>라고 같이 말해주세요.</div>
   </div>
 </div>
 
