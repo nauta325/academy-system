@@ -783,11 +783,14 @@ lib/claude.js 의 reportGuideline() 을 고치면 될 거야.</div>
       <div class="copy-body prompt" id="pp36">재시 통과 기준을 70%로 바꿔줘. (lib/retest.js 맨 위 PASS_DEFAULT)
 우리는 점수를 늘 100점 만점으로 적으니까 FULL_DEFAULT 도 100 으로 바꿔줘.</div>
     </div>
-    <div class="copy-wrap claude pitem" data-k="알림톡 ㉟ 재시 안내를 문장 테스트에도  단어 말고 '문장 테스트' 결과도 불통과면 재시 안내 카톡이 나가게 해줘.
-템플릿은 따로 올릴 거야. 변수는 #{학생이름} #{날짜} #{구문교재} #{영작테스트} #{점수} 로.">
-      <div class="copy-head"><span class="copy-label">㉟ 재시 안내를 문장 테스트에도</span><button class="copy-btn" onclick="cp(this,'pp37')">복사</button></div>
-      <div class="copy-body prompt" id="pp37">단어 말고 '문장 테스트' 결과도 불통과면 재시 안내 카톡이 나가게 해줘.
-템플릿은 따로 올릴 거야. 변수는 #{학생이름} #{날짜} #{구문교재} #{영작테스트} #{점수} 로.</div>
+    <div class="copy-wrap claude pitem" data-k="알림톡 ㉟ 문장 영작 테스트를 새로 만들고 재시까지 배포본에는 없음  데일리 리포트에 '문장 테스트' 결과·점수 칸을 단어테스트처럼 새로 만들어줘.
+그리고 그게 불통과면 재시 안내 카톡이 따로 나가게 해줘.
+템플릿은 내가 따로 올릴 거야. 변수는 #{학생이름} #{날짜} #{구문교재} #{영작테스트} #{점수} 로.">
+      <div class="copy-head"><span class="copy-label">㉟ 문장(영작) 테스트를 새로 만들고 재시까지</span><button class="copy-btn" onclick="cp(this,'pp37')">복사</button></div>
+      <div class="pnote">⚠️ 배포본에는 <b>문장(영작) 테스트가 없습니다</b> — 테스트 칸은 단어 하나뿐이에요. 영작을 보시는 학원만, <b>칸부터 새로 만드는</b> 프롬프트입니다.</div>
+      <div class="copy-body prompt" id="pp37">데일리 리포트에 '문장 테스트' 결과·점수 칸을 단어테스트처럼 새로 만들어줘.
+그리고 그게 불통과면 재시 안내 카톡이 따로 나가게 해줘.
+템플릿은 내가 따로 올릴 거야. 변수는 #{학생이름} #{날짜} #{구문교재} #{영작테스트} #{점수} 로.</div>
     </div>
     <div class="copy-wrap claude pitem" data-k="알림톡 ㊱ 재시 안내를 모아서 저녁에 한 번만  재시 안내 카톡을 그때그때 보내지 말고, 하루치를 모아서 내가 버튼을 누를 때만 나가게 해줘.
 (지금도 버튼식이면 그대로 두고, 버튼에 '오늘 재시 n명'이 보이게 해줘)">
