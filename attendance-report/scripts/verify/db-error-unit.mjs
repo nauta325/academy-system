@@ -72,5 +72,46 @@ const RAW = /PGRST\d+|schema cache|permission denied for table|Invalid API key/;
   check("모르는 에러는 원문을 그대로 남긴다", m?.includes("500") && m.includes("boom"), m);
 }
 
+// ── 원장님이 리허설에서 겪은 두 가지 (여기 없으면 다시 영어 날코드가 뜹니다) ──
+{
+  // 칸이 없을 때 — **돌릴 SQL 한 줄**을 그대로 줘야 합니다.
+  //   예전엔 "서버 로그의 칸 이름을 보고 alter table 하세요" 라서 아무도 못 고쳤습니다.
+  const m = await messageFor(400, JSON.stringify({
+    code: "PGRST204",
+    message: "Could not find the 'retest_sent' column of 'daily_records' in the schema cache",
+  }));
+  check("칸 없음 — 어느 칸인지 말해준다", m?.includes("retest_sent"), m);
+  check("칸 없음 — 붙여넣을 SQL 을 그대로 준다",
+    m?.includes("alter table daily_records add column if not exists retest_sent text;"), m);
+  check("칸 없음 — 어디에 붙여넣는지 말해준다", m?.includes("SQL Editor"), m);
+  check("칸 없음 — 데이터가 안 지워진다고 안심시킨다", m?.includes("지워지지 않"), m);
+}
+{
+  // 모르는 칸이어도 쓸 수 있는 SQL 을 만들어 줘야 합니다
+  const m = await messageFor(400, JSON.stringify({
+    code: "PGRST204",
+    message: "Could not find the 'wibble' column of 'tasks' in the schema cache",
+  }));
+  check("모르는 칸도 alter table 문장을 만들어 준다",
+    m?.includes("alter table tasks add column if not exists wibble"), m);
+}
+{
+  // tasks 표가 통째로 없을 때 — 돌릴 **파일 이름**을 정확히
+  const m = await messageFor(404, JSON.stringify({
+    code: "PGRST205", message: "Could not find the table 'public.tasks' in the schema cache",
+  }));
+  check("표 없음 — migrate_tasks.sql 을 짚어준다", m?.includes("migrate_tasks.sql"), m);
+  check("표 없음 — setup.sql 재실행을 막는다", m?.includes("재실행 금지"), m);
+}
+{
+  // ★ SUPABASE_URL 에 Vercel 주소를 넣은 경우 (원장님이 실제로 겪은 것)
+  const m = await messageFor(404,
+    "The deployment could not be found on Vercel. DEPLOYMENT_NOT_FOUND icn1:iad1::qb8f4-179-7b8");
+  check("Vercel 주소를 넣었을 때 — SUPABASE_URL 을 짚어준다", m?.includes("SUPABASE_URL"), m);
+  check("Vercel 주소를 넣었을 때 — 어디서 복사하는지 말해준다", m?.includes("Project URL"), m);
+  check("Vercel 주소를 넣었을 때 — Redeploy 를 말해준다", m?.includes("Redeploy"), m);
+  check("Vercel 주소를 넣었을 때 — 영어 원문이 안 보인다", !m?.includes("DEPLOYMENT_NOT_FOUND"), m);
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);

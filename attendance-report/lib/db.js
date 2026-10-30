@@ -78,24 +78,74 @@ function 입력오류(text) {
   return null;
 }
 
+// 「칸이 없습니다」 에 **그대로 붙여넣을 SQL** 을 붙여주기 위한 표.
+//   이 앱이 나중에 더한 칸들입니다. 1·2차 수강생이 쓰던 DB 에 설치하면 꼭 하나는 걸립니다.
+//   예전에는 "서버 로그의 칸 이름을 보고 alter table 하세요" 라고만 해서,
+//   수강생이 그 문장을 보고도 아무것도 못 했습니다 (원장님이 리허설에서 겪은 자리).
+const 칸고치기 = {
+  retest_sent:   { sql: "alter table daily_records add column if not exists retest_sent text;", file: "migrate_retest.sql" },
+  auto:          { sql: "alter table tasks add column if not exists auto boolean not null default false;", file: "migrate_auto_tasks.sql" },
+  voca_score:    { sql: "alter table daily_records add column if not exists voca_score text;", file: "migrate_daily_report.sql" },
+  parent_note:   { sql: "alter table daily_records add column if not exists parent_note text;", file: "migrate_daily_report.sql" },
+  report_sent:   { sql: "alter table daily_records add column if not exists report_sent text not null default '미전송';", file: "migrate_daily_report.sql" },
+  books:         { sql: "alter table daily_records add column if not exists books jsonb not null default '{}'::jsonb;", file: "migrate_daily_report.sql" },
+  student_code:  { sql: "alter table students add column if not exists student_code text;", file: "migrate_daily_report.sql" },
+  middle_school: { sql: "alter table students add column if not exists middle_school boolean not null default false;", file: "migrate_daily_report.sql" },
+  step:          { sql: "alter table textbooks add column if not exists step int not null default 1;", file: "migrate_daily_report.sql" },
+  price:         { sql: "alter table textbooks add column if not exists price int;", file: "migrate_daily_report.sql" },
+  stock_total:   { sql: "alter table textbooks add column if not exists stock_total int;", file: "migrate_daily_report.sql" },
+  distributed:   { sql: "alter table textbooks add column if not exists distributed int not null default 0;", file: "migrate_daily_report.sql" },
+};
+// 표가 통째로 없을 때 돌릴 파일
+const 표고치기 = { tasks: "migrate_tasks.sql" };
+
 function friendlyDbError(op, table, status, text) {
   const t = String(text || "");
   const has = (...xs) => xs.some((x) => t.includes(x));
 
+  // ★ SUPABASE_URL 에 **Supabase 가 아닌 주소**(Vercel 등)를 넣은 경우.
+  //   앱은 멀쩡히 돌고 그 주소로 요청이 나가서, Vercel 의 영어 404 가 화면에 그대로 떴습니다.
+  //   "select students 실패: 404 The deployment could not be found on Vercel…" (실제로 겪은 것)
+  if (has("DEPLOYMENT_NOT_FOUND", "could not be found on Vercel", "vercel.app")) {
+    return (
+      `Vercel 환경변수 SUPABASE_URL 에 **Supabase 주소가 아닌 것**이 들어가 있습니다.\n` +
+      `Supabase → Settings → Data API(예전 API) 의 **Project URL** 을 통째로 복사해 넣어주세요 ` +
+      `(https://내프로젝트ID.supabase.co 꼴). 고친 뒤 Vercel 에서 **Redeploy** 를 눌러야 적용됩니다.`
+    );
+  }
+
   // 표가 아예 없다 — setup.sql 을 안 돌렸거나, 그 표가 생기기 전에 만든 DB
   if (has("PGRST205", "42P01") || /Could not find the table/i.test(t)) {
+    const 파일 = 표고치기[table];
     return (
       `DB에 '${table}' 표가 없습니다.\n` +
-      `· 처음 설치라면: Supabase → SQL Editor 에서 sql/setup.sql 을 통째로 한 번 돌리세요.\n` +
-      `· 쓰던 DB라면: 그 표가 생기기 전에 만든 DB입니다. sql/fix_tasks_table.sql 처럼 ` +
-      `그 표만 더하는 스크립트를 돌리세요 (setup.sql 재실행 금지 — 맨 위 drop table 로 데이터가 지워집니다).`
+      `· 처음 설치라면: Supabase → SQL Editor 에서 attendance-report/sql/setup.sql 을 통째로 한 번 돌리세요.\n` +
+      (파일
+        ? `· 쓰던 DB라면(데이터가 들어 있다면): Supabase → SQL Editor 에 ` +
+          `attendance-report/sql/${파일} 을 붙여넣고 Run 하세요.\n`
+        : `· 쓰던 DB라면: 그 표만 더하는 스크립트(attendance-report/sql/ 안)를 돌리세요.\n`) +
+      `  ⚠️ setup.sql 재실행 금지 — 맨 위 drop table 로 데이터가 지워집니다.`
     );
   }
   // 칸이 없다 — 표는 있는데 setup.sql 이 옛것
   if (has("PGRST204") || /Could not find the .* column/i.test(t)) {
+    // 어느 칸인지 메시지에서 뽑아냅니다 — PostgREST 가 'retest_sent' 처럼 따옴표로 알려줍니다
+    const m = /Could not find the ['"`]?([a-zA-Z_][a-zA-Z0-9_]*)['"`]?\s+column/i.exec(t);
+    const 칸 = m ? m[1] : "";
+    const 고침 = 칸고치기[칸];
+    if (고침) {
+      return (
+        `DB에 '${칸}' 칸이 없습니다 (DB가 코드보다 옛것이에요).\n` +
+        `Supabase → SQL Editor 에 **아래 한 줄**을 붙여넣고 Run 하시면 바로 됩니다.\n\n` +
+        `  ${고침.sql}\n\n` +
+        `(데이터는 지워지지 않습니다. 같은 내용이 attendance-report/sql/${고침.file} 에도 있어요.)`
+      );
+    }
     return (
-      `'${table}' 표에 필요한 칸이 없습니다 (DB가 코드보다 옛것).\n` +
-      `서버 로그의 칸 이름을 보고 alter table ... add column if not exists 로 더하세요.`
+      `'${table}' 표에 ${칸 ? `'${칸}' ` : ""}칸이 없습니다 (DB가 코드보다 옛것이에요).\n` +
+      `Supabase → SQL Editor 에서:\n` +
+      `  alter table ${table} add column if not exists ${칸 || "<칸이름>"} text;\n` +
+      `(숫자 칸이면 text 대신 int, 참/거짓이면 boolean 입니다. 데이터는 지워지지 않습니다.)`
     );
   }
   // 권한 — setup.sql 아래쪽 grant 가 빠졌을 때. 미니 원서 앱 세미나에서 실제로 난 사고.
