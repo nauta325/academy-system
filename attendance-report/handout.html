@@ -467,11 +467,11 @@ CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
   <div class="sec-header"><div class="sec-num claude-num">09</div><div><div class="sec-label">바이브 코딩</div><div class="sec-title">코드 안 열고, 말로 바꾼다</div></div></div>
   <div class="card claude-card">
     <p>고치고 싶은 게 생기면 <b>클로드에 내 저장소를 연결</b>하고 아래 문장을 <b>그대로 복사</b>해서 말하면 됩니다.
-      <b>51개</b>를 상황별로 모아뒀어요. 수업 중에 이 화면을 옆에 띄워두고 쓰세요.</p>
+      <b>52개</b>를 상황별로 모아뒀어요. 수업 중에 이 화면을 옆에 띄워두고 쓰세요.</p>
     <div class="pfind">
       <input id="pq" type="search" placeholder="찾기 — 예: 평가서, 진도, 알림톡, 교재"
              oninput="pfilter(this.value)" autocomplete="off">
-      <span class="pcount" id="pcount">51개</span>
+      <span class="pcount" id="pcount">52개</span>
     </div>
   </div>
   <div class="psec"><h3 class="ptitle">우리 학원 것으로 바꾸기 <span>5</span></h3>
@@ -546,13 +546,14 @@ api/attendance.js 의 GRACE 를 고치면 될 거야.</div>
   유닛코드 | 제목 | 집과제 | 학원과제
 
 규칙:
-· 유닛코드는 CH1-1, CH1-2 … 처럼 써.
+· 유닛코드는 CH1-1, CH1-2 … 처럼. ★ 교재 안에서 절대 겹치지 않게 해줘.
+  복습 줄도 「CH1-복습」「CH2-복습」 처럼 챕터 번호를 붙여서.
 · 제목은 원래 목차의 단원 제목을 그대로.
 · 집과제는 전부 「워크북 그 유닛 풀기, 단어 외우기」
 · 학원과제는 전부 「본문 2회 소리내어 읽기」
 · 유닛 4개마다 「복습 | CH1-1~1-4 다시」 처럼 복습 줄을 하나씩 끼워 넣어줘.
   복습 줄은 과제 칸을 비워둬.">
-      <div class="copy-head"><span class="copy-label">㊼-B 목차 정리 + 과제까지 <b>한 번에</b></span><button class="copy-btn" onclick="cp(this,'pp11')">복사</button></div>
+      <div class="copy-head"><span class="copy-label">㊼-B <b>문법책</b> — 목차 + 과제 한 번에</span><button class="copy-btn" onclick="cp(this,'pp11')">복사</button></div>
       <div class="pnote">★ ㊷(목차 정리) + ㊼(과제 넣기) <b>두 단계를 한 번에</b> 끝냅니다. 유닛마다 과제가 비슷한 학원이면 이쪽이 훨씬 빠릅니다.</div>
       <div class="copy-body prompt" id="pp11">(여기에 목차를 붙여넣거나 목차 사진을 올리고)
 
@@ -561,7 +562,8 @@ api/attendance.js 의 GRACE 를 고치면 될 거야.</div>
   유닛코드 | 제목 | 집과제 | 학원과제
 
 규칙:
-· 유닛코드는 CH1-1, CH1-2 … 처럼 써.
+· 유닛코드는 CH1-1, CH1-2 … 처럼. ★ 교재 안에서 절대 겹치지 않게 해줘.
+  복습 줄도 「CH1-복습」「CH2-복습」 처럼 챕터 번호를 붙여서.
 · 제목은 원래 목차의 단원 제목을 그대로.
 · 집과제는 전부 「워크북 그 유닛 풀기, 단어 외우기」
 · 학원과제는 전부 「본문 2회 소리내어 읽기」
@@ -577,6 +579,36 @@ CH1-2 | 일반동사 | 워크북 그 유닛 풀기, 단어 외우기 | 본문 2�
         <tr><td>챕터 단위로 다르게</td><td><code>5유닛이 한 챕터야. 챕터가 바뀔 때만 집과제를 「Ch번호 워크북」으로</code></td></tr>
         <tr><td>리딩 교재</td><td><code>집과제는 「본문 2번 읽고 모르는 단어 찾기」, 학원과제는 「요약 한 문장 쓰기」</code></td></tr>
       </table></div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊼-E 리딩책 목차 + 과제 한 번에 해석 단어학습 문제풀이 구문분석 (여기에 리딩 교재 목차를 붙여넣거나 목차 사진을 올리고)
+
+이 목차를 아래 형식으로 한 줄씩 정리해줘. 설명 없이 결과만.
+
+  유닛코드 | 제목 | 집과제 | 학원과제
+
+규칙:
+· 유닛코드는 CH1-1, CH1-2 … 처럼. ★ 교재 안에서 절대 겹치지 않게 해줘.
+  리뷰·복습 줄도 「CH1-리뷰」「CH2-리뷰」 처럼 챕터 번호를 붙여서.
+· 제목은 그 지문의 실제 제목으로 (「Unit 1」처럼 번호만 쓰지 말고).
+· 집과제는 전부 「해석」
+· 학원과제는 전부 「단어 학습, 문제풀이, 구문분석」
+· 챕터가 끝나는 자리에 「CH1-리뷰 | CH1 리뷰 문제풀이 |  | 」 줄을 끼워 넣어줘.">
+      <div class="copy-head"><span class="copy-label">㊼-E <b>리딩책</b> — 목차 + 과제 한 번에</span><button class="copy-btn" onclick="cp(this,'pp11r')">복사</button></div>
+      <div class="pnote">리딩은 <b>집에서 해석해오고 학원에서 단어·문제·구문</b>을 하는 학원이 많습니다. 다르면 아래 두 줄만 바꾸세요.</div>
+      <div class="copy-body prompt" id="pp11r">(여기에 리딩 교재 목차를 붙여넣거나 목차 사진을 올리고)
+
+이 목차를 아래 형식으로 한 줄씩 정리해줘. 설명 없이 결과만.
+
+  유닛코드 | 제목 | 집과제 | 학원과제
+
+규칙:
+· 유닛코드는 CH1-1, CH1-2 … 처럼. ★ 교재 안에서 절대 겹치지 않게 해줘.
+  리뷰·복습 줄도 「CH1-리뷰」「CH2-리뷰」 처럼 챕터 번호를 붙여서.
+· 제목은 그 지문의 실제 제목으로 (「Unit 1」처럼 번호만 쓰지 말고).
+· 집과제는 전부 「해석」
+· 학원과제는 전부 「단어 학습, 문제풀이, 구문분석」
+· 챕터가 끝나는 자리에 「CH1-리뷰 | CH1 리뷰 문제풀이 |  | 」 줄을 끼워 넣어줘.</div>
+    </div>
+    <div class="hl-box red"><strong>🔴 유닛코드가 겹치면 진도가 그 자리에서 맴돕니다</strong><br>「복습」·「리뷰」를 챕터마다 <b>같은 코드</b>로 쓰면, 앱이 늘 <b>첫 번째</b>를 찾아서 그 다음으로 되돌아갑니다. CH3 에 영영 못 가요. <code>CH1-리뷰</code> <code>CH2-리뷰</code> 처럼 <b>챕터 번호를 붙이세요</b> — 위 프롬프트에 그 규칙을 넣어뒀습니다.</div>
     <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊼-C 챕터마다 다른 과제  5유닛이 한 챕터야. 챕터가 바뀔 때마다 집과제를 「Ch번호 워크북」으로 넣어줘.
 같은 챕터 안에서는 같은 과제로.">
       <div class="copy-head"><span class="copy-label">㊼-C 챕터마다 다른 과제</span><button class="copy-btn" onclick="cp(this,'pp12')">복사</button></div>
