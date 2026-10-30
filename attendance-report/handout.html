@@ -539,14 +539,44 @@ api/attendance.js 의 GRACE 를 고치면 될 거야.</div>
       <div class="copy-body prompt" id="pp10">이 목차 전부에 집과제를 「단어 30개 암기」로 똑같이 넣어줘.
 「유닛코드 | 제목 | 집과제」 형식으로 다시 보여줘.</div>
     </div>
-    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊼-B 유닛마다 다른 과제 (워크북이 진도를 따라갈 때) 유닛마다 집과제를 「워크북 그 유닛 풀기」로 넣어줘. 유닛 번호는 각 줄에 맞춰서.
-학원과제는 전부 「본문 2회 소리내어 읽기」로.
-「유닛코드 | 제목 | 집과제 | 학원과제」 형식으로 보여줘.">
-      <div class="copy-head"><span class="copy-label">㊼-B 유닛마다 다른 과제 · (워크북이 진도를 따라갈 때)</span><button class="copy-btn" onclick="cp(this,'pp11')">복사</button></div>
-      <div class="copy-body prompt" id="pp11">유닛마다 집과제를 「워크북 그 유닛 풀기」로 넣어줘. 유닛 번호는 각 줄에 맞춰서.
-학원과제는 전부 「본문 2회 소리내어 읽기」로.
-「유닛코드 | 제목 | 집과제 | 학원과제」 형식으로 보여줘.</div>
+    <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊼-B 목차 정리 + 과제까지 한 번에 한방 (여기에 목차를 붙여넣거나 목차 사진을 올리고)
+
+이 목차를 아래 형식으로 한 줄씩 정리해줘. 설명 없이 결과만.
+
+  유닛코드 | 제목 | 집과제 | 학원과제
+
+규칙:
+· 유닛코드는 CH1-1, CH1-2 … 처럼 써.
+· 제목은 원래 목차의 단원 제목을 그대로.
+· 집과제는 전부 「워크북 그 유닛 풀기, 단어 외우기」
+· 학원과제는 전부 「본문 2회 소리내어 읽기」
+· 유닛 4개마다 「복습 | CH1-1~1-4 다시」 처럼 복습 줄을 하나씩 끼워 넣어줘.
+  복습 줄은 과제 칸을 비워둬.">
+      <div class="copy-head"><span class="copy-label">㊼-B 목차 정리 + 과제까지 <b>한 번에</b></span><button class="copy-btn" onclick="cp(this,'pp11')">복사</button></div>
+      <div class="pnote">★ ㊷(목차 정리) + ㊼(과제 넣기) <b>두 단계를 한 번에</b> 끝냅니다. 유닛마다 과제가 비슷한 학원이면 이쪽이 훨씬 빠릅니다.</div>
+      <div class="copy-body prompt" id="pp11">(여기에 목차를 붙여넣거나 목차 사진을 올리고)
+
+이 목차를 아래 형식으로 한 줄씩 정리해줘. 설명 없이 결과만.
+
+  유닛코드 | 제목 | 집과제 | 학원과제
+
+규칙:
+· 유닛코드는 CH1-1, CH1-2 … 처럼 써.
+· 제목은 원래 목차의 단원 제목을 그대로.
+· 집과제는 전부 「워크북 그 유닛 풀기, 단어 외우기」
+· 학원과제는 전부 「본문 2회 소리내어 읽기」
+· 유닛 4개마다 「복습 | CH1-1~1-4 다시」 처럼 복습 줄을 하나씩 끼워 넣어줘.
+  복습 줄은 과제 칸을 비워둬.</div>
     </div>
+    <div class="hl-box"><strong>결과는 이렇게 나옵니다</strong> — 그대로 복사해 목차 칸에 붙여넣으면 끝입니다.
+      <div style="font-family:'Space Mono',monospace;font-size:12px;line-height:1.9;margin-top:7px;overflow-x:auto;white-space:pre">CH1-1 | be동사 | 워크북 그 유닛 풀기, 단어 외우기 | 본문 2회 소리내어 읽기
+CH1-2 | 일반동사 | 워크북 그 유닛 풀기, 단어 외우기 | 본문 2회 소리내어 읽기
+복습 | CH1-1~1-4 다시</div>
+      <table class="tb" style="margin-top:10px"><tr><th>바꿀 것</th><th>프롬프트에서 이렇게</th></tr>
+        <tr><td>유닛 <b>번호가 과제에</b> 들어가야 할 때</td><td><code>집과제는 「워크북 Unit N 풀기」 — N 은 각 줄의 유닛 번호로 바꿔서</code></td></tr>
+        <tr><td>챕터 단위로 다르게</td><td><code>5유닛이 한 챕터야. 챕터가 바뀔 때만 집과제를 「Ch번호 워크북」으로</code></td></tr>
+        <tr><td>리딩 교재</td><td><code>집과제는 「본문 2번 읽고 모르는 단어 찾기」, 학원과제는 「요약 한 문장 쓰기」</code></td></tr>
+      </table></div>
     <div class="copy-wrap claude pitem" data-k="교재 목차 넣기 (제일 먼저 하실 것) ㊼-C 챕터마다 다른 과제  5유닛이 한 챕터야. 챕터가 바뀔 때마다 집과제를 「Ch번호 워크북」으로 넣어줘.
 같은 챕터 안에서는 같은 과제로.">
       <div class="copy-head"><span class="copy-label">㊼-C 챕터마다 다른 과제</span><button class="copy-btn" onclick="cp(this,'pp12')">복사</button></div>
