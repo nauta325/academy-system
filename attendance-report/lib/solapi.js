@@ -64,6 +64,15 @@ function 읽기쉽게(reason) {
     return 보태기("카카오 채널(pfId)이 안 맞습니다. SOLAPI_PFID 가 **그 템플릿을 등록한 채널**의 것인지 보세요.");
   if (/sender|발신|from/i.test(r))
     return 보태기("발신번호가 솔라피에 **등록돼 있지 않습니다.** SOLAPI_SENDER 를 등록된 번호로.");
+  // ★ 새로 만든 키는 IP 제한이 걸린 채로 생깁니다. Vercel 은 요청마다 IP 가 바뀌어서
+  //   그 IP 하나만 추가하면 오늘 되고 내일 안 됩니다 — 「모든 IP 허용」이 맞습니다.
+  if (/허용되지 않은 IP|Forbidden|not allowed ip|ip.*not.*allow/i.test(r))
+    return 보태기(
+      "솔라피 API Key 에 **IP 제한**이 걸려 있습니다. 솔라피 → API Key → 그 키의 ⋮ → " +
+      "**허용 IP 설정 → 모든 IP 허용** 으로 바꿔주세요.\n" +
+      "(위에 적힌 IP 는 원장님 컴퓨터가 아니라 **앱이 올라간 서버**의 것이고, 요청마다 바뀝니다. " +
+      "그 IP 하나만 추가하면 오늘 되고 내일 안 됩니다.)"
+    );
   if (/Unauthorized|401|signature|apiKey|인증/i.test(r))
     return 보태기("솔라피 API 키·시크릿이 틀렸습니다. 넣은 뒤 **Redeploy** 를 눌렀는지도 보세요.");
   if (/balance|잔액|point/i.test(r))

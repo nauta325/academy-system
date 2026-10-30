@@ -17,6 +17,7 @@ for (const [라벨, status, body, 기대] of [
   ["변수 안 맞음", 400, {failedMessageList:[{reason:"invalid variable #{단어테스트}"}]}, "변수 이름"],
   ["채널 안 맞음", 400, {errorCode:"InvalidPfId", errorMessage:"pfId mismatch"}, "카카오 채널"],
   ["발신번호 미등록", 400, {errorCode:"E", errorMessage:"sender number not registered"}, "발신번호"],
+  ["IP 제한 (원장님이 실제로 겪은 것)", 403, {errorCode:"Forbidden", errorMessage:"허용되지 않은 IP(13.223.235.127)로 접근하고 있습니다."}, "모든 IP 허용"],
   ["키 틀림", 401, {errorCode:"Unauthorized", errorMessage:"invalid signature"}, "Redeploy"],
   ["잔액 부족", 400, {errorCode:"E", errorMessage:"not enough balance"}, "잔액"],
   ["사유를 안 줄 때", 500, {}, "HTTP 500"],
