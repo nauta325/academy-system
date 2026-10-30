@@ -1019,6 +1019,18 @@ lib/claude.js 의 reportGuideline() 을 고치면 될 거야.</div>
   <div class="card">
     <table class="tb">
       <tr><th>증상</th><th>원인</th><th>해결</th></tr>
+    <div class="copy-wrap">
+      <div class="copy-head"><span class="copy-label">🩺 뭐가 빠졌나 한 번에 — Supabase SQL Editor 에 붙여넣고 Run</span><button class="copy-btn" onclick="cp(this,'dbchk')">복사</button></div>
+      <div class="pnote"><b>전부 <code>1</code> 이면 정상입니다.</b> <code>0</code> 이 있으면 그 칸을 더하는 <code>attendance-report/sql/migrate_*.sql</code> 을 Run 하세요 — 과제표는 <code>migrate_tasks</code>, 자동과제칸은 <code>migrate_auto_tasks</code>, 재시칸은 <code>migrate_retest</code>, 점수칸은 <code>migrate_daily_report</code>. ⚠️ <b><code>setup.sql</code> 재실행 금지</b> — 쓰던 데이터가 지워집니다.</div>
+      <div class="copy-body" id="dbchk">select
+  (select count(*) from information_schema.tables  where table_name='students')      as 학생표,
+  (select count(*) from information_schema.tables  where table_name='daily_records') as 데일리표,
+  (select count(*) from information_schema.tables  where table_name='textbooks')     as 교재표,
+  (select count(*) from information_schema.tables  where table_name='tasks')         as 과제표,
+  (select count(*) from information_schema.columns where table_name='daily_records' and column_name='retest_sent') as 재시칸,
+  (select count(*) from information_schema.columns where table_name='tasks'         and column_name='auto')        as 자동과제칸,
+  (select count(*) from information_schema.columns where table_name='daily_records' and column_name='voca_score')  as 점수칸;</div>
+    </div>
       <tr><td>카톡은 왔는데 <b>버튼이 옛 시스템으로</b> 감</td><td>1·2차 때 등록한 템플릿의 버튼 URL 은 <b>옛 주소로 고정</b>돼 있습니다</td><td>연습 중이면 그대로 두세요(본문은 정상). 옮기실 땐 <b>버튼 없는 템플릿을 새로 등록</b> — 기존 것을 고치면 <b>운영 알림톡도 같이 바뀝니다</b></td></tr>
       <tr><td>알림톡 <code>허용되지 않은 IP(…)</code></td><td>솔라피 API Key 에 IP 제한</td><td>솔라피 → API Key → ⋮ → <b>허용 IP 설정 → 모든 IP 허용</b> (IP 하나만 넣으면 내일 또 막힙니다)</td></tr>
       <tr><td>화면에 <code>Failed to parse URL from …</code></td><td><code>SUPABASE_URL</code> 에 <b>프로젝트 ID만</b> 넣음</td><td><code>https://내프로젝트ID.supabase.co</code> 로 고치고 <b>Redeploy</b></td></tr>

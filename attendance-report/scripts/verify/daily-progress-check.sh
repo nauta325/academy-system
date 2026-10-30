@@ -64,17 +64,30 @@ CHAIN=$($PS -d $DB -tAc "
   select string_agg(progress->'문법'->>'code', ' → ' order by date)
   from daily_records where student_id='$SID'")
 note "문법: $CHAIN"
-EXPECT="Unit 1 → Unit 2 → Unit 3 → Unit 4 → Unit 5"
+# ★ 기대값을 **목차에서 읽어옵니다.** 예전에는 "Unit 1 → Unit 2 …" 를 박아뒀는데,
+#   샘플 교재를 바꾸는 순간 멀쩡한데도 실패했습니다 (실제로 그렇게 헛걸렸습니다).
+EXPECT=$($PS -d $DB -tAc "
+  select string_agg(u ->> 'code', ' → ' order by i)
+  from students s
+  join textbooks t on t.name = s.books ->> '문법'
+  cross join lateral jsonb_array_elements(t.units) with ordinality as x(u, i)
+  where s.id='$SID' and i <= 5")
 [ "$CHAIN" = "$EXPECT" ] || bad "기대: $EXPECT"
 
 # ── 2. 아직 안 쓴 날을 만들면 '다음 목차'가 들어오나 (cron 과 같은 길) ────
 echo "── 2. 다음 수업일에 다음 목차가 미리 들어오나 ──"
 curl -s "localhost:4331/api/attendance?action=daily-rows&date=2026-10-16" -o /dev/null
 NEXT=$($PS -d $DB -tAc "
-  select (progress->'문법'->>'code')||' '||coalesce(progress->'문법'->>'title','')
-  from daily_records where student_id='$SID' and date='2026-10-16'")
-note "10/16 문법: $NEXT"
-echo "$NEXT" | grep -q "^Unit 6" || bad "10/16 은 Unit 6 이어야 합니다 (받은 값: $NEXT)"
+  select progress->'문법'->>'code' from daily_records where student_id='$SID' and date='2026-10-16'")
+# 목차의 **여섯 번째 줄**이 들어와야 합니다 (코드 글자를 박아두지 않습니다)
+SIXTH=$($PS -d $DB -tAc "
+  select u ->> 'code'
+  from students s
+  join textbooks t on t.name = s.books ->> '문법'
+  cross join lateral jsonb_array_elements(t.units) with ordinality as x(u, i)
+  where s.id='$SID' and i = 6")
+note "10/16 문법: $NEXT  (목차 6번째 = $SIXTH)"
+[ "$NEXT" = "$SIXTH" ] || bad "10/16 은 목차 6번째($SIXTH)여야 합니다 — 받은 값: $NEXT"
 
 # ── 3. 미래 날짜는 저장하지 않나 (월말평가서 수업일수가 부풀면 안 됨) ────
 echo "── 3. 미래 날짜는 행을 만들지 않나 ──"
@@ -99,14 +112,27 @@ for order in "test_5_demo_students test_1_today test_3_month" "test_3_month test
   for f in $order; do
     $PS -d ${DB}2 -q -v ON_ERROR_STOP=1 -f "$APP/sql/$f.sql" >/dev/null 2>&1
   done
+  # ★ **목차에서 몇 번째 줄인가**로 비교합니다. 예전에는 코드에서 숫자만 뽑아 비교했는데,
+  #   「CH1-4」(→14) 다음 「CH1-복습」(→1) 이 거꾸로 간 것으로 잡혔습니다.
+  #   복습 줄이 있는 교재면 멀쩡한데도 실패합니다.
   BACK=$($PS -d ${DB}2 -tAc "
-    with t as (
-      select d.date, d.progress->'문법'->>'code' as c,
-             lag(d.progress->'문법'->>'code') over (partition by d.student_id order by d.date) as p
-      from daily_records d)
+    with 자리 as (
+      select t.name as 교재, u ->> 'code' as code, i
+      from textbooks t
+      cross join lateral jsonb_array_elements(t.units) with ordinality as x(u, i)),
+    r as (
+      select d.date, d.student_id,
+             z.i as c
+      from daily_records d
+      join students s on s.id = d.student_id
+      left join 자리 z
+        on z.교재 = coalesce(d.books ->> '문법', s.books ->> '문법')
+       and z.code = d.progress->'문법'->>'code'),
+    t as (
+      select date, c, lag(c) over (partition by student_id order by date) as p from r)
     select count(*) from t
-    where date=(now() at time zone 'Asia/Seoul')::date and p is not null
-      and nullif(regexp_replace(c,'\D','','g'),'')::int < nullif(regexp_replace(p,'\D','','g'),'')::int")
+    where date=(now() at time zone 'Asia/Seoul')::date
+      and p is not null and c is not null and c < p")
   note "순서 [$(echo $order | sed 's/ / -> /g')] 거꾸로 가는 행: $BACK"
   [ "$BACK" = "0" ] || bad "진도가 거꾸로 가는 행이 $BACK 개 있습니다"
 done
