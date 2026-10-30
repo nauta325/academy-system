@@ -256,8 +256,15 @@
     var keys = Object.keys(byS);
     if (!keys.length) { toast('오늘 진도가 아직 없어요. 데일리 리포트에서 진도를 먼저 확인해주세요.'); return; }
     $('items').innerHTML = '';
-    keys.forEach(function (s) { addItem('집', s, s + ' ' + [...byS[s]].join(', ') + ' 복습'); });
-    toast(keys.length + '과목을 진도로 채웠어요. 내용은 고쳐도 됩니다.');
+    // ★ 유닛마다 **한 줄씩** 만듭니다.
+    //   예전에는 반 전체 유닛을 이어붙여서 「문법 6과. 과거시제, Unit 8. 비교급, Unit 6. 분사 복습」
+    //   같은 줄이 아이 폰에 그대로 떴습니다. 읽을 수가 없어요.
+    //   줄이 많으면 ✕ 로 지우시면 됩니다 — 고쳐 쓰라고 만든 칸입니다.
+    var 줄수 = 0;
+    keys.forEach(function (s) {
+      [...byS[s]].forEach(function (u) { addItem('집', s, s + ' ' + u + ' 복습'); 줄수++; });
+    });
+    toast(keys.length + '과목 ' + 줄수 + '줄을 채웠어요. 집/학원과 내용은 고쳐도 됩니다.');
   }
 
   async function saveTasks() {

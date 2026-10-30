@@ -295,6 +295,9 @@ export default async function handler(req, res) {
             attitude: rec.attitude, homework: rec.homework,
             voca_test: rec.voca_test, voca_score: rec.voca_score,
             progress: rec.progress || {}, note: rec.note, parent_note: rec.parent_note,
+            // 그날 행이 들고 있는 교재. 학생DB의 교재(위 books)와 다를 수 있습니다 —
+            // 학생 관리에서 교재를 바꿔도 **이미 만들어진 행**은 옛 교재를 들고 있기 때문입니다.
+            books: rec.books || {},
             report_sent: rec.report_sent,
             // 재시 안내 카톡 상태 — 화면의 「🔁 재시 안내」 개수를 이걸로 셉니다
             retest_sent: rec.retest_sent || null,
@@ -620,6 +623,54 @@ export default async function handler(req, res) {
         needs_retest: needsRetest(upd),
         retest_hint: retestHint(upd.voca_test, upd.voca_score),
       });
+    }
+
+    // ── 교재 바꾸기 (그 과목 교재를 다음 권으로) ──
+    // body: { student_id, date, subject, book }
+    //
+    // 왜 여기 있나: 교재는 학생 정보라 원래 /students.html 에서 바꿉니다. 그런데
+    //   **교재를 다 끝낸 날**은 데일리 리포트를 쓰다가 알게 돼요. 그때 학생 관리로
+    //   건너갔다 오는 게 번거로워서, 그 자리에서 바꿀 수 있게 했습니다.
+    //
+    // 세 가지를 같이 합니다 (하나라도 빠지면 어긋납니다):
+    //   ① 학생DB의 교재 → 다음 수업부터 새 교재로 진도가 나갑니다
+    //   ② 그날 행의 교재 → 이미 만들어진 행은 옛 교재를 들고 있습니다
+    //   ③ 그날 진도를 **새 교재 목차 1번**으로 → 옛 유닛은 새 목차에 없어서 멈춰버립니다
+    if (action === "change-book") {
+      const { student_id, subject } = req.body;
+      const d = req.body.date || now.date;
+      const book = String(req.body.book || "").trim();
+      if (!student_id || !subject) throw new BadRequest("학생과 과목이 필요해요.");
+      if (!okDate(d)) throw new BadRequest(`날짜가 올바르지 않아요: ${d}`);
+
+      const stu = (await select("students", `id=eq.${student_id}&limit=1`))[0];
+      if (!stu) throw new BadRequest("그 학생을 찾을 수 없어요. 화면을 새로고침한 뒤 다시 해주세요.");
+
+      const toc = await tocByBook();
+      if (book && !toc[book]) {
+        // 막지는 않지만, 목차가 없으면 진도가 안 넘어가니 미리 말해줍니다
+        //   (교재DB에 없는 이름이면 아예 고를 수 없게 화면에서 막아두었습니다)
+      }
+
+      // ① 학생DB
+      const books = { ...(stu.books || {}) };
+      if (book) books[subject] = book; else delete books[subject];
+      await patch("students", `id=eq.${student_id}`, { books });
+
+      // ② 그날 행
+      const row = await ensureTodayRow(student_id, d);
+      const rBooks = { ...(row.books || {}) };
+      if (book) rBooks[subject] = book; else delete rBooks[subject];
+
+      // ③ 진도를 새 교재 1번으로
+      const progress = { ...(row.progress || {}) };
+      const units = book ? (toc[book]?.units || []) : [];
+      if (units.length) progress[subject] = units[0];
+      else delete progress[subject];
+
+      const upd = (await patch("daily_records", `id=eq.${row.id}`, { books: rBooks, progress }))[0];
+      await syncAutoTasks({ ...stu, books }, d, progress, toc);
+      return res.status(200).json({ record: upd, books });
     }
 
     // ── 교재(목차) 저장/삭제 ──

@@ -40,6 +40,9 @@
   .prow { display:grid; grid-template-columns:52px 1fr; gap:8px; align-items:center; margin:5px 0; }
   .prow .k { font-size:12px; font-weight:800; color:var(--muted); }
   .prow input { width:100%; padding:7px 9px; border:1px solid var(--line); border-radius:8px; }
+  /* 교재 바꾸기 — 교재를 다 끝낸 날 여기서 바로 다음 권으로 */
+  .bkrow { grid-column:2; display:flex; align-items:center; gap:6px; margin:2px 0 6px; font-size:11.5px; color:var(--muted); }
+  .bkrow select { font-size:11.5px; padding:3px 6px; border:1px solid var(--line); border-radius:6px; color:#444; max-width:62%; }
   .prev { grid-column:2; font-size:11.5px; color:var(--muted); margin-top:-2px; }
   /* 📜 최근 수업 — 운영 플래너와 같은 모양 */
   .hist{margin:6px 0 10px;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:12px;}
@@ -109,6 +112,7 @@
   <div class="muted" style="margin-bottom:12px">
     매일 새벽, 오늘 등원할 학생의 리포트가 <b>다음 진도까지 채워져 자동 생성</b>돼요. 바뀐 것만 고치면 됩니다 · 칸을 고치면 자동 저장 · 추가사항은 학부모 카톡에 나갑니다.<br>
     <b>안 온 학생(결석)</b>은 따로 추가하지 않아요 — 오늘 수업 예정이면 <b>안 와도 이미 목록에 있습니다.</b> 그 학생 칸의 <b>결석</b>만 누르세요.<br>
+    <b>📕 교재</b>를 다 끝냈으면 과목 아래 교재 칸에서 <b>다음 권으로 바로 바꿀 수 있어요</b> (진도는 새 교재 1번부터).<br>
     <b>➕ 보강 학생 추가</b>는 반대 경우예요 — <b>정규 수업일이 아닌 날 온 학생</b>(결석 보강). 그날 행을 만들면 진도가 다음으로 이어집니다.<br>
     단어테스트를 <b>불통과</b>로 누르거나 <b>점수만 「12/20」처럼 적어도</b> (기준 미달이면) <b>🔁 재시 안내</b> 버튼에 자동으로 올라옵니다 —
     점수칸 밑에 <b>지금 대상인지</b>가 한 줄로 나와요. 통과/불통과를 직접 누르면 <b>그게 점수보다 우선</b>입니다 ·
@@ -149,6 +153,9 @@
 <script>
 const $ = (s) => document.querySelector(s);
 const SUBJECTS = ["문법", "리딩", "단어"];
+// 교재DB의 교재명 (과목별) — 「교재 바꾸기」 드롭다운에 씁니다.
+//   교재DB에 있는 것만 고를 수 있게 합니다. 손으로 치면 목차를 못 찾아 진도가 멈춥니다.
+let BOOKS = {};
 let ROWS = [], TOC = {}, PREVIEW = [];
 
 // ── 📜 최근 수업 ────────────────────────────────────────
@@ -271,7 +278,9 @@ async function api(payload){
 
 async function loadToc(){
   try { const r = await fetch("/api/attendance?action=textbooks"); const d = await r.json();
+    BOOKS = {};
     (d.textbooks||[]).forEach(t => { TOC[t.name] = (Array.isArray(t.units)? t.units : []).map(normU); });
+    (d.textbooks||[]).forEach(t => { if(t.name) (BOOKS[t.subject||""] = BOOKS[t.subject||""] || []).push(t.name); });
   } catch(e){}
 }
 
@@ -342,7 +351,13 @@ function cardHtml(i){
     const pv = hist.length
       ? `<div class="prev">↳ 지난 ${hist.map(h => `${esc(md(h.date))} ${esc(unitLabel(h.progress[sub]))}`).join("  ·  ")}</div>`
       : "";
-    return `<div class="prow"><span class="k">${sub}</span>${field}</div>${pv}${linkNote(r, sub)}`;
+    // 교재 바꾸기 — 그 과목 교재DB에 있는 것 중에서만 (없는 이름을 치면 진도가 멈춥니다)
+    const 고를것 = [...new Set([...(BOOKS[sub]||[]), ...(book?[book]:[])])];
+    const bkOpts = 고를것.map(n => `<option value="${esc(n)}"${n===book?" selected":""}>${esc(n)}</option>`).join("");
+    const bk = `<div class="bkrow">📕 <select data-bk="${i}" data-bksub="${sub}" title="교재를 다 끝냈으면 다음 권으로 바꾸세요">`
+      + `<option value="">- 교재 없음 -</option>${bkOpts}</select>`
+      + (book && !(TOC[book]||[]).length ? ` <span style="color:#b4472e">목차 없음</span>` : "") + `</div>`;
+    return `<div class="prow"><span class="k">${sub}</span>${field}</div>${bk}${pv}${linkNote(r, sub)}`;
   }).join("");
   return `<div class="card" data-i="${i}">
     <div class="stuhead">
@@ -378,6 +393,32 @@ document.addEventListener("click", (e) => {
   btn.classList.add("on");
   scheduleSave(Number(seg.dataset.i));
 });
+// ── 교재 바꾸기 ──
+//   학생DB·그날 행·진도(새 교재 1번)를 서버가 한꺼번에 맞춥니다. 되돌릴 수 없어서 한 번 묻습니다.
+document.addEventListener("change", async (e) => {
+  const sel = e.target;
+  if (!sel.dataset || sel.dataset.bk === undefined) return;
+  const i = Number(sel.dataset.bk), sub = sel.dataset.bksub, r = ROWS[i];
+  const 이전 = r.books[sub] || "";
+  const 새것 = sel.value;
+  if (새것 === 이전) return;
+  const 말 = 새것
+    ? `${r.name} 학생의 ${sub} 교재를 「${새것}」 으로 바꿀까요?\n\n· 다음 수업부터 이 교재로 진도가 나갑니다\n· 오늘 ${sub} 진도는 새 교재 목차 1번으로 바뀝니다`
+    : `${r.name} 학생의 ${sub} 교재를 비울까요? (그 과목 진도가 사라집니다)`;
+  if (!confirm(말)) { sel.value = 이전; return; }
+  const m = $("#save-"+i); if (m){ m.className="savemsg saving"; m.textContent="● 교재 바꾸는 중…"; }
+  try {
+    const d = await api({ action:"change-book", student_id:r.student_id, date:$("#date").value, subject:sub, book:새것 });
+    r.books = d.books || r.books;
+    r.record = { ...r.record, ...d.record };
+    if (m){ m.className="savemsg ok"; m.textContent="교재 바꿨어요 ✓"; }
+    render();
+  } catch(err){
+    sel.value = 이전;
+    if (m){ m.className="savemsg err"; m.textContent="실패: "+err.message; }
+  }
+});
+
 // ── 입력 변경 → 자동 저장 ──
 document.addEventListener("input", (e) => {
   const el = e.target;
