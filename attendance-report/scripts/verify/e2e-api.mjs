@@ -55,7 +55,22 @@ r = await get("action=teachers");
 ck("teachers", r.s === 200 && r.d.teachers.length === 2, r.d.teachers);
 
 r = await get(`action=tasks&date=${today}`);
-ck("tasks", r.s === 200 && r.d.tasks.length === 36, r.d.tasks?.length);  // 12명 × 3개
+// ★ 개수를 숫자로 박지 않습니다. 샘플 교재 목차가 바뀌면 과제 수도 바뀌는데,
+//   그때마다 검수가 멀쩡한 걸 실패로 잡습니다 (실제로 겪었습니다).
+//   **학생 전원에게 과제가 있나 · 자동과 손으로 낸 것이 둘 다 있나**를 봅니다.
+ck("tasks", r.s === 200 && r.d.tasks.length > 0, r.d.tasks?.length);
+{
+  const t = r.d.tasks || [];
+  const 학생수 = new Set(t.map((x) => x.student_id)).size;
+  ck("★ 설치 직후부터 전원에게 과제가 있다 (학생앱이 안 비어 있다)", 학생수 >= 12, { 학생수, 과제: t.length });
+  ck("★ 교재 목차에서 온 자동 과제가 있다", t.some((x) => x.auto), t.filter((x) => x.auto).length);
+  ck("★ 손으로 낸 과제도 있다 (진도를 바꿔도 안 지워지는 것)", t.some((x) => !x.auto), t.filter((x) => !x.auto).length);
+  // 학생마다 진도가 다르니 과제도 달라야 합니다 — 이 세미나의 간판입니다
+  const 묶음 = {};
+  t.filter((x) => x.auto).forEach((x) => { (묶음[x.student_id] ||= []).push(x.title); });
+  const 가짓수 = new Set(Object.values(묶음).map((v) => v.sort().join("|"))).size;
+  ck("★ 과제가 학생마다 다르다", 가짓수 >= 8, { 가짓수, 학생: Object.keys(묶음).length });
+}
 // 과제 목록은 **학생별로 묶여** 있어야 합니다. 예전에는 집/학원 으로만 줄을 세워서
 //   한 아이 과제가 목록 네 군데에 흩어졌고, 선생님이 "민준이 건 어디 있지" 를 하게 됐습니다.
 {
