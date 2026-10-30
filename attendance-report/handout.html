@@ -264,21 +264,31 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
 
     <div class="sec-header" style="margin-top:28px"><div class="sec-num">03b</div><div><div class="sec-label">옆에 띄워놓고 쓰세요</div><div class="sec-title">환경변수 한 판 — 이름을 그대로 복사</div></div></div>
     <p>변수 <b>이름</b>은 글자 하나라도 다르면 못 알아봅니다. 아래를 복사해 두고 이름 칸에 붙여넣으세요.
-      <b>값</b>은 각자 자기 것을 넣습니다. <b>필수 2개만 있으면 일단 돌아갑니다.</b></p>
+      <b>값</b>은 각자 자기 것을 넣습니다.</p>
+    <div class="hl-box green"><strong>✓ 오늘 넣는 건 아래 두 개가 전부입니다.</strong>
+      나머지는 <b>안 넣어도 전부 돌아갑니다</b> — 필요해질 때 그때 넣으세요.</div>
     <div class="copy-wrap">
-      <div class="copy-head"><span class="copy-label">필수 — 이것만 있으면 화면이 돕니다</span><button class="copy-btn" onclick="cp(this,'env1')">복사</button></div>
+      <div class="copy-head"><span class="copy-label">필수 — 이 둘만 넣으면 됩니다</span><button class="copy-btn" onclick="cp(this,'env1')">복사</button></div>
       <div class="copy-body" id="env1">SUPABASE_URL
 SUPABASE_SERVICE_KEY</div>
     </div>
     <div class="copy-wrap">
-      <div class="copy-head"><span class="copy-label">선택 — 월말평가서 AI · 학원 이름/색</span><button class="copy-btn" onclick="cp(this,'env2')">복사</button></div>
-      <div class="copy-body" id="env2">ANTHROPIC_API_KEY
-ACADEMY_NAME
-BRAND_COLOR
-CRON_SECRET</div>
+      <div class="copy-head"><span class="copy-label">월말평가서를 AI로 써볼 때만</span><button class="copy-btn" onclick="cp(this,'env2')">복사</button></div>
+      <div class="copy-body" id="env2">ANTHROPIC_API_KEY</div>
+    </div>
+    <div class="hl-box"><strong>이건 넣지 마세요 — 환경변수로 할 일이 아닙니다</strong>
+      <table class="tb" style="margin-top:8px">
+        <tr><th>이름</th><th>대신 이렇게</th></tr>
+        <tr><td><code>ACADEMY_NAME</code><br><code>BRAND_COLOR</code></td>
+            <td>학원 이름·대표 색은 <b><code>config.js</code> 두 줄</b>을 고치세요 (전 화면에 한 번에 적용).
+              클로드에게 <b>「학원 이름을 ○○로 바꿔줘」</b> 라고 하면 됩니다.</td></tr>
+        <tr><td><code>CRON_SECRET</code></td>
+            <td>새벽 자동 생성을 아무나 못 부르게 막는 자물쇠입니다. <b>넣으면 Vercel Cron 쪽에도 같은 값을 들려보내야</b> 하고,
+              안 그러면 <b>새벽에 리포트 행이 안 생깁니다</b>(401). 안 넣으면 그냥 돌아가니 <b>오늘은 비워두세요.</b></td></tr>
+      </table>
     </div>
     <div class="copy-wrap">
-      <div class="copy-head"><span class="copy-label">선택 — 알림톡(솔라피). 검수 끝난 분만</span><button class="copy-btn" onclick="cp(this,'env3')">복사</button></div>
+      <div class="copy-head"><span class="copy-label">알림톡(솔라피) — 검수 승인 끝난 분만. 오늘은 안 넣어도 됩니다</span><button class="copy-btn" onclick="cp(this,'env3')">복사</button></div>
       <div class="copy-body" id="env3">SOLAPI_API_KEY
 SOLAPI_API_SECRET
 SOLAPI_SENDER
@@ -291,7 +301,7 @@ TPL_REPORT
 TPL_RETEST</div>
     </div>
     <div class="copy-wrap">
-      <div class="copy-head"><span class="copy-label">선택 — 노션에서 옮겨올 분만 (1·2차 수강생)</span><button class="copy-btn" onclick="cp(this,'env4')">복사</button></div>
+      <div class="copy-head"><span class="copy-label">노션에서 옮겨올 분만 (1·2차 수강생) — 이관할 때 넣으세요</span><button class="copy-btn" onclick="cp(this,'env4')">복사</button></div>
       <div class="copy-body" id="env4">NOTION_TOKEN
 NOTION_STUDENTS_DB
 NOTION_DAILY_DB
