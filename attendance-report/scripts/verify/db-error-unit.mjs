@@ -113,5 +113,25 @@ const RAW = /PGRST\d+|schema cache|permission denied for table|Invalid API key/;
   check("Vercel 주소를 넣었을 때 — 영어 원문이 안 보인다", !m?.includes("DEPLOYMENT_NOT_FOUND"), m);
 }
 
+{
+  // ★ PostgreSQL 까지 간 경우 — 원장님 화면에 이게 날것으로 떴습니다.
+  //   delete tasks 실패: 400 {"code":"42703","message":"column tasks.auto does not exist"}
+  const m = await messageFor(400, JSON.stringify({
+    code: "42703", message: "column tasks.auto does not exist",
+  }));
+  check("42703 — 어느 칸인지 말해준다", m?.includes("auto"), m);
+  check("42703 — 붙여넣을 SQL 을 그대로 준다",
+    m?.includes("alter table tasks add column if not exists auto boolean"), m);
+  check("42703 — 영어 원문이 안 보인다", !m?.includes("does not exist"), m);
+}
+{
+  // 모르는 칸이어도 쓸 수 있는 문장을 만들어 줘야 합니다
+  const m = await messageFor(400, JSON.stringify({
+    code: "42703", message: "column students.wibble does not exist",
+  }));
+  check("42703 — 모르는 칸도 alter table 문장을 만들어 준다",
+    m?.includes("alter table students add column if not exists wibble"), m);
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);

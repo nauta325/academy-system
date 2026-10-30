@@ -128,6 +128,28 @@ function friendlyDbError(op, table, status, text) {
     );
   }
   // 칸이 없다 — 표는 있는데 setup.sql 이 옛것
+  //   두 가지 꼴로 옵니다. PostgREST 가 걸러내면 PGRST204 + "Could not find the 'x' column",
+  //   PostgreSQL 까지 가서 걸리면 42703 + "column tasks.auto does not exist".
+  //   ★ 뒤엣것을 안 잡아서, 원장님 화면에 영어 날코드가 그대로 떴습니다.
+  if (has("42703") || /column\s+[\w.]+\s+does not exist/i.test(t)) {
+    const m = /column\s+(?:([\w]+)\.)?"?([\w]+)"?\s+does not exist/i.exec(t);
+    const 표 = m?.[1] || table, 칸 = m?.[2] || "";
+    const 고침 = 칸고치기[칸];
+    if (고침) {
+      return (
+        `DB에 '${칸}' 칸이 없습니다 (DB가 코드보다 옛것이에요).\n` +
+        `Supabase → SQL Editor 에 **아래 한 줄**을 붙여넣고 Run 하시면 바로 됩니다.\n\n` +
+        `  ${고침.sql}\n\n` +
+        `(데이터는 지워지지 않습니다. 같은 내용이 attendance-report/sql/${고침.file} 에도 있어요.)`
+      );
+    }
+    return (
+      `DB의 '${표}' 표에 '${칸}' 칸이 없습니다 (DB가 코드보다 옛것이에요).\n` +
+      `Supabase → SQL Editor 에서:\n` +
+      `  alter table ${표} add column if not exists ${칸 || "<칸이름>"} text;\n` +
+      `(숫자 칸이면 text 대신 int, 참/거짓이면 boolean 입니다. 데이터는 지워지지 않습니다.)`
+    );
+  }
   if (has("PGRST204") || /Could not find the .* column/i.test(t)) {
     // 어느 칸인지 메시지에서 뽑아냅니다 — PostgREST 가 'retest_sent' 처럼 따옴표로 알려줍니다
     const m = /Could not find the ['"`]?([a-zA-Z_][a-zA-Z0-9_]*)['"`]?\s+column/i.exec(t);
