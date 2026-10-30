@@ -61,7 +61,11 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .card p+p{margin-top:10px}
 .card h4.sub{font-size:15px;font-weight:800;color:var(--text);margin:18px 0 8px}
 
-.step-list{list-style:none;counter-reset:sc}
+/* ★ 번호는 **카드 단위**로 셉니다. 목록마다 counter-reset 을 걸면,
+   중간에 표가 끼어 목록이 끊길 때마다 번호가 01 로 되돌아갑니다
+   (03 다음에 01 이 나와서 수업 중에 멈칫하게 됩니다). */
+.card,.claude-card,.prep-box{counter-reset:sc}
+.step-list{list-style:none}
 /* 번호를 띄워 두고 본문은 한 덩어리로 흐르게 — flex 로 두면 <b> 가 별도 칸이 되어
    「치지 마 / 세요」 처럼 단어가 끊깁니다 */
 .step-list li{counter-increment:sc;position:relative;padding:14px 0 14px 46px;border-bottom:1px solid var(--border);font-size:14px;line-height:1.7;color:#444;word-break:keep-all}
@@ -104,6 +108,7 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
 .copy-body{padding:14px 16px;font-size:13px;line-height:1.85;white-space:pre;overflow-x:auto;font-family:'Space Mono',monospace;color:#2a3440}
 .copy-body.prompt{white-space:pre-wrap;font-family:'Noto Sans KR',sans-serif;font-size:13.5px;line-height:1.9;color:#333}
 /* 프롬프트 위 한 줄 메모 — 「이건 이미 들어 있습니다」 처럼 짚어줄 때 */
+.warn-inline{display:block;margin-top:3px;font-size:11.5px;color:#a33b2a;font-weight:700}
 .pnote{padding:9px 16px;background:#f3f8f5;border-bottom:1px solid #e3ece7;font-size:12.5px;line-height:1.7;color:#35594c}
 
 .recap-list{list-style:none}
@@ -227,7 +232,7 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
     <div class="card-title" style="margin-top:20px"><div class="num">C</div> 열쇠 2개 복사 (다음 단계에서 씀)</div>
     <ul class="step-list">
       <li>왼쪽 <b>Project Settings → API</b> 로 이동.</li>
-      <li><b>Project URL</b> 복사 → 메모 (SUPABASE_URL).</li>
+      <li><b>Project URL</b> 복사 → 메모 (SUPABASE_URL). <b>주소 전체</b>를 복사하세요 — <code>https://내프로젝트ID.supabase.co</code> 꼴입니다. <b>프로젝트 ID만(<code>khji…</code>) 넣으면 안 돌아갑니다.</b></li>
       <li><b>service_role</b> 키 복사 → 메모 (SUPABASE_SERVICE_KEY). <b>비밀키니 남에게 공유 금지.</b></li>
     </ul>
     <div class="hl-box red"><strong>⚠️ service_role 키는 비밀입니다</strong><br>이 키는 Vercel 환경변수에만 넣고, 채팅·화면·깃허브에 절대 붙여넣지 마세요. (서버만 사용)</div>
@@ -244,10 +249,14 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
     </ul>
     <table class="tb">
       <tr><th>이름</th><th>값</th><th>필수</th></tr>
-      <tr><td><code>SUPABASE_URL</code></td><td><b>Project URL</b> (앞에서 복사)</td><td>✅</td></tr>
+      <tr><td><code>SUPABASE_URL</code></td><td><code>https://내프로젝트ID.supabase.co</code><br><span class="warn-inline">✗ ID만 · ✗ 끝에 <code>/</code> · ✗ <code>/rest/v1</code> 까지 (그건 앱이 붙입니다)</span></td><td>✅</td></tr>
       <tr><td><code>SUPABASE_SERVICE_KEY</code></td><td><b>service_role</b> 키 (anon 아님)</td><td>✅</td></tr>
       <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Claude 키 (월말평가서 생성용)</td><td>선택</td></tr>
     </table>
+    <div class="hl-box green" style="margin-top:10px"><strong>✓ 주소가 맞나 1초 확인</strong><br>
+      브라우저에 <code>https://내프로젝트ID.supabase.co/rest/v1/</code> 를 쳐서
+      <code>{"message":"No API key found in request"…}</code> 같은 글이 뜨면 <b>주소는 맞는 것</b>입니다
+      (키를 안 보냈으니 거절당하는 게 정상). 「사이트를 찾을 수 없음」이면 주소가 틀린 거예요.</div>
     <ul class="step-list" style="margin-top:8px">
       <li><b>Deploy</b> 클릭 → 1~2분 후 <b>내 주소</b>(<code>https://내프로젝트.vercel.app</code>)가 생깁니다.</li>
       <li>주소 뒤에 <code>/</code> 를 붙여 홈을 열면 4개 화면 버튼이 보여요.</li>
@@ -938,6 +947,7 @@ lib/claude.js 의 reportGuideline() 을 고치면 될 거야.</div>
   <div class="card">
     <table class="tb">
       <tr><th>증상</th><th>원인</th><th>해결</th></tr>
+      <tr><td>화면에 <code>Failed to parse URL from …</code></td><td><code>SUPABASE_URL</code> 에 <b>프로젝트 ID만</b> 넣음</td><td><code>https://내프로젝트ID.supabase.co</code> 로 고치고 <b>Redeploy</b></td></tr>
       <tr><td>화면이 "환경변수가 없어요"</td><td>Vercel env 미입력/오타</td><td><code>SUPABASE_URL</code>·<code>SUPABASE_SERVICE_KEY</code> 확인 후 재배포</td></tr>
       <tr><td>학생이 안 보임</td><td>SQL 미실행</td><td><code>sql/setup.sql</code> 을 SQL Editor에서 Run 했는지 확인</td></tr>
       <tr><td>"AI 평가서 생성"이 안 됨</td><td><code>ANTHROPIC_API_KEY</code> 없음</td><td>키 입력 후 재배포 (없으면 통계·저장만 사용)</td></tr>
