@@ -38,6 +38,14 @@
     .pbar { height: 7px; background: #eee; border-radius: 99px; overflow: hidden; margin: 2px 0 14px; }
     .pbar > i { display: block; height: 100%; background: var(--green); border-radius: 99px; transition: width .35s; }
     .cheer { font-size: 13px; font-weight: 600; color: var(--green); margin-bottom: 12px; }
+    /* 집과제 / 학원과제 묶음 — 아이가 집에서 열면 위쪽(집)만 보면 되게 */
+    .grp { margin-bottom: 18px; }
+    .grp:last-child { margin-bottom: 0; }
+    .grp > h3 { font-size: 13.5px; font-weight: 700; margin: 0 0 3px; display: flex; align-items: center; gap: 6px; }
+    .grp.home > h3 { color: #b1731f; }
+    .grp.acad > h3 { color: #4a7c75; }
+    .grp > h3 .n { margin-left: auto; font-size: 12px; font-weight: 600; color: #999; }
+    .grp.home .pbar > i { background: #e0922f; }
 
     /* 진도 */
     .prog { display: flex; align-items: center; gap: 11px; padding: 11px 12px; background: #f8f9fb; border-radius: 10px; margin-bottom: 8px; }
@@ -99,9 +107,7 @@
     <div id="home" style="display:none">
       <div class="card">
         <h2>✅ 오늘 할 일</h2>
-        <div class="hint" id="taskHint">탭하면 체크돼요. 선생님 화면에 바로 보입니다.</div>
-        <div class="pbar"><i id="bar" style="width:0%"></i></div>
-        <div class="cheer" id="cheer"></div>
+        <div class="hint" id="taskHint">탭하면 체크돼요. 선생님 화면에 바로 보입니다. <b>🏠 집에서 할 것</b>부터 하면 돼요.</div>
         <div id="tasks"></div>
       </div>
 
@@ -181,24 +187,42 @@
     renderReports(d.reports);
   }
 
+  // 과제 한 줄
+  function taskHtml(t) {
+    // 묶음 제목이 집/학원을 이미 말해주므로, 줄마다 또 붙이지 않습니다 (과목만)
+    var tags = t.subject ? '<span class="tag">' + esc(t.subject) + '</span>' : '';
+    if (t.overdue) tags += '<span class="tag late">밀린 과제 · ' + esc(t.date.slice(5)) + '</span>';
+    return '<div class="task' + (t.done ? ' done' : '') + '" onclick="toggle(\'' + t.id + '\',' + (!t.done) + ')">'
+      + '<div class="box">✓</div><div class="t"><div class="title">' + esc(t.title) + '</div>'
+      + (tags ? '<div class="meta">' + tags + '</div>' : '') + '</div></div>';
+  }
+
+  // 한 묶음 (집 또는 학원) — 진행률을 **묶음마다 따로** 셉니다.
+  //   합쳐서 세면, 집에서 아무리 다 해도 학원과제가 남아 100% 가 안 됩니다.
+  //   아이 입장에선 "다 했는데 왜 67%" 가 되어서 체크할 맛이 안 나요.
+  function groupHtml(cls, icon, name, where, list) {
+    if (!list.length) return '';
+    var done = list.filter(function (t) { return t.done; }).length;
+    var pct = Math.round(done / list.length * 100);
+    var cheer = pct === 100 ? (name === '집' ? '집 거 다 했어요! 최고 👏' : '다 했어요! 👏')
+                            : (done + ' / ' + list.length + ' 완료');
+    return '<div class="grp ' + cls + '">'
+      + '<h3>' + icon + ' ' + where + '<span class="n">' + cheer + '</span></h3>'
+      + '<div class="pbar"><i style="width:' + pct + '%"></i></div>'
+      + list.map(taskHtml).join('') + '</div>';
+  }
+
   function renderTasks(tasks) {
     var box = $('tasks');
     if (!tasks.length) {
       box.innerHTML = '<div class="empty">오늘 낸 과제가 없어요 🎉</div>';
-      $('bar').style.width = '0%'; $('cheer').textContent = ''; return;
+      return;
     }
-    var done = tasks.filter(function (t) { return t.done; }).length;
-    var pct = Math.round(done / tasks.length * 100);
-    $('bar').style.width = pct + '%';
-    $('cheer').textContent = pct === 100 ? '다 했어요! 최고 👏' : (done + ' / ' + tasks.length + ' 완료 · ' + pct + '%');
-    box.innerHTML = tasks.map(function (t) {
-      var tags = '<span class="tag' + (t.kind === '집' ? ' home' : '') + '">' + esc(t.kind) + '</span>';
-      if (t.subject) tags += '<span class="tag">' + esc(t.subject) + '</span>';
-      if (t.overdue) tags += '<span class="tag late">밀린 과제 · ' + esc(t.date.slice(5)) + '</span>';
-      return '<div class="task' + (t.done ? ' done' : '') + '" onclick="toggle(\'' + t.id + '\',' + (!t.done) + ')">'
-        + '<div class="box">✓</div><div class="t"><div class="title">' + esc(t.title) + '</div>'
-        + '<div class="meta">' + tags + '</div></div></div>';
-    }).join('');
+    // 집 / 학원 두 묶음으로. **집을 위에** — 아이가 집에서 여니까요.
+    var home = tasks.filter(function (t) { return t.kind === '집'; });
+    var acad = tasks.filter(function (t) { return t.kind !== '집'; });
+    box.innerHTML = groupHtml('home', '🏠', '집', '집에서 할 것', home)
+                  + groupHtml('acad', '🏫', '학원', '학원에서 할 것', acad);
   }
 
   async function toggle(id, done) {
