@@ -116,6 +116,8 @@ node claude-error-unit.mjs > /tmp/clerr.out 2>&1; C=$?; tail -1 /tmp/clerr.out
 node retest-unit.mjs > /tmp/retest.out 2>&1; RT=$?; tail -1 /tmp/retest.out
 # SUPABASE_URL 을 잘못 넣었을 때 한국어로 막아주나 (설치 단계에서 제일 많이 틀리는 칸)
 node url-unit.mjs > /tmp/url.out 2>&1; UR=$?; tail -1 /tmp/url.out
+# 알림톡이 안 나갈 때 무엇을 고쳐야 하는지 말해주나
+node solapi-unit.mjs > /tmp/solapi.out 2>&1; SL=$?; tail -1 /tmp/solapi.out
 
 (fuser -k 4330/tcp 2>/dev/null || true)
 
@@ -138,6 +140,7 @@ FAILED=""
 [ $SC -ne 0 ] && FAILED="$FAILED 시나리오"
 [ $RT -ne 0 ] && FAILED="$FAILED 재시판정"
 [ $UR -ne 0 ] && FAILED="$FAILED 주소점검"
+[ $SL -ne 0 ] && FAILED="$FAILED 알림톡문구"
 if [ -z "$FAILED" ]; then
   echo "
 ✅ 전면 검수 통과"
@@ -145,6 +148,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out · /tmp/url.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out · /tmp/url.out · /tmp/solapi.out"
   exit 1
 fi

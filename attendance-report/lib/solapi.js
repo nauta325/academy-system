@@ -51,6 +51,28 @@ function authHeader() {
 }
 
 // 성공/실패와 무관하게 절대 throw 하지 않는다 (알림톡 실패가 출결을 막으면 안 됨).
+// 솔라피가 영어·코드로 주는 사유를, 수강생이 **무엇을 고쳐야 하는지** 알 수 있는 말로.
+//   세미나 당일 알림톡이 안 나갈 때 「발송 실패」 넉 자만 보면 아무도 못 고칩니다.
+function 읽기쉽게(reason) {
+  const r = String(reason || "");
+  const 보태기 = (말) => `${말}\n(솔라피가 알려준 것: ${r})`;
+  if (/ValidationError|InvalidTemplate|template.*not.*found|TemplateNotFound/i.test(r))
+    return 보태기("템플릿 ID가 틀렸거나 **아직 검수 승인이 안 난** 템플릿입니다. 솔라피 콘솔에서 승인 상태를 보세요.");
+  if (/variable|변수/i.test(r))
+    return 보태기("템플릿의 **변수 이름과 안 맞습니다.** 템플릿에 적은 #{...} 과 글자까지 똑같아야 해요 (띄어쓰기도).");
+  if (/pfId|channel|채널/i.test(r))
+    return 보태기("카카오 채널(pfId)이 안 맞습니다. SOLAPI_PFID 가 **그 템플릿을 등록한 채널**의 것인지 보세요.");
+  if (/sender|발신|from/i.test(r))
+    return 보태기("발신번호가 솔라피에 **등록돼 있지 않습니다.** SOLAPI_SENDER 를 등록된 번호로.");
+  if (/Unauthorized|401|signature|apiKey|인증/i.test(r))
+    return 보태기("솔라피 API 키·시크릿이 틀렸습니다. 넣은 뒤 **Redeploy** 를 눌렀는지도 보세요.");
+  if (/balance|잔액|point/i.test(r))
+    return 보태기("솔라피 **잔액이 부족**합니다. 충전 후 다시 보내세요.");
+  if (/phone|수신|recipient|number/i.test(r))
+    return 보태기("받는 번호가 올바르지 않습니다. 학생 관리의 학부모 연락처를 보세요.");
+  return r || "발송 실패";
+}
+
 export async function sendAlimtalk(to, templateId, variables) {
   if (!solapiConfigured()) return { skipped: true, reason: "미설정" };
   if (!templateId) return { skipped: true, reason: "템플릿ID 없음" };
@@ -78,11 +100,22 @@ export async function sendAlimtalk(to, templateId, variables) {
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
+
+    // 솔라피가 "이 건은 못 보냈다" 고 알려준 경우 — 사유가 제일 정확합니다
     if (data.failedMessageList && data.failedMessageList.length > 0) {
-      return { success: false, reason: data.failedMessageList[0].reason || "발송 실패" };
+      const f = data.failedMessageList[0];
+      return { success: false, reason: 읽기쉽게(f.reason || f.statusMessage || "발송 실패") };
     }
-    return { success: res.ok, detail: data };
+
+    // ★ 요청 자체가 거절된 경우(401·400 …). 예전에는 여기서 사유 없이 그냥 실패만
+    //   돌려줘서, 화면에 「발송 실패」 넉 자만 뜨고 왜인지 알 길이 없었습니다.
+    if (!res.ok) {
+      const 코드 = data.errorCode || "";
+      const 말 = data.errorMessage || data.message || "";
+      return { success: false, reason: 읽기쉽게(`${코드} ${말}`.trim() || `솔라피가 거절했어요 (HTTP ${res.status})`) };
+    }
+    return { success: true, detail: data };
   } catch (e) {
-    return { success: false, reason: String(e.message || e) };
+    return { success: false, reason: `솔라피에 못 닿았어요: ${String(e.message || e)}` };
   }
 }
