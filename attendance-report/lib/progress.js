@@ -96,8 +96,18 @@ export function findUnitIndex(units, last) {
   const lc = keyOf(u.code), lt = keyOf(u.title);
 
   // 1) 코드가 같다 (공백·대소문자·구두점 무시)
-  let i = list.findIndex((x) => keyOf(x.code) === lc);
-  if (i >= 0) return i;
+  //    ★ 같은 코드가 **여럿**일 때는 제목으로 가립니다.
+  //      「복습」·「리뷰」를 챕터마다 같은 코드로 쓰는 분이 많은데, 그때 늘 첫 번째를
+  //      찾아버리면 진도가 거기로 되돌아가 **그 자리에서 맴돕니다** (CH3 에 영영 못 감).
+  //      제목(「CH2 리뷰 문제풀이」)까지 보면 제 자리를 찾습니다.
+  const 코드같은것 = [];
+  list.forEach((x, idx) => { if (keyOf(x.code) === lc) 코드같은것.push(idx); });
+  if (코드같은것.length === 1) return 코드같은것[0];
+  if (코드같은것.length > 1) {
+    const 제목까지 = lt ? 코드같은것.filter((idx) => keyOf(list[idx].title) === lt) : [];
+    return 제목까지.length ? 제목까지[0] : 코드같은것[0];
+  }
+  let i = -1;
 
   // 2) 수기 진도가 "코드 + 제목" 형태 → 코드로 시작하는 것.
   //    "Unit 15" 가 "Unit 1" 에 잘못 붙지 않도록 **가장 긴 코드**를 고른다.

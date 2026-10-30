@@ -68,7 +68,7 @@
     <div><label>누적 교재 수량</label><input id="f_stock" type="number" min="0" placeholder="30"></div>
     <div><label>배포된 수량</label><input id="f_dist" type="number" min="0" placeholder="12"></div>
   </div>
-  <p class="muted" style="margin:6px 0 4px">재고 = 누적 − 배포. 하루 진도 1=매 수업 한 유닛, 2=두 유닛씩. 복습은 목차에 "복습 | …" 줄을 끼워 넣으세요.</p>
+  <p class="muted" style="margin:6px 0 4px">재고 = 누적 − 배포. 하루 진도 1=매 수업 한 유닛, 2=두 유닛씩. 복습은 목차에 <b>"CH1-복습 | …"</b> 처럼 <b>챕터마다 다른 코드</b>로 끼워 넣으세요 — 코드가 겹치면 진도가 그 자리에서 맴돕니다.</p>
   <label>목차 (한 줄에 하나씩 · <b>유닛코드 | 제목 | 집과제 | 학원과제</b>)<br><span class="muted" style="font-weight:400">뒤 두 칸은 안 쓰셔도 됩니다. 적어두면 <b>그 유닛에 진도가 닿는 날 그 학생에게 저절로</b> 과제가 들어갑니다. 집과제는 쉼표로 여러 개.</span></label>
   <p class="muted" style="margin:2px 0 4px">유닛 번호(코드)와 실제 제목을 <b>|</b> 로 구분해 넣으세요. 데일리 리포트에서 유닛을 바꾸면 제목이 자동으로 붙습니다.<br>
     <b>제목을 꼭 넣으세요</b> — 코드만 넣으면 학부모가 받는 건 <code>CH1-1</code> 뿐이라 무슨 뜻인지 모릅니다. 제목이 있으면 <code>CH1-1 be동사</code> 로 나가요.</p>
@@ -140,6 +140,24 @@ $("#save").onclick=async()=>{
     if (p[3]) u["학원과제"] = p[3];
     return u;
   });
+  // ★ 같은 유닛코드가 둘 이상이면 **진도가 그 자리에서 맴돕니다.**
+  //   「복습」·「리뷰」를 챕터마다 같은 코드로 쓰는 분이 많습니다. 제목이 다르면
+  //   앱이 가려내긴 하지만, 제목까지 같으면 방법이 없어요. 저장 전에 알려줍니다.
+  const 겹침 = {};
+  units.forEach(u=>{ const k=(u.code||"").replace(/\s+/g,"").toLowerCase(); if(k) (겹침[k]=겹침[k]||[]).push(u); });
+  const 겹친코드 = Object.entries(겹침).filter(([,v])=>v.length>1);
+  if (겹친코드.length) {
+    const 제목도같음 = 겹친코드.filter(([,v]) => new Set(v.map(u=>(u.title||"").trim())).size < v.length);
+    const 목록 = 겹친코드.slice(0,5).map(([,v])=>`「${v[0].code}」 ${v.length}개`).join(" · ");
+    const 말 = 제목도같음.length
+      ? `🔴 유닛코드가 겹치고 **제목까지 같은** 줄이 있습니다 — ${목록}\n\n`
+        + `이대로 두면 그 학생의 진도가 **거기서 맴돌아 뒤 챕터로 못 갑니다.**\n`
+        + `「CH1-복습」「CH2-복습」 처럼 코드를 다르게 해주세요.\n\n그래도 저장할까요?`
+      : `⚠️ 같은 유닛코드가 여럿 있습니다 — ${목록}\n\n`
+        + `제목이 서로 달라서 앱이 가려내긴 합니다만, 「CH1-복습」「CH2-복습」 처럼\n`
+        + `코드를 다르게 해두시는 게 안전합니다.\n\n이대로 저장할까요?`;
+    if (!confirm(말)) return;
+  }
   const numv = (id)=>{ const v=$(id).value.trim(); return v===""?null:Number(v); };
   const textbook = { id:editing?.id, name:$("#f_name").value.trim(), subject:$("#f_subject").value.trim(),
     price:numv("#f_price"), stock_total:numv("#f_stock"), distributed:numv("#f_dist")||0,
