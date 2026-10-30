@@ -79,6 +79,11 @@ node auto-task-check.mjs > /tmp/auto.out 2>&1; T=$?; tail -3 /tmp/auto.out
 echo "── 3-1-C. 나머지 동작 (하원·교재삭제·평가서 다시열기) ──"
 node rest-actions-check.mjs > /tmp/rest.out 2>&1; X=$?; tail -3 /tmp/rest.out
 
+echo "── 3-1-E. 알림톡 변수 — 자료의 템플릿 문구와 앱이 맞나 ──"
+#  카카오는 **모르는 변수를 빈 칸으로** 내보냅니다 — 에러가 안 납니다.
+#  자료의 문구가 한 글자만 어긋나도 수강생 40명의 학부모 카톡에 빈 줄이 나갑니다.
+TESTDB=tapp node alimtalk-vars-check.mjs > /tmp/alim.out 2>&1; AL=$?; tail -3 /tmp/alim.out
+
 echo "── 3-2. 노션 이관 (가짜 노션) ──"
 (fuser -k 4330/tcp 2>/dev/null || true); sleep 1
 MOCK_NOTION=1 TESTDB=tapp NOTION_TOKEN=secret_fake \
@@ -141,6 +146,7 @@ FAILED=""
 [ $RT -ne 0 ] && FAILED="$FAILED 재시판정"
 [ $UR -ne 0 ] && FAILED="$FAILED 주소점검"
 [ $SL -ne 0 ] && FAILED="$FAILED 알림톡문구"
+[ $AL -ne 0 ] && FAILED="$FAILED 알림톡변수"
 if [ -z "$FAILED" ]; then
   echo "
 ✅ 전면 검수 통과"
@@ -148,6 +154,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out · /tmp/url.out · /tmp/solapi.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out · /tmp/url.out · /tmp/solapi.out · /tmp/alim.out"
   exit 1
 fi

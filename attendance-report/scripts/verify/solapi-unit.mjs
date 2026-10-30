@@ -23,11 +23,11 @@ for (const [라벨, status, body, 기대] of [
   ["사유를 안 줄 때", 500, {}, "HTTP 500"],
 ]) {
   가짜(status, body);
-  const r = await sendAlimtalk("01012345678","TPL",{});
+  const r = await sendAlimtalk("01012345678","TPL",{});   // 가짜 번호 (검수용)
   ck(`${라벨} → ${기대}`, !r.success && String(r.reason||"").includes(기대), r);
 }
 가짜(200, {groupInfo:{}});
-const ok = await sendAlimtalk("01012345678","TPL",{});
+const ok = await sendAlimtalk("01012345678","TPL",{});   // 가짜 번호 (검수용)
 ck("성공하면 success:true", ok.success===true, ok);
 console.log(bad?`\n❌ ${bad}/${n} 실패`:`\n✅ ${n}가지 전부 통과`);
 process.exit(bad?1:0);
