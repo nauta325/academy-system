@@ -30,6 +30,10 @@
   .actions { display:flex; gap:8px; margin-top:16px; }
   .err { color:#cf6a4a; font-size:13px; }
   .muted { color:var(--muted); font-size:12px; }
+  /* 교재명이 교재DB에 없을 때 — 진도가 안 넘어가는 제일 흔한 원인이라 그 자리에서 알려줍니다 */
+  .bookwarn { font-size:12px; line-height:1.6; color:#8a5d0f; background:#fff8e6; border:1px solid #f0dca8;
+              border-radius:7px; padding:7px 9px; margin-top:8px; display:none; }
+  .bookwarn.on { display:block; }
 </style>
 <script src="/config.js"></script>
 </head>
@@ -76,9 +80,14 @@
     <div><label>목</label><input data-day="목"></div>
     <div><label>금</label><input data-day="금"></div>
   </div>
-  <label>교재</label>
-  <div class="row2"><input data-book="문법" placeholder="문법 교재"><input data-book="리딩" placeholder="리딩 교재"></div>
-  <input data-book="단어" placeholder="단어 교재" style="margin-top:8px">
+  <label>교재 <span class="muted" style="font-weight:400">— 칸을 누르면 <b>교재DB에 있는 것</b>이 뜹니다</span></label>
+  <div class="row2">
+    <input data-book="문법" list="bk-문법" placeholder="문법 교재" autocomplete="off">
+    <input data-book="리딩" list="bk-리딩" placeholder="리딩 교재" autocomplete="off">
+  </div>
+  <input data-book="단어" list="bk-단어" placeholder="단어 교재" style="margin-top:8px" autocomplete="off">
+  <datalist id="bk-문법"></datalist><datalist id="bk-리딩"></datalist><datalist id="bk-단어"></datalist>
+  <div id="bookWarn" class="bookwarn"></div>
   <div class="actions">
     <button id="save">저장</button>
     <button class="ghost" id="del" style="border-color:#cf6a4a;color:#cf6a4a">삭제</button>
@@ -108,8 +117,52 @@ let editing = null;
 async function api(p){ const r=await fetch("/api/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"실패"); return d; }
 function esc(s){ return (s ?? "").replace(/[&<>]/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
+// 교재DB에 있는 교재명 — 학생의 교재 칸을 **고르게** 하려고 들고 있습니다.
+//   교재명이 교재DB와 한 글자라도 다르면 목차를 못 찾아서 **진도가 안 넘어갑니다.**
+//   손으로 치게 두면 반드시 어긋나요 (자료실 ㊻ 프롬프트가 그 뒷수습용이었습니다).
+let BOOKS = {};       // 과목 → [교재명]
+let ALLBOOKS = new Set();
+
+async function loadBooks(){
+  try{
+    const r = await fetch("/api/attendance?action=textbooks");
+    const d = await r.json(); if(!r.ok) return;
+    BOOKS = {}; ALLBOOKS = new Set();
+    for(const t of (d.textbooks||[])){
+      if(!t.name) continue;
+      (BOOKS[t.subject||""] = BOOKS[t.subject||""] || []).push(t.name);
+      ALLBOOKS.add(t.name);
+    }
+    // 과목이 맞는 것을 위에, 나머지도 뒤에 (과목을 안 적어둔 교재도 고를 수 있게)
+    for(const sub of ["문법","리딩","단어"]){
+      const dl = $("#bk-"+sub); if(!dl) continue;
+      const mine = BOOKS[sub] || [];
+      const rest = [...ALLBOOKS].filter(n => !mine.includes(n));
+      dl.innerHTML = [...mine, ...rest].map(n => `<option value="${esc(n)}">`).join("");
+    }
+  }catch(e){ /* 교재를 못 불러와도 학생 관리는 돌아가야 합니다 */ }
+}
+
+// 교재DB에 없는 이름을 적었으면 그 자리에서 알려줍니다 (막지는 않습니다 —
+// 교재를 아직 안 만든 분도 학생부터 넣을 수 있어야 하니까요)
+function checkBooks(){
+  const box = $("#bookWarn"); if(!box) return;
+  const 없는것 = [];
+  document.querySelectorAll("[data-book]").forEach(i=>{
+    const v = i.value.trim();
+    if(v && ALLBOOKS.size && !ALLBOOKS.has(v)) 없는것.push(v);
+  });
+  if(!없는것.length){ box.classList.remove("on"); box.innerHTML=""; return; }
+  box.classList.add("on");
+  box.innerHTML = `⚠️ <b>교재DB에 없는 이름</b>이에요: ${없는것.map(esc).join(" · ")}<br>`
+    + `이대로 저장하면 <b>진도가 저절로 안 넘어갑니다</b> (목차를 못 찾아서요). `
+    + `<a href="/books.html" target="_blank">교재</a> 에서 먼저 만드시거나, 칸을 눌러 목록에서 고르세요.`;
+}
+document.addEventListener("input", (e)=>{ if(e.target.dataset && e.target.dataset.book!==undefined) checkBooks(); });
+
 async function load(){
   $("#msg").textContent="";
+  await loadBooks();
   const r = await fetch("/api/attendance?action=students"); const d = await r.json();
   if(!r.ok){ $("#msg").textContent=d.error; return; }
   const body = $("#rows"); body.innerHTML="";
@@ -132,6 +185,7 @@ function openForm(s){
   $("#f_teacher").value=s?.teacher||""; $("#f_status").value=s?.status||"재원"; $("#f_phone").value=s?.phone||""; $("#f_min").value=s?.class_minutes||"";
   document.querySelectorAll("[data-day]").forEach(i=> i.value=(s?.schedule||{})[i.dataset.day]||"");
   document.querySelectorAll("[data-book]").forEach(i=> i.value=(s?.books||{})[i.dataset.book]||"");
+  checkBooks();
   $("#del").style.display = s ? "" : "none";
   $("#overlay").classList.add("on");
 }
