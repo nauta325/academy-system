@@ -2,11 +2,51 @@
 // service_role 키로 "서버(api 폴더)에서만" 호출한다. 브라우저로 절대 내보내지 말 것.
 // 노션 SDK·rate limit 없이 fetch 한 방으로 테이블을 읽고 쓴다.
 
-const URL = process.env.SUPABASE_URL;
-const KEY = process.env.SUPABASE_SERVICE_KEY;
+// SUPABASE_URL 을 **쓸 수 있는 꼴로 다듬는다.**
+//
+// 왜: 설치 단계에서 제일 많이 틀리는 칸입니다. Supabase 화면이 바뀌면서
+//   Settings → General 에는 **프로젝트 ID 만**(khji… 같은 글자) 나오는데,
+//   그걸 그대로 넣으면 화면에 영어 날코드가 그대로 떴습니다 —
+//     Failed to parse URL from khji…/rest/v1/students?status=eq.재원
+//   당일에 이게 뜨면 뭘 틀렸는지 알 길이 없습니다.
+//
+//   · 끝의 `/` 는 떼어냅니다 (`//rest/v1` 이 되는 걸 막음)
+//   · 실수로 `/rest/v1` 까지 붙여 넣은 것도 떼어냅니다 (앱이 붙이니 두 번이 됨)
+//   · 주소 꼴이 아니면 **한국어로** 무엇을 넣어야 하는지 알려줍니다
+function 주소다듬기(v) {
+  return String(v || "").trim()
+    .replace(/\/+$/, "")           // 끝의 /
+    .replace(/\/rest\/v1$/i, "");  // 실수로 붙인 /rest/v1
+}
+const URL = 주소다듬기(process.env.SUPABASE_URL);
+const KEY = (process.env.SUPABASE_SERVICE_KEY || "").trim();
+
+// 주소 꼴인가 — https://무엇.supabase.co 같은 모양이어야 합니다.
+const 주소꼴 = /^https?:\/\/[^/\s]+/i.test(URL);
 
 export function dbConfigured() {
   return Boolean(URL && KEY);
+}
+
+// 주소가 주소 꼴이 아닐 때 띄울 말. 괜찮으면 null.
+export function urlProblem() {
+  if (!URL) return null;          // 아예 없는 건 "환경변수가 없어요" 쪽에서 안내합니다
+  if (주소꼴) return null;
+  const 보인것 = URL.length > 24 ? URL.slice(0, 24) + "…" : URL;
+  return (
+    `Vercel 환경변수 SUPABASE_URL 에 **주소 전체**를 넣어주세요 — ` +
+    `https://내프로젝트ID.supabase.co 꼴입니다.\n` +
+    `지금 들어 있는 값: "${보인것}"\n` +
+    `프로젝트 ID만 넣으신 것 같아요 (Settings → General 의 Reference ID 는 ID만 나옵니다). ` +
+    `Supabase 의 Settings → Data API(예전 API) 맨 위 **Project URL** 을 통째로 복사해 넣고, ` +
+    `Vercel 에서 **Redeploy** 를 꼭 눌러주세요.`
+  );
+}
+
+// 호출 직전에 한 번 확인 — 주소가 엉뚱하면 fetch 가 영어로 터지기 전에 막습니다.
+function 주소확인() {
+  const p = urlProblem();
+  if (p) throw new DbInputError(p);
 }
 
 // PostgREST 가 주는 날코드를, 수강생이 **읽고 바로 고칠 수 있는 말**로 바꾼다.
@@ -97,6 +137,7 @@ function headers(extra = {}) {
 
 // 예: select("students", "status=eq.재원&order=name.asc")
 export async function select(table, query = "") {
+  주소확인();
   const res = await fetch(`${URL}/rest/v1/${table}?${query}`, {
     headers: headers(),
   });
@@ -106,6 +147,7 @@ export async function select(table, query = "") {
 
 // 있으면 갱신, 없으면 삽입 (onConflict = 유니크 컬럼, 예: "student_id,month")
 export async function upsert(table, rows, onConflict) {
+  주소확인();
   const q = onConflict ? `?on_conflict=${encodeURIComponent(onConflict)}` : "";
   const res = await fetch(`${URL}/rest/v1/${table}${q}`, {
     method: "POST",
@@ -118,6 +160,7 @@ export async function upsert(table, rows, onConflict) {
 
 // 새로 삽입 (id 자동 생성)
 export async function insert(table, rows) {
+  주소확인();
   const res = await fetch(`${URL}/rest/v1/${table}`, {
     method: "POST",
     headers: headers({ Prefer: "return=representation" }),
@@ -129,6 +172,7 @@ export async function insert(table, rows) {
 
 // 조건에 맞는 행 수정. 예: patch("daily_records", "id=eq.xxx", {check_out:"19:00"})
 export async function patch(table, query, body) {
+  주소확인();
   const res = await fetch(`${URL}/rest/v1/${table}?${query}`, {
     method: "PATCH",
     headers: headers({ Prefer: "return=representation" }),
@@ -140,6 +184,7 @@ export async function patch(table, query, body) {
 
 // 조건에 맞는 행 삭제. 예: remove("students", "id=eq.xxx")
 export async function remove(table, query) {
+  주소확인();
   const res = await fetch(`${URL}/rest/v1/${table}?${query}`, {
     method: "DELETE",
     headers: headers(),

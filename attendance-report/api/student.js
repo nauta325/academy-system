@@ -13,7 +13,7 @@
 // ⚠️ 학생은 '자기 것'만 볼 수 있어야 한다. 아래 모든 조회에 student_id=eq.<본인> 이 붙어 있다.
 //    이 조건을 빼면 다른 학생 기록이 보인다 — 수정할 때 꼭 유지할 것.
 
-import { select, patch, dbConfigured } from "../lib/db.js";
+import { select, patch, dbConfigured, DbInputError } from "../lib/db.js";
 import { kstNow } from "../lib/time.js";
 import { normUnit } from "../lib/progress.js";
 
@@ -116,6 +116,8 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: `알 수 없는 action: ${action}` });
   } catch (e) {
+    // 입력·설정 때문에 난 것은 400 — 500 이면 화면에 영어 날코드가 그대로 뜹니다
+    if (e instanceof DbInputError) return res.status(400).json({ error: e.message });
     return res.status(500).json({ error: String(e.message || e) });
   }
 }

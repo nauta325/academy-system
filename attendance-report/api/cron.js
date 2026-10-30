@@ -3,7 +3,7 @@
 //   오늘 등원 예정인 학생(요일별 등원시간이 있는 학생)의 데일리리포트 행을 미리 생성.
 //   진도는 직전 기록에서 캐리포워드(전날 값 복사) — 바뀐 날만 현황판에서 수정.
 
-import { select, insert, dbConfigured } from "../lib/db.js";
+import { select, insert, dbConfigured, DbInputError } from "../lib/db.js";
 import { kstNow } from "../lib/time.js";
 import { tocByBook, advanceProgress } from "../lib/progress.js";
 
@@ -43,6 +43,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ date: now.date, created: toCreate.length });
   } catch (e) {
+    if (e instanceof DbInputError) return res.status(400).json({ error: e.message });
     return res.status(500).json({ error: String(e.message || e) });
   }
 }

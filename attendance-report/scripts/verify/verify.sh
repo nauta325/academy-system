@@ -114,6 +114,8 @@ node db-error-unit.mjs > /tmp/dberr.out 2>&1; D=$?; tail -1 /tmp/dberr.out
 node claude-error-unit.mjs > /tmp/clerr.out 2>&1; C=$?; tail -1 /tmp/clerr.out
 # 재시 안내 판정 — 점수만 적어도 큐에 올라가나, 기준이 0% 로 죽지 않았나
 node retest-unit.mjs > /tmp/retest.out 2>&1; RT=$?; tail -1 /tmp/retest.out
+# SUPABASE_URL 을 잘못 넣었을 때 한국어로 막아주나 (설치 단계에서 제일 많이 틀리는 칸)
+node url-unit.mjs > /tmp/url.out 2>&1; UR=$?; tail -1 /tmp/url.out
 
 (fuser -k 4330/tcp 2>/dev/null || true)
 
@@ -135,6 +137,7 @@ FAILED=""
 [ $C -ne 0 ] && FAILED="$FAILED AI에러문구"
 [ $SC -ne 0 ] && FAILED="$FAILED 시나리오"
 [ $RT -ne 0 ] && FAILED="$FAILED 재시판정"
+[ $UR -ne 0 ] && FAILED="$FAILED 주소점검"
 if [ -z "$FAILED" ]; then
   echo "
 ✅ 전면 검수 통과"
@@ -142,6 +145,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out · /tmp/url.out"
   exit 1
 fi
