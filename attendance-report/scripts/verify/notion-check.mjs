@@ -32,7 +32,7 @@ const A = list.find((s) => s.name === "노션학생A");
 ck("노션 학생이 들어옴", !!A, list.map((s) => s.name));
 if (A) {
   ck("★ 학생ID 보존 (학생앱 로그인에 필요)", A.student_code === "nt01", A.student_code);
-  ck("★ 출결PIN 보존", A.pin === "1212", A.pin);
+  ck("★ 출결PIN 보존", A.pin === "1217", A.pin);
   ck("담당 선생님 보존", A.teacher === "이선생", A.teacher);
   ck("요일별 등원시간 보존", !!(A.schedule || {})["월"], A.schedule);
 }
@@ -59,9 +59,9 @@ ck("★ 두 번 이관해도 학생이 중복되지 않음", new Set(l2).size ==
   const w = await (await fetch(`${B}/__notion-writes`)).json().catch(() => ({}));
   ck("★ 노션에 쓰기가 한 번도 없었음 (원본은 그대로)", (w.writes || []).length === 0, w.writes);
   // 기존 학생ID·출결PIN 으로 실제 로그인·등원이 되나 = "다시 안내할 게 없다"
-  const ci = await P("attendance", { action: "checkin", code: "nt01", pin: "1212" });
+  const ci = await P("attendance", { action: "checkin", code: "nt01", pin: "1217" });
   ck("★ 기존 출결PIN 으로 키오스크 등원됨", ci.code === 200, ci.raw.slice(0, 140));
-  const lg = await P("student", { action: "home", code: "nt01", pin: "1212" });
+  const lg = await P("student", { action: "home", code: "nt01", pin: "1217" });
   ck("★★ 기존 학생ID 로 학생앱 로그인됨", lg.code === 200 && /노션학생A/.test(JSON.stringify(lg.body)), lg.raw.slice(0, 140));
 }
 

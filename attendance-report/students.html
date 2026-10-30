@@ -50,6 +50,8 @@
     <button class="ghost" id="bulkBtn">붙여넣기 일괄등록</button>
   </div>
   <div id="msg" class="err"></div>
+  <!-- 출결PIN 중복 알림 — 키오스크가 PIN 만으로 학생을 찾기 때문에 겹치면 등원이 안 됩니다 -->
+  <div id="pinDup" style="display:none;margin:10px 0;padding:12px 14px;border:1px solid #e3b7a8;background:#fdf3ef;border-radius:8px;line-height:1.7;font-size:13px"></div>
   <div style="overflow-x:auto">
   <table><thead><tr><th>이름</th><th>학생ID</th><th>학년</th><th>PIN</th><th>담당</th><th>등원시간</th><th>연락처</th><th>이력</th></tr></thead>
   <tbody id="rows"></tbody></table>
@@ -190,14 +192,27 @@ async function load(){
   await loadBooks();
   const r = await fetch("/api/attendance?action=students"); const d = await r.json();
   if(!r.ok){ $("#msg").textContent=d.error; return; }
+  // ★ 같은 출결PIN 을 쓰는 학생이 있으면 **제일 위에** 띄웁니다.
+  //   키오스크는 PIN 만으로 학생을 찾습니다 — 겹치면 그 아이들은 등원이 안 되고,
+  //   모르고 있으면 세미나 당일 아침에야 드러납니다. 노션에서 옮겨온 PIN 이
+  //   샘플 학생의 PIN 과 겹치는 일이 자주 있습니다.
+  const dups = d.pin_dups || [];
+  $("#pinDup").innerHTML = dups.length
+    ? `<b>⚠️ 출결PIN이 겹치는 학생이 있어요</b><br>`
+      + dups.map(x=>`· PIN <b>${esc(x.pin)}</b> — ${esc(x.names.join(", "))}`).join("<br>")
+      + `<br><br>키오스크는 PIN만으로 학생을 찾기 때문에, 겹친 학생은 <b>등원·하원이 안 됩니다.</b>`
+      + `<br>아래 명단에서 한 명을 눌러 <b>다른 번호</b>로 바꿔주세요.`
+    : "";
+  $("#pinDup").style.display = dups.length ? "" : "none";
   const body = $("#rows"); body.innerHTML="";
+  const 겹친핀 = new Set(dups.map(x=>x.pin));
   const DAYORD = ["월","화","수","목","금","토","일"];
   for(const s of d.students){
     // 요일별 등원시간: "월 17:00 · 수 17:00 · 금 17:00"
     const times = DAYORD.filter(d0 => (s.schedule||{})[d0]).map(d0 => `${d0} ${s.schedule[d0]}`).join(" · ");
     const quit = s.status && s.status !== "재원" ? ' <span style="font-size:11px;color:#cf6a4a">(퇴원)</span>' : "";
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td><b>${esc(s.name)}</b>${quit}</td><td>${esc(s.student_code||"")}</td><td>${esc(s.grade||"")}</td><td>${esc(s.pin||"")}</td><td>${esc(s.teacher||"")}</td><td style="white-space:nowrap">${esc(times)||'<span style="color:#9aa">-</span>'}</td><td>${esc(s.phone||"")}</td><td style="white-space:nowrap"><a href="/student_card.html?student_id=${encodeURIComponent(s.id)}" target="_blank" onclick="event.stopPropagation()" title="학생 카드 — 지난 진도 쭉 보기">📋</a></td>`;
+    tr.innerHTML = `<td><b>${esc(s.name)}</b>${quit}</td><td>${esc(s.student_code||"")}</td><td>${esc(s.grade||"")}</td><td>${겹친핀.has(String(s.pin||"").trim()) && s.status!=="퇴원" ? `<span style="color:#c0392b;font-weight:700" title="다른 학생과 겹칩니다 — 키오스크 등원이 안 됩니다">${esc(s.pin)} ⚠️</span>` : esc(s.pin||"")}</td><td>${esc(s.teacher||"")}</td><td style="white-space:nowrap">${esc(times)||'<span style="color:#9aa">-</span>'}</td><td>${esc(s.phone||"")}</td><td style="white-space:nowrap"><a href="/student_card.html?student_id=${encodeURIComponent(s.id)}" target="_blank" onclick="event.stopPropagation()" title="학생 카드 — 지난 진도 쭉 보기">📋</a></td>`;
     tr.onclick = () => openForm(s);
     body.appendChild(tr);
   }
@@ -320,6 +335,24 @@ $("#bulkSave").onclick = async () => {
       + `학생ID가 없으면 그 학생은 학생앱(student.html)에 로그인할 수 없습니다.\n`
       + `제목 줄에 「학생ID」 칸을 넣으면 함께 등록됩니다.\n\n`
       + `이대로 등록할까요?`)) return;
+  // ★ 출결PIN 도 같이 짚습니다. PIN 이 없으면 **키오스크 등하원도** 안 됩니다
+  //   (학생앱 로그인은 학생ID + PIN 둘 다 필요). 예전엔 학생ID 만 알려줬습니다.
+  const noPin = rows.filter(r=>!r.pin).map(r=>r.name);
+  if(noPin.length && !confirm(
+      `출결PIN이 비어 있는 학생이 ${noPin.length}명 있어요: ${noPin.slice(0,5).join(", ")}${noPin.length>5?" 외":""}\n\n`
+      + `출결PIN이 없으면 그 학생은 키오스크로 등원·하원을 할 수 없고, 학생앱에도 로그인할 수 없습니다.\n`
+      + `제목 줄에 「출결PIN」 칸을 넣고 4자리 숫자를 적으면 같이 들어갑니다.\n\n`
+      + `이대로 등록할까요?`)) return;
+  // ★ 붙여넣은 명단 안에서 PIN 이 겹치면 — 키오스크는 PIN 만으로 학생을 찾기 때문에
+  //   겹치면 엉뚱한 학생으로 등원되고 그 집에 카톡이 갑니다. 서버도 막지만 여기서 먼저 알립니다.
+  const pins = rows.map(r=>String(r.pin||"").trim()).filter(Boolean);
+  const dupPin = [...new Set(pins.filter((p,i)=>pins.indexOf(p)!==i))];
+  if(dupPin.length){
+    alert(`붙여넣은 명단 안에서 출결PIN이 겹칩니다: ${dupPin.join(", ")}\n\n`
+      + `키오스크는 PIN만으로 학생을 찾기 때문에 겹치면 엉뚱한 학생으로 등원되고,\n`
+      + `그 학생 집으로 등원 카톡이 갑니다.\n\n시트에서 고쳐 다시 붙여넣어 주세요.`);
+    return;
+  }
   // 요일이 하나도 없으면 데일리 리포트에 안 뜹니다 — 조용히 넘어가면 안 되는 자리
   const noDay = rows.filter(r=>!Object.keys(r.schedule||{}).length).map(r=>r.name);
   if(noDay.length && !confirm(

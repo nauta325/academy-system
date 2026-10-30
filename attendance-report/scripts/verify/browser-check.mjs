@@ -118,10 +118,22 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
   await p2.goto(B + "/students.html", { waitUntil: "networkidle" });
   await p2.waitForTimeout(1000);
   const code = "vfy" + String(Date.now()).slice(-5);
+  // ★ PIN 을 **박아두면 안 됩니다.** 4242·7777 을 박아뒀다가 샘플 교재를 바꾸면서
+  //   샘플 PIN 과 겹쳤고, 앱이 올바르게 「PIN 이 겹친다」고 막는데 검수가 실패했습니다.
+  //   지금 안 쓰는 번호를 찾아서 씁니다.
+  const [빈핀, 빈핀2] = await (async () => {
+    const d = await (await fetch(`${B}/api/attendance?action=students`)).json();
+    const 쓰는중 = new Set((d.students || []).map((x) => String(x.pin || "").trim()));
+    const 빈것 = [];
+    for (let n = 1000; n <= 9999 && 빈것.length < 2; n++) {
+      const p = String(n); if (!쓰는중.has(p)) 빈것.push(p);
+    }
+    return 빈것;
+  })();
   if (await p2.locator("#bulkBtn").count()) {
     await p2.locator("#bulkBtn").click();
     await p2.waitForTimeout(400);
-    await p2.locator("#bulkText").fill(`검수학생\t${code}\t4242\t중1\t이선생\t010-4242-4242`);
+    await p2.locator("#bulkText").fill(`검수학생\t${code}\t${빈핀}\t중1\t이선생\t010-4242-4242`);
     await p2.locator("#bulkSave").click();
     await p2.waitForTimeout(2200);
     ck("★ 일괄등록에 학생ID가 들어감", (await p2.locator("body").innerText()).includes(code), dl.slice(0, 2));
@@ -129,7 +141,7 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
     await p2.waitForTimeout(800);
     const ii = await p2.locator("input:visible").all();
     if (ii.length >= 2) {
-      await ii[0].fill(code); await ii[1].fill("4242");
+      await ii[0].fill(code); await ii[1].fill(빈핀);
       await p2.locator("button:visible").first().click();
       await p2.waitForTimeout(2000);
     }
@@ -144,7 +156,7 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
     await p2.locator("#bulkBtn").click(); await p2.waitForTimeout(300);
     await p2.locator("#bulkText").fill(
       "이름\t학생ID\t출결PIN\t학년\t담당\t연락처\t월\t화\t수\t목\t금\t문법교재\t리딩교재\t단어교재\n" +
-      `시트학생\t${code2}\t7777\t중1\t이선생\t010-7777-7777\t17:00\t\t17:00\t\t17:00\t그래머인유즈 1\t리딩릴레이 스타터1\t능률 보카 기본`
+      `시트학생\t${code2}\t${빈핀2}\t중1\t이선생\t010-7777-7777\t17:00\t\t17:00\t\t17:00\t그래머 인사이드 1\t리딩튜터 주니어 1\t능률 VOCA 입문`
     );
     await p2.waitForTimeout(500);
     const prev = await p2.locator("#bulkPreview").innerText();
@@ -155,10 +167,43 @@ ck("★ 진도가 비어 있지 않음(자동으로 채워짐)", !!firstVal, { f
     const row = (made.students || []).find((x) => x.student_code === code2);
     ck("★★ 시트 한 장으로 등록됨", !!row, null);
     ck("★★ 요일별 등원시간이 들어감", row && Object.values(row.schedule || {}).filter(Boolean).length >= 1, row && row.schedule);
-    ck("★★ 과목별 교재가 들어감", row && (row.books || {}).문법 === "그래머인유즈 1", row && row.books);
-    ck("담당·PIN·학년도 들어감", row && row.teacher === "이선생" && row.pin === "7777" && row.grade === "중1", row);
+    ck("★★ 과목별 교재가 들어감", row && (row.books || {}).문법 === "그래머 인사이드 1", row && row.books);
+    ck("담당·PIN·학년도 들어감", row && row.teacher === "이선생" && row.pin === 빈핀2 && row.grade === "중1", row);
+
+    // ★★ 출결PIN 이 겹치면 — 키오스크는 PIN 만으로 학생을 찾습니다. 겹치면 엉뚱한 아이로
+    //   등원되고 **그 집에 등원 카톡이** 갑니다. 아무 표시도 없어서 당일 아침에야 드러나던 자리.
+    {
+      const code3 = "dup" + String(Date.now()).slice(-5);
+      await p2.goto(B + "/students.html", { waitUntil: "networkidle" });
+      await p2.waitForTimeout(900);
+      await p2.locator("#bulkBtn").click(); await p2.waitForTimeout(300);
+      dl.length = 0;
+      // 이미 등록된 「시트학생」의 PIN 을 그대로 쓴다
+      await p2.locator("#bulkText").fill(`겹침학생\t${code3}\t${빈핀2}\t중1\t이선생\t010-4242-4242`);
+      await p2.locator("#bulkSave").click(); await p2.waitForTimeout(2000);
+      const 재조회 = await (await fetch(`${B}/api/attendance?action=students`)).json();
+      ck("★★ PIN 이 겹치는 학생은 등록을 막는다",
+         !(재조회.students || []).some((x) => x.student_code === code3), dl.slice(0, 2));
+      ck("★★ 막는 말이 한국어로 뜬다", dl.some((m) => /겹|PIN/.test(m) && /[가-힣]/.test(m)), dl.slice(0, 2));
+      // 겹친 걸 **명단 화면이 알려주나** — 노션 이관처럼 다른 길로 들어온 중복까지 잡는 장치.
+      //   ★ 「배너가 안 뜬다」를 박으면 안 됩니다. 앞 단계(노션 이관)가 남긴 학생 때문에
+      //     진짜 중복이 있을 수 있고, 그때는 배너가 뜨는 게 **맞습니다.**
+      //     그래서 「서버가 말하는 중복과 화면이 일치하나」를 봅니다.
+      await p2.goto(B + "/students.html", { waitUntil: "networkidle" });
+      await p2.waitForTimeout(1200);
+      const 서버중복 = ((await (await fetch(`${B}/api/attendance?action=students`)).json()).pin_dups) || [];
+      const 배너보임 = await p2.locator("#pinDup").isVisible().catch(() => false);
+      ck("★ 겹친 PIN 유무가 화면과 서버에서 같다", 배너보임 === (서버중복.length > 0),
+         { 서버: 서버중복, 배너: 배너보임 });
+      if (서버중복.length) {
+        const 글 = await p2.locator("#pinDup").innerText();
+        ck("★ 배너가 겹친 학생 이름을 짚어준다",
+           서버중복.every((x) => x.names.every((n) => 글.includes(n))), 글);
+      }
+    }
 
     // 📄 시트 양식(CSV) 내려받기가 실제로 되는지 (등록하면 모달이 닫히므로 다시 연다)
+    await p2.goto(B + "/students.html", { waitUntil: "networkidle" }); await p2.waitForTimeout(800);
     await p2.locator("#bulkBtn").click(); await p2.waitForTimeout(400);
     const [dlFile] = await Promise.all([
       p2.waitForEvent("download", { timeout: 8000 }).catch(() => null),

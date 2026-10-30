@@ -5,7 +5,7 @@
 
 import { select, insert, dbConfigured, DbInputError } from "../lib/db.js";
 import { kstNow } from "../lib/time.js";
-import { tocByBook, advanceProgress } from "../lib/progress.js";
+import { tocByBook, advanceProgress, lastAttendedProgress } from "../lib/progress.js";
 
 export default async function handler(req, res) {
   // Vercel Cron 외 호출 차단(선택): CRON_SECRET 설정 시 검사
@@ -28,14 +28,13 @@ export default async function handler(req, res) {
       if (!scheduled) continue; // 오늘 수업 없는 학생 skip
       if (has.has(s.id)) continue; // 이미 행 있으면 skip
       // 직전 기록 진도 → 교재 목차의 다음 진도로 자동 전환
-      const prev = await select(
-        "daily_records",
-        `student_id=eq.${s.id}&date=lt.${now.date}&order=date.desc&limit=1&select=progress`
-      );
+      //   ★ 결석한 날은 건너뜁니다 (lastAttendedProgress 주석 참고) — 결석한 아이가
+      //     안 배운 과를 소비해 한 과를 건너뛰던 문제.
+      const prev = await lastAttendedProgress(s.id, now.date);
       toCreate.push({
         student_id: s.id,
         date: now.date,
-        progress: advanceProgress(prev[0]?.progress, s.books, toc),
+        progress: advanceProgress(prev, s.books, toc),
         books: s.books || {}, // 그날 교재 스냅샷 (교재 전환 감지용)
       });
     }

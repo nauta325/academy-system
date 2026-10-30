@@ -30,7 +30,7 @@
 import { select, insert, patch, remove, dbConfigured, DbInputError } from "../lib/db.js";
 import { kstNow, toMinutes, addMinutes } from "../lib/time.js";
 import { sendAlimtalk, TPL } from "../lib/solapi.js";
-import { tocByBook, advanceProgress, normUnit, linkStatus, tasksForProgress } from "../lib/progress.js";
+import { tocByBook, advanceProgress, normUnit, linkStatus, tasksForProgress, lastAttendedProgress } from "../lib/progress.js";
 import { isFail, retestQueueValue, needsRetest, retestHint, RETEST_PASS } from "../lib/retest.js";
 
 const GRACE = 10;       // 지각 유예(분)
@@ -76,6 +76,25 @@ const okDate = (v) => DATE_RE.test(String(v)) && !isNaN(new Date(`${v}T00:00:00Z
 class BadRequest extends Error {
   constructor(msg) { super(msg); this.status = 400; }
 }
+// ── 출결PIN 이 겹치나 ─────────────────────────────────────────────
+// 왜 막나: 키오스크(`checkin`)는 **PIN 만으로** 학생을 찾습니다. 아이가 등원할 때
+//   학생ID 까지 누르게 하면 번거로워서 그렇게 돼 있습니다. 그래서 PIN 이 겹치면
+//   **엉뚱한 아이로 등원되고 그 집에 등원 카톡이 갑니다** — 아무 표시도 없이.
+//   겹치는 걸 알아챌 방법이 없으니 넣는 자리에서 막습니다.
+async function 핀겹치나(row, 내id) {
+  const pin = String(row.pin || "").trim();
+  if (!pin || row.status === "퇴원") return;   // 퇴원생은 키오스크가 안 찾습니다
+  const 같은핀 = await select("students", `pin=eq.${encodeURIComponent(pin)}&status=eq.재원&select=id,name`);
+  const 남 = 같은핀.filter((x) => String(x.id) !== String(내id || ""));
+  if (남.length) {
+    throw new BadRequest(
+      `출결PIN ${pin} 은 이미 ${남.map((x) => x.name).join("·")} 학생이 쓰고 있어요. ` +
+      `키오스크는 PIN 만으로 학생을 찾기 때문에 겹치면 엉뚱한 학생으로 등원되고 ` +
+      `그 집에 등원 카톡이 갑니다. 다른 번호로 바꿔주세요.`
+    );
+  }
+}
+
 async function ensureTodayRow(studentId, date) {
   const sid = String(studentId ?? "").trim();
   if (BAD_ID.test(sid) || !SAFE_ID.test(sid)) {
@@ -90,7 +109,7 @@ async function ensureTodayRow(studentId, date) {
   );
   if (rows[0]) return rows[0];
   const [prev, students, toc] = await Promise.all([
-    select("daily_records", `student_id=eq.${studentId}&date=lt.${date}&order=date.desc&limit=1&select=progress`),
+    lastAttendedProgress(studentId, date),
     select("students", `id=eq.${studentId}&select=books`),
     tocByBook(),
   ]);
@@ -98,7 +117,7 @@ async function ensureTodayRow(studentId, date) {
   const created = await insert("daily_records", {
     student_id: studentId,
     date,
-    progress: advanceProgress(prev[0]?.progress, bk, toc),
+    progress: advanceProgress(prev, bk, toc),
     books: bk, // 그날 교재 스냅샷 (교재 전환 감지용)
   });
   return created[0];
@@ -141,7 +160,21 @@ export default async function handler(req, res) {
     // ── 학생 목록 ──
     if (action === "students") {
       const students = await select("students", `order=name.asc${teacherFilter(req)}`);
-      return res.status(200).json({ students });
+      // ★ 같은 출결PIN 을 쓰는 학생이 있나 — **키오스크가 PIN 만으로 학생을 찾기** 때문에
+      //   겹치면 엉뚱한 아이로 등원되고 그 집에 카톡이 갑니다.
+      //   넣는 자리(save-student·bulk-students)에서도 막지만, **노션 이관**처럼
+      //   다른 길로 들어온 중복은 그걸로 안 걸립니다. 그래서 명단 화면이 띄워줍니다.
+      //   (1·2차 수강생의 노션 PIN 이 샘플 12명의 PIN 과 겹치는 일이 실제로 있습니다)
+      const 핀묶음 = {};
+      for (const s of students) {
+        const p = String(s.pin || "").trim();
+        if (!p || s.status === "퇴원") continue;   // 퇴원생은 키오스크가 안 찾습니다
+        (핀묶음[p] ||= []).push(s.name);
+      }
+      const pin_dups = Object.entries(핀묶음)
+        .filter(([, names]) => names.length > 1)
+        .map(([pin, names]) => ({ pin, names }));
+      return res.status(200).json({ students, pin_dups });
     }
 
     // ── 교재(목차) 목록 ──
@@ -238,11 +271,9 @@ export default async function handler(req, res) {
       if (missing.length) {
         const toCreate = [];
         for (const s of missing) {
-          const prev = await select(
-            "daily_records",
-            `student_id=eq.${s.id}&date=lt.${date}&order=date.desc&limit=1&select=progress`
-          );
-          toCreate.push({ student_id: s.id, date, progress: advanceProgress(prev[0]?.progress, s.books, toc), books: s.books || {} });
+          // 결석한 날은 건너뛰고 **마지막으로 나온 날**의 진도에서 이어갑니다 (lastAttendedProgress 주석 참고)
+          const prev = await lastAttendedProgress(s.id, date);
+          toCreate.push({ student_id: s.id, date, progress: advanceProgress(prev, s.books, toc), books: s.books || {} });
         }
         // 미래면 저장하지 않고 화면에만 (preview: true 로 표시)
         const created = isFuture
@@ -490,6 +521,7 @@ export default async function handler(req, res) {
         status: s.status || "재원",
         schedule: s.schedule || {}, books: s.books || {},
       };
+      await 핀겹치나(row, s.id);
       let saved;
       if (s.id) saved = (await patch("students", `id=eq.${s.id}`, row))[0];
       else saved = (await insert("students", row))[0];
@@ -515,6 +547,16 @@ export default async function handler(req, res) {
           schedule: r.schedule || {}, books: r.books || {},
         }));
       if (!rows.length) return res.status(400).json({ error: "등록할 학생이 없어요." });
+      // ★ 붙여넣은 것들끼리 PIN 이 겹치나 (시트에서 복사하면 흔히 생깁니다)
+      const 핀들 = rows.map((r) => String(r.pin || "").trim()).filter(Boolean);
+      const 겹친 = [...new Set(핀들.filter((p, i) => 핀들.indexOf(p) !== i))];
+      if (겹친.length) {
+        return res.status(400).json({ error:
+          `붙여넣은 명단 안에서 출결PIN 이 겹칩니다: ${겹친.join(", ")}. ` +
+          `키오스크는 PIN 만으로 학생을 찾기 때문에 겹치면 엉뚱한 학생으로 등원됩니다 — 시트에서 고쳐 다시 붙여넣어 주세요.` });
+      }
+      // ★ 이미 있는 학생과 겹치나
+      for (const r of rows) await 핀겹치나(r, null);
       const saved = await insert("students", rows);
       return res.status(200).json({ count: saved.length });
     }
@@ -523,9 +565,16 @@ export default async function handler(req, res) {
     if (action === "checkin") {
       const pin = String(req.body.pin || "").trim();
       if (!pin) return res.status(400).json({ error: "PIN을 입력하세요." });
-      const found = await select("students", `pin=eq.${pin}&status=eq.재원`);
+      const found = await select("students", `pin=eq.${encodeURIComponent(pin)}&status=eq.재원`);
       const student = found[0];
       if (!student) return res.status(404).json({ error: "PIN을 찾을 수 없어요." });
+      // ★ 같은 PIN 을 쓰는 학생이 둘 이상이면 **누가 눌렀는지 알 수 없습니다.**
+      //   아무 쪽으로 처리하면 엉뚱한 집에 등원 카톡이 갑니다 — 멈추고 알립니다.
+      if (found.length > 1) {
+        return res.status(409).json({ error:
+          `이 PIN 을 ${found.map((x) => x.name).join("·")} 학생이 같이 쓰고 있어서 누구인지 알 수 없어요. ` +
+          `학생 관리에서 한 명의 PIN 을 다른 번호로 바꿔주세요.` });
+      }
 
       const row = await ensureTodayRow(student.id, now.date);
       if (row.check_in && !row.check_out) {
@@ -707,12 +756,10 @@ export default async function handler(req, res) {
       for (const s of students) {
         const rows = await select("daily_records", `student_id=eq.${s.id}&date=eq.${today}&select=id`);
         if (!rows[0]) continue; // 오늘 행 없으면 skip
-        const prev = await select(
-          "daily_records",
-          `student_id=eq.${s.id}&date=lt.${today}&order=date.desc&limit=1&select=progress`
-        );
+        // 결석한 날은 건너뛰고 마지막으로 나온 날에서 이어갑니다 (lastAttendedProgress 주석 참고)
+        const prev = await lastAttendedProgress(s.id, today);
         await patch("daily_records", `id=eq.${rows[0].id}`, {
-          progress: advanceProgress(prev[0]?.progress, s.books, toc),
+          progress: advanceProgress(prev, s.books, toc),
         });
         updated++;
       }

@@ -14,6 +14,23 @@ export function normUnit(u) {
   return { code: u.code || "", title: u.title || "" };
 }
 
+// ── 직전 진도 — **결석한 날은 건너뜁니다** ───────────────────────────
+// 왜: 결석한 날 행에도 진도가 적혀 있습니다 (새벽에 미리 깔리니까요).
+//   그걸 「직전 진도」로 쓰면 **아이가 안 배운 과가 소비되어** 한 과를 건너뜁니다.
+//   운영(앱스크립트)은 결석 학생을 그날 목록에서 아예 빼기 때문에 이 문제가 없습니다.
+//   연속 결석도 거슬러 올라가 **마지막으로 나온 날**을 찾습니다 (최대 10회).
+//
+// 이 함수를 **세 곳이 같이 씁니다** — 새벽 cron(`api/cron.js`),
+//   데일리 리포트 행 생성(`daily-rows`·`add-row`), 진도 일괄 전진(`advance-today`).
+//   한 곳만 고치면 규칙이 어긋나서 여기 한 군데에 모아뒀습니다.
+export async function lastAttendedProgress(studentId, date) {
+  const rows = await select(
+    "daily_records",
+    `student_id=eq.${studentId}&date=lt.${date}&order=date.desc&limit=10&select=date,progress,lateness`
+  );
+  return rows.find((r) => r.lateness !== "결석")?.progress;
+}
+
 // 교재명 → { units:[{code,title}...], step } 맵. (여러 학생이 같은 교재를 써도 한 번만 조회)
 export async function tocByBook() {
   const books = await select("textbooks", "select=name,units,step");

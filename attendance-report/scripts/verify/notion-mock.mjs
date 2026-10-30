@@ -22,13 +22,15 @@ const REL = (id) => ({ type: "relation", relation: [{ id }] });
 const ROWS = {
   students: [
     page({ "학생이름":{type:"title",title:T("노션학생A")}, "학생ID":{type:"rich_text",rich_text:T("nt01")},
-           "출결PIN":{type:"rich_text",rich_text:T("1212")}, "학부모연락처":{type:"phone_number",phone_number:"010-0000-1212"},  // 가짜 번호(검수용 샘플)
+           "출결PIN":{type:"rich_text",rich_text:T("1217")}, "학부모연락처":{type:"phone_number",phone_number:"010-0000-1212"},  // 가짜 번호(검수용 샘플)
+           // ★ PIN 은 setup.sql 샘플(1111·1212·2222…)과 **겹치지 않는** 값이어야 합니다.
+           //   겹치면 앱이 「PIN 이 겹친다」고 막는 게 맞고, 그러면 이 검수가 헛걸립니다.
            "학년":{type:"select",select:{name:"중1"}}, "담당":{type:"select",select:{name:"이선생"}},
            "수업시간":{type:"number",number:120}, "재원상태":{type:"status",status:{name:"재원"}},
            "월-등원시간":{type:"rich_text",rich_text:T("17:00")}, "수-등원시간":{type:"rich_text",rich_text:T("17:00")},
            "문법교재":{type:"relation",relation:[]} }, SA),
     page({ "학생이름":{type:"title",title:T("노션학생B")}, "학생ID":{type:"rich_text",rich_text:T("nt02")},
-           "출결PIN":{type:"rich_text",rich_text:T("3434")}, "학부모연락처":{type:"phone_number",phone_number:"010-0000-3434"},  // 가짜 번호(검수용 샘플)
+           "출결PIN":{type:"rich_text",rich_text:T("3437")}, "학부모연락처":{type:"phone_number",phone_number:"010-0000-3434"},  // 가짜 번호(검수용 샘플)
            "학년":{type:"select",select:{name:"중3"}}, "담당":{type:"select",select:{name:"박선생"}},
            "재원상태":{type:"status",status:{name:"재원"}}, "화-등원시간":{type:"rich_text",rich_text:T("18:00")} }, SB),
     // 가장자리: 이름만 있고 나머지가 비어 있는 줄

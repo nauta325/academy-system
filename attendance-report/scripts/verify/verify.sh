@@ -104,6 +104,12 @@ echo "── 3-3. 쓰던 DB 로 설치했을 때 (1·2차 수강생) ──"
 #  칸·표를 일부러 지워서, 영어 날코드가 아니라 **붙여넣을 SQL** 이 나오는지 봅니다.
 bash old-db-check.sh > /tmp/olddb.out 2>&1; OD=$?; tail -2 /tmp/olddb.out
 
+echo "── 3-4. 선생님 하루 전체 (등원→진도→숙제 내기/취소→보강→결석→하원→발송) ──"
+#  기능 하나하나는 통과하는데 **하루를 이어서** 돌려본 적이 없었습니다.
+#  결석한 아이가 한 과를 건너뛰던 것과 PIN 중복을 여기서 처음 잡았습니다.
+#  자기 DB(simday)·자기 포트(4332)로 돌아서 위 단계 데이터를 흐리지 않습니다.
+bash full-day-sim.sh > /tmp/fullday.out 2>&1; FD=$?; tail -8 /tmp/fullday.out
+
 echo "── 4. 브라우저에서 전 화면 ──"
 if [ -f browser-check.mjs ]; then node browser-check.mjs > /tmp/br.out 2>&1; B=$?; tail -4 /tmp/br.out; else echo "  (생략)"; B=0; fi
 
@@ -156,6 +162,7 @@ FAILED=""
 [ $SL -ne 0 ] && FAILED="$FAILED 알림톡문구"
 [ $AL -ne 0 ] && FAILED="$FAILED 알림톡변수"
 [ $OD -ne 0 ] && FAILED="$FAILED 쓰던DB"
+[ $FD -ne 0 ] && FAILED="$FAILED 하루전체"
 if [ -z "$FAILED" ]; then
   echo "
 ✅ 전면 검수 통과"
@@ -163,6 +170,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out · /tmp/url.out · /tmp/solapi.out · /tmp/alim.out · /tmp/tocdup.out · /tmp/olddb.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out · /tmp/url.out · /tmp/solapi.out · /tmp/alim.out · /tmp/tocdup.out · /tmp/olddb.out · /tmp/fullday.out"
   exit 1
 fi
