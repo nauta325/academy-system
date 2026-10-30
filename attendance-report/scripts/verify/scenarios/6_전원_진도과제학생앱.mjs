@@ -27,6 +27,8 @@ for (const t of tb) {
   await post("/api/attendance", { action:"save-textbook", textbook: { ...t, units } });
 }
 console.log(`교재 ${tb.length}권에 과제를 심었습니다.\n`);
+// 교재명 → 목차. 「목차에 제목이 있으면 진도에도 붙나」 를 보려면 목차를 알아야 합니다.
+const TOC = Object.fromEntries(tb.map(t => [t.name, t.units || []]));
 
 const students = (await get("/api/attendance","action=students")).d.students
   .sort((a,b)=>a.name.localeCompare(b.name));
@@ -67,8 +69,16 @@ for (const s of students) {
   const 과목 = Object.keys(s.books||{});
   const 연결 = 과목.filter(k => prog[k]?.code);
   ck(`${s.name}: 과목마다 진도가 채워져 있다`, 연결.length===과목.length, {과목, prog});
-  const 제목붙음 = 과목.every(k => !prog[k]?.code || prog[k]?.title);
-  ck(`${s.name}: 진도에 유닛 제목이 같이 붙는다`, 제목붙음, prog);
+  // ★ 제목은 **목차에 적혀 있을 때만** 따라옵니다.
+  //   단어 교재처럼 「Day 16」 만으로 충분한 경우엔 목차의 제목 칸이 비어 있고,
+  //   그때 제목을 억지로 요구하면 멀쩡한데도 실패합니다.
+  //   봐야 할 것은 「목차에 제목이 있으면 진도에도 따라붙나」 입니다.
+  const 제목붙음 = 과목.every(k => {
+    const c = prog[k]?.code; if (!c) return true;
+    const u = (TOC[s.books[k]] || []).find(x => String(x.code) === String(c));
+    return !u || !u.title || Boolean(prog[k]?.title);   // 목차에 제목이 없으면 통과
+  });
+  ck(`${s.name}: 목차에 제목이 있으면 진도에도 붙는다`, 제목붙음, prog);
   line.진도 = 연결.length + "/" + 과목.length;
 
   // (3) 자동 과제 — 진도를 저장하면 그 유닛 과제가 깔린다
