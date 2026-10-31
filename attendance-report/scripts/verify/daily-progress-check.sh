@@ -135,6 +135,19 @@ for order in "test_5_demo_students test_1_today test_3_month" "test_3_month test
       and p is not null and c is not null and c < p")
   note "순서 [$(echo $order | sed 's/ / -> /g')] 거꾸로 가는 행: $BACK"
   [ "$BACK" = "0" ] || bad "진도가 거꾸로 가는 행이 $BACK 개 있습니다"
+
+  # ── 샘플끼리 출결PIN 이 겹치면 **설치 직후 명단에 빨간 경고가 뜹니다.**
+  #    키오스크는 PIN 만으로 학생을 찾으니 겹친 학생은 등원이 안 됩니다.
+  #    샘플을 손볼 때 조용히 깨질 자리라 여기서 못 박습니다.
+  DUP=$($PS -d ${DB}2 -tAc "
+    select coalesce(string_agg(x, ' / '), '') from (
+      select pin || ' → ' || string_agg(name, ', ') as x
+      from students where status = '재원' and coalesce(pin, '') <> ''
+      group by pin having count(*) > 1) t")
+  [ -z "$DUP" ] || bad "샘플 학생의 출결PIN 이 겹칩니다 ($DUP) — 설치 직후 경고가 뜹니다"
+  NOPIN=$($PS -d ${DB}2 -tAc "select count(*) from students where status='재원' and coalesce(pin,'')=''")
+  [ "$NOPIN" = "0" ] || bad "출결PIN 이 빈 샘플 학생이 $NOPIN 명 — 그 학생은 키오스크·학생앱이 안 됩니다"
+  note "출결PIN: 겹침 없음 · 빈 학생 없음"
 done
 
 (fuser -k 4331/tcp >/dev/null 2>&1 || true)
