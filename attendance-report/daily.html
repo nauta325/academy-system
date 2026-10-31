@@ -156,7 +156,7 @@ const SUBJECTS = ["문법", "리딩", "단어"];
 // 교재DB의 교재명 (과목별) — 「교재 바꾸기」 드롭다운에 씁니다.
 //   교재DB에 있는 것만 고를 수 있게 합니다. 손으로 치면 목차를 못 찾아 진도가 멈춥니다.
 let BOOKS = {};
-let ROWS = [], TOC = {}, PREVIEW = [];
+let ROWS = [], TOC = {}, PREVIEW = [], EMPTY = null;   // EMPTY = 비었을 때 서버가 알려준 이유
 
 // ── 📜 최근 수업 ────────────────────────────────────────
 // 운영 플래너(studyplanner `public/daily_report.html` 의 histHtml)를 그대로 옮긴 것.
@@ -291,6 +291,7 @@ async function load(){
     const d = await r.json(); if (!r.ok) throw new Error(d.error);
     $("#dateLabel").textContent = `${d.date} (${d.weekday})`;
     ROWS = d.rows || [];
+    EMPTY = d.empty || null;
     render();
   } catch(e){ $("#list").innerHTML = ""; $("#msg").textContent = e.message; }
 }
@@ -307,12 +308,28 @@ function render(){
   // 샘플 12명은 주말까지 수업이 깔려 있어 어느 요일이든 뜹니다. 그래도 내 학생을
   // 넣은 뒤 요일을 안 채우면 비는데, 그때 고장으로 오해하지 않게 안내합니다.
   if (!rows.length){
-    $("#list").innerHTML = '<div class="muted">'
-      + '이 날짜에 <b>수업 예정인 학생이 없어요.</b> 고장난 게 아닙니다 — 그 요일에 등원하는 학생이 없는 거예요.<br><br>'
-      + '· 내 학생을 넣으셨다면 → <a href="/students.html">학생 관리</a> 에서 <b>요일별 등원시간</b>을 채워주세요.<br>'
-      + '· 샘플까지 안 보인다면 → Supabase <b>SQL Editor</b> 에서 <code>sql/setup.sql</code> 을 '
-      + '끝까지 Run 했는지 확인해 주세요 (표 6개 + 샘플 12명).'
-      + '</div>';
+    // ★ 서버가 **왜** 비었는지 알려줍니다 (학생 0명 / 재원 0명 / 그 요일에 없음).
+    //   예전에는 셋을 뭉쳐서 「요일을 채우세요」 만 띄웠습니다. 그런데 정작 많은 건
+    //   「다른 Supabase 프로젝트를 보고 있다」 였고, 그 안내로는 못 찾습니다.
+    const e = EMPTY;
+    let 안내;
+    if (e && e.kind === "학생없음") {
+      안내 = '🔴 <b>학생이 한 명도 없습니다.</b> 요일 문제가 아닙니다.<br><br>'
+        + '· Supabase <b>SQL Editor</b> 에서 <code>sql/setup.sql</code> 을 <b>끝까지</b> Run 했나요? (표 6개 + 샘플 학생 12명)<br>'
+        + '· Vercel 의 <b>SUPABASE_URL</b> 이 <b>그 프로젝트</b> 주소인가요? 프로젝트가 여러 개면 다른 빈 프로젝트를 보고 있을 수 있어요.<br>'
+        + '· 환경변수를 고쳤으면 <b>Deployments → Redeploy</b> 를 눌러야 적용됩니다.';
+    } else if (e && e.kind === "재원없음") {
+      안내 = '🔴 <b>' + esc(e.message) + '</b><br><br>· <a href="/students.html">학생 관리</a> 에서 학생을 눌러 <b>재원상태</b>를 「재원」 으로.';
+    } else if (e && e.kind === "요일없음") {
+      안내 = '이 날짜에 <b>수업 예정인 학생이 없어요.</b> 고장난 게 아닙니다.<br><br>'
+        + esc(e.message).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") + '<br><br>'
+        + '· <a href="/students.html">학생 관리</a> 에서 <b>요일별 등원시간</b>을 채워주세요.';
+    } else {
+      안내 = '이 날짜에 <b>수업 예정인 학생이 없어요.</b><br><br>'
+        + '· <a href="/students.html">학생 관리</a> 에서 <b>요일별 등원시간</b>을 확인해 주세요.<br>'
+        + '· 샘플까지 안 보인다면 Supabase <b>SQL Editor</b> 에서 <code>sql/setup.sql</code> 을 끝까지 Run 했는지 보세요.';
+    }
+    $("#list").innerHTML = '<div class="muted">' + 안내 + '</div>';
     return;
   }
   $("#list").innerHTML = rows.map(r => cardHtml(ROWS.indexOf(r))).join("");

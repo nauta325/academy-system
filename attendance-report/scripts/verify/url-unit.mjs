@@ -79,5 +79,38 @@ for (const [넣은값, 설명] of [
   check("빈 값이면 설정 안 된 것", m.dbConfigured() === false);
 }
 
+// ── http:// — Supabase 는 항상 https 입니다 ────────────────────────────
+// 원장님이 http://dmqpeaauw….supabase.co 를 넣으셨고, 화면에는 「학생이 한 명도 없다」
+// 로 보였습니다. http 로 두면 Supabase 가 https 로 넘기면서 **인증 헤더가 떨어져**
+// 전혀 엉뚱한 모습으로 나타납니다 — 원인을 찾기가 아주 어려운 자리입니다.
+{
+  const m = await 로드("http://abcdefghijklmnopqrst.supabase.co");
+  const r = { problem: m.urlProblem() };
+  check("★ http:// 를 막는다", Boolean(r.problem), r.problem);
+  check("★ https 로 고치라고 말한다", /https/.test(r.problem || ""), r.problem);
+  check("★ 지금 들어 있는 값을 보여준다", (r.problem || "").includes("http://abcdefghijklmnopqrst.supabase.co"), r.problem);
+  check("★ 고친 주소를 그대로 적어준다",
+        (r.problem || "").includes("https://abcdefghijklmnopqrst.supabase.co"), r.problem);   // 가짜 주소 (점검용 예시)
+  check("★ 왜 학생이 안 보이는지까지 말한다", /한 명도 없|인증/.test(r.problem || ""), r.problem);
+  check("★ Redeploy 를 짚어준다", /Redeploy/.test(r.problem || ""), r.problem);
+  check("★ 영어 날코드가 아니다", /[가-힣]/.test(r.problem || ""), r.problem);
+}
+{
+  const m = await 로드("https://abcdefghijklmnopqrst.supabase.co");   // 가짜 주소 (점검용 예시)
+  const r = { problem: m.urlProblem() };
+  check("https 는 그냥 통과한다", !r.problem, r.problem);
+}
+// ★ 내 컴퓨터에서 돌리는 Supabase 는 **http 가 정상**입니다 (Supabase CLI = http://127.0.0.1:54321).
+//   http 를 통째로 막았다가 그걸 쓰는 길을 끊었고, 검수 하네스까지 멈췄습니다.
+for (const u of ["http://127.0.0.1:54321", "http://localhost:54321", "http://localhost", "http://[::1]:54321"]) {
+  const m = await 로드(u);
+  check(`★ 내 컴퓨터 주소는 막지 않는다 — ${u}`, !m.urlProblem(), m.urlProblem());
+}
+// 바깥 주소는 포트가 붙어도 막아야 합니다 (localhost 흉내)
+{
+  const m = await 로드("http://localhost.evil.example.com:54321");
+  check("★ localhost 를 흉낸 바깥 주소는 막는다", Boolean(m.urlProblem()), m.urlProblem());
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);

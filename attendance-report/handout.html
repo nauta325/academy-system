@@ -232,7 +232,7 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
     <div class="card-title" style="margin-top:20px"><div class="num">C</div> 열쇠 2개 복사 (다음 단계에서 씀)</div>
     <ul class="step-list">
       <li>왼쪽 <b>Project Settings → API</b> 로 이동.</li>
-      <li><b>Project URL</b> 복사 → 메모 (SUPABASE_URL). <b>주소 전체</b>를 복사하세요 — <code>https://내프로젝트ID.supabase.co</code> 꼴입니다. <b>프로젝트 ID만(<code>khji…</code>) 넣으면 안 돌아갑니다.</b></li>
+      <li><b>Project URL</b> 복사 → 메모 (SUPABASE_URL). <b>주소 전체</b>를 복사하세요 — <code>https://내프로젝트ID.supabase.co</code> 꼴입니다. <b>프로젝트 ID만(<code>khji…</code>) 넣으면 안 돌아갑니다.</b><br><b>손으로 치지 말고 복사하세요</b> — <code>https</code> 의 <b>s</b> 를 빠뜨리거나 <code>.co</code> 를 <code>.com</code> 으로 치면, 화면에 오류 없이 <b>학생이 한 명도 없는 것처럼</b> 보입니다 (앱이 알려주긴 하지만 복사가 제일 빠릅니다).</li>
       <li><b>service_role</b> 키 복사 → 메모 (SUPABASE_SERVICE_KEY). <b>비밀키니 남에게 공유 금지.</b></li>
     </ul>
     <div class="hl-box red"><strong>⚠️ service_role 키는 비밀입니다</strong><br>이 키는 Vercel 환경변수에만 넣고, 채팅·화면·깃허브에 절대 붙여넣지 마세요. (서버만 사용)</div>
@@ -249,7 +249,7 @@ table.tb code{font-family:'Space Mono',monospace;font-size:12.5px;color:#155e57;
     </ul>
     <table class="tb">
       <tr><th>이름</th><th>값</th><th>필수</th></tr>
-      <tr><td><code>SUPABASE_URL</code></td><td><code>https://내프로젝트ID.supabase.co</code><br><span class="warn-inline">✗ ID만 · ✗ 끝에 <code>/</code> · ✗ <code>/rest/v1</code> 까지 (그건 앱이 붙입니다)</span></td><td>✅</td></tr>
+      <tr><td><code>SUPABASE_URL</code></td><td><code>https://내프로젝트ID.supabase.co</code><br><span class="warn-inline">✗ <code>http://</code> (<b>s</b> 꼭!) · ✗ <code>.com</code> (<code>.co</code> 입니다) · ✗ ID만 · ✗ 끝에 <code>/</code> · ✗ <code>/rest/v1</code> 까지 (그건 앱이 붙입니다)</span></td><td>✅</td></tr>
       <tr><td><code>SUPABASE_SERVICE_KEY</code></td><td><b>service_role</b> 키 (anon 아님)</td><td>✅</td></tr>
       <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Claude 키 (월말평가서 생성용)</td><td>선택</td></tr>
     </table>
@@ -1035,6 +1035,8 @@ lib/claude.js 의 reportGuideline() 을 고치면 될 거야.</div>
       <tr><td>알림톡 <code>허용되지 않은 IP(…)</code></td><td>솔라피 API Key 에 IP 제한</td><td>솔라피 → API Key → ⋮ → <b>허용 IP 설정 → 모든 IP 허용</b> (IP 하나만 넣으면 내일 또 막힙니다)</td></tr>
       <tr><td>화면에 <code>Failed to parse URL from …</code></td><td><code>SUPABASE_URL</code> 에 <b>프로젝트 ID만</b> 넣음</td><td><code>https://내프로젝트ID.supabase.co</code> 로 고치고 <b>Redeploy</b></td></tr>
       <tr><td>화면이 "환경변수가 없어요"</td><td>Vercel env 미입력/오타</td><td><code>SUPABASE_URL</code>·<code>SUPABASE_SERVICE_KEY</code> 확인 후 재배포</td></tr>
+      <tr><td><b>학생이 한 명도 안 나옴</b> (오류는 없음)</td><td><code>SUPABASE_URL</code> 이 <code>http://</code> 로 시작 (<b>s</b> 빠짐) · <code>.com</code> 으로 씀 · <b>다른 프로젝트</b>를 가리킴</td><td>Supabase → Settings → Data API 의 <b>Project URL</b> 을 <b>복사</b>해 넣고 <b>Redeploy</b>. 화면이 어느 경우인지 말해줍니다</td></tr>
+      <tr><td>Supabase 에는 데이터가 보이는데 앱은 빔</td><td>앱이 <b>다른 프로젝트</b>를 보고 있음 (프로젝트가 여러 개일 때)</td><td>주소창에 <code>/api/attendance?action=students</code> 를 열어 보세요 — 앱이 지금 뭘 보는지 그대로 나옵니다</td></tr>
       <tr><td>학생이 안 보임</td><td>SQL 미실행</td><td><code>sql/setup.sql</code> 을 SQL Editor에서 Run 했는지 확인</td></tr>
       <tr><td>"AI 평가서 생성"이 안 됨</td><td><code>ANTHROPIC_API_KEY</code> 없음</td><td>키 입력 후 재배포 (없으면 통계·저장만 사용)</td></tr>
       <tr><td>통계가 0으로 나옴</td><td>그 달 기록이 없음</td><td>월을 <b>지난달</b>로 (샘플이 들어 있는 달) 또는 그 달 출결부터 쌓기</td></tr>

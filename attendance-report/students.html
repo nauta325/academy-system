@@ -205,6 +205,17 @@ async function load(){
     : "";
   $("#pinDup").style.display = dups.length ? "" : "none";
   const body = $("#rows"); body.innerHTML="";
+  // ★ 학생이 하나도 없으면 — 요일·재원 문제가 아니라 **앱이 보는 DB 가 비어 있는** 것입니다.
+  //   제일 많은 원인은 「Supabase 에는 들어가 있는데 다른 프로젝트를 보고 있다」 입니다.
+  if (!(d.students || []).length) {
+    $("#msg").innerHTML = '🔴 <b>학생이 한 명도 없습니다.</b> 앱이 보고 있는 데이터베이스가 비어 있어요.<br>'
+      + '· Supabase <b>SQL Editor</b> 에서 <code>sql/setup.sql</code> 을 <b>끝까지</b> Run 했나요? (표 6개 + 샘플 학생 12명)<br>'
+      + '· Vercel 의 <b>SUPABASE_URL</b> 이 <b>그 프로젝트</b> 주소인가요? '
+      + '프로젝트가 여러 개면 다른 빈 프로젝트를 보고 있을 수 있어요 '
+      + '(Supabase → Settings → API 의 <b>Project URL</b> 과 글자까지 같아야 합니다).<br>'
+      + '· 환경변수를 고쳤으면 <b>Deployments → Redeploy</b> 를 눌러야 적용됩니다.<br>'
+      + '· 지금 앱이 뭘 보고 있는지는 <code>/api/attendance?action=students</code> 를 주소창에 열어보면 바로 보여요.';
+  }
   const 겹친핀 = new Set(dups.map(x=>x.pin));
   const DAYORD = ["월","화","수","목","금","토","일"];
   for(const s of d.students){

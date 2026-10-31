@@ -23,11 +23,11 @@ function check(name, cond, got) {
   else { fail++; console.log(`  FAIL ${name}`); console.log(`       받은 것: ${JSON.stringify(got)?.slice(0, 300)}`); }
 }
 
-process.env.SUPABASE_URL = "http://fake-supabase";
+process.env.SUPABASE_URL = "https://fake-supabase";
 process.env.SUPABASE_SERVICE_KEY = "fake";
 globalThis.fetch = async (url, opts = {}) => {
   const u = String(url);
-  if (u.startsWith("http://fake-supabase")) {
+  if (u.startsWith("https://fake-supabase")) {
     const m = /\/rest\/v1\/([a-z_]+)\?([\s\S]*)$/.exec(u) || /\/rest\/v1\/([a-z_]+)$/.exec(u);
     try {
       const data = await handle(opts.method || "GET", m[1], m[2] || "", opts.body ? JSON.parse(opts.body) : null,

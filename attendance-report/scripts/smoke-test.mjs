@@ -1,5 +1,5 @@
 // 가짜 PostgREST — api/*.js 를 실제로 호출해 로직을 점검한다 (Supabase 없이).
-process.env.SUPABASE_URL = "http://fake";
+process.env.SUPABASE_URL = "https://fake";   // 가짜 주소 (점검용) — https 여야 합니다, lib/db.js 가 http 를 막습니다
 process.env.SUPABASE_SERVICE_KEY = "fake";
 
 // ⚠️ 점검용 학생은 **요일 7개를 모두** 채웁니다.

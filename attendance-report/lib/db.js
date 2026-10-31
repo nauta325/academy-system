@@ -31,6 +31,23 @@ export function dbConfigured() {
 // 주소가 주소 꼴이 아닐 때 띄울 말. 괜찮으면 null.
 export function urlProblem() {
   if (!URL) return null;          // 아예 없는 건 "환경변수가 없어요" 쪽에서 안내합니다
+  // ★ http:// — Supabase 주소는 **항상 https** 입니다.
+  //   http 로 넣으면 Supabase 가 https 로 넘기는데, 그때 브라우저·Node 규칙상
+  //   **인증 헤더(apikey)가 떨어져 나갑니다.** 그래서 「키가 틀렸다」 나
+  //   「학생이 한 명도 없다」 처럼 엉뚱한 모습으로 나타나고, 원인을 찾기가 아주 어렵습니다.
+  //   (주소를 손으로 치거나 앞의 s 를 빠뜨리면 이렇게 됩니다)
+  //   ⚠️ 단, **내 컴퓨터에서 돌리는 Supabase** 는 http 가 정상입니다
+  //      (Supabase CLI 는 http://127.0.0.1:54321 을 줍니다). 그건 막지 않습니다.
+  const 내컴퓨터 = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)(:\d+)?$/i.test(URL);
+  if (/^http:\/\//i.test(URL) && !내컴퓨터) {
+    return (
+      `Vercel 환경변수 SUPABASE_URL 이 **http://** 로 시작합니다 — Supabase 주소는 항상 **https://** 입니다.\n` +
+      `지금 들어 있는 값: "${URL}"\n` +
+      `이렇게 두면 인증 정보가 중간에 떨어져서, 학생이 한 명도 없는 것처럼 보이거나 키가 틀렸다고 나옵니다.\n` +
+      `맨 앞에 s 하나만 붙여 "https://${URL.replace(/^http:\/\//i, "")}" 로 고치고, ` +
+      `Vercel 에서 **Redeploy** 를 꼭 눌러주세요.`
+    );
+  }
   if (주소꼴) return null;
   const 보인것 = URL.length > 24 ? URL.slice(0, 24) + "…" : URL;
   return (

@@ -38,7 +38,7 @@ function 자료변수() {
 }
 
 // ── 2. 앱을 진짜 DB 위에 올리고, 솔라피로 나가는 변수를 가로챈다 ──
-process.env.SUPABASE_URL = "http://fake-supabase";
+process.env.SUPABASE_URL = "https://fake-supabase";
 process.env.SUPABASE_SERVICE_KEY = "fake";
 process.env.SOLAPI_API_KEY = "k";
 process.env.SOLAPI_API_SECRET = "s";
@@ -49,7 +49,7 @@ for (const t of ["CHECKIN", "CHECKOUT", "LATE", "DAILY", "REPORT", "RETEST"]) pr
 const 나간것 = {};   // templateId → Set(변수명)
 globalThis.fetch = async (url, opts = {}) => {
   const u = String(url);
-  if (u.startsWith("http://fake-supabase")) {
+  if (u.startsWith("https://fake-supabase")) {
     const m = /\/rest\/v1\/([a-z_]+)\?([\s\S]*)$/.exec(u) || /\/rest\/v1\/([a-z_]+)$/.exec(u);
     const data = await handle(opts.method || "GET", m[1], m[2] || "", opts.body ? JSON.parse(opts.body) : null,
       (opts.headers && (opts.headers.Prefer || opts.headers.prefer)) || "");

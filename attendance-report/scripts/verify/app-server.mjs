@@ -7,7 +7,7 @@ import { handle } from "./pgrest.mjs";
 import { notionRespond, WRITES as NOTION_WRITES } from "./notion-mock.mjs";
 
 const APP = path.resolve(import.meta.dirname, "../..");
-process.env.SUPABASE_URL = "http://fake-supabase";
+process.env.SUPABASE_URL = "https://fake-supabase";
 process.env.SUPABASE_SERVICE_KEY = "fake";
 // 알림톡·AI 는 키 없음 = 세미나 당일 "아직 승인 안 난" 수강생과 같은 상태로 검사
 delete process.env.SOLAPI_API_KEY;
@@ -21,7 +21,7 @@ if (!/^https?:\/\/(localhost|127\.0\.0\.1)[:/]/.test(process.env.ANTHROPIC_BASE_
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, opts = {}) => {
   const u = String(url);
-  if (u.startsWith("http://fake-supabase")) {
+  if (u.startsWith("https://fake-supabase")) {
     const m = /\/rest\/v1\/([a-z_]+)\?([\s\S]*)$/.exec(u) || /\/rest\/v1\/([a-z_]+)$/.exec(u);
     const table = m[1], search = m[2] || "";
     const body = opts.body ? JSON.parse(opts.body) : null;

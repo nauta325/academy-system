@@ -136,6 +136,9 @@ node toc-dup-unit.mjs > /tmp/tocdup.out 2>&1; TD=$?; tail -1 /tmp/tocdup.out
 node url-unit.mjs > /tmp/url.out 2>&1; UR=$?; tail -1 /tmp/url.out
 # 알림톡이 안 나갈 때 무엇을 고쳐야 하는지 말해주나
 node solapi-unit.mjs > /tmp/solapi.out 2>&1; SL=$?; tail -1 /tmp/solapi.out
+# 「학생이 한 명도 안 나와요」 가 **왜** 그런지 화면이 말해주나
+#   (SUPABASE_URL 에 http:// 를 넣으셨을 때 앱이 그냥 빈 화면이었던 건)
+node empty-why-unit.mjs > /tmp/emptywhy.out 2>&1; EW=$?; tail -1 /tmp/emptywhy.out
 
 (fuser -k 4330/tcp 2>/dev/null || true)
 
@@ -163,6 +166,7 @@ FAILED=""
 [ $AL -ne 0 ] && FAILED="$FAILED 알림톡변수"
 [ $OD -ne 0 ] && FAILED="$FAILED 쓰던DB"
 [ $FD -ne 0 ] && FAILED="$FAILED 하루전체"
+[ $EW -ne 0 ] && FAILED="$FAILED 빈화면이유"
 if [ -z "$FAILED" ]; then
   echo "
 ✅ 전면 검수 통과"
@@ -170,6 +174,6 @@ if [ -z "$FAILED" ]; then
 else
   echo "
 ❌ 검수 실패 —$FAILED
-   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out · /tmp/url.out · /tmp/solapi.out · /tmp/alim.out · /tmp/tocdup.out · /tmp/olddb.out · /tmp/fullday.out"
+   자세한 내용: /tmp/schema.out · /tmp/notion.out · /tmp/e2e.out · /tmp/report.out · /tmp/flow.out · /tmp/rest.out · /tmp/auto.out · /tmp/br.out · /tmp/smoke.out · /tmp/pers.out · /tmp/dberr.out · /tmp/clerr.out · /tmp/retest.out · /tmp/url.out · /tmp/solapi.out · /tmp/alim.out · /tmp/tocdup.out · /tmp/olddb.out · /tmp/fullday.out · /tmp/emptywhy.out"
   exit 1
 fi

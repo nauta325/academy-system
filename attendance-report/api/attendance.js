@@ -95,6 +95,43 @@ async function 핀겹치나(row, 내id) {
   }
 }
 
+// ── 「왜 비었나」 ────────────────────────────────────────────────
+// 화면은 「한 명도 없다」만 압니다. **왜** 없는지는 서버만 아는데,
+// 그 셋이 전혀 다른 문제입니다 —
+//   ① 학생이 아예 0명      → setup.sql 을 안 돌렸거나 **다른 프로젝트**를 보고 있음
+//   ② 있는데 재원이 0명     → 전부 퇴원으로 들어갔음 (이관·붙여넣기에서 자주)
+//   ③ 재원은 있는데 그 요일  → 요일별 등원시간이 비었음
+// 이걸 안 갈라주면 「고장났나?」 하고 설치를 처음부터 다시 하게 됩니다.
+async function 왜비었나(weekday) {
+  const all = await select("students", "select=id,status,schedule");
+  const 재원 = all.filter((s) => s.status === "재원");
+  if (!all.length) {
+    return {
+      kind: "학생없음",
+      message: "학생이 한 명도 없습니다. Supabase 의 SQL Editor 에서 sql/setup.sql 을 끝까지 Run 했는지, " +
+        "그리고 Vercel 의 SUPABASE_URL 이 그 프로젝트 주소인지 확인해 주세요 (setup.sql 을 돌리면 샘플 학생 12명이 같이 깔립니다).",
+    };
+  }
+  if (!재원.length) {
+    return {
+      kind: "재원없음",
+      message: `학생 ${all.length}명이 있는데 재원 상태인 학생이 없습니다. 학생 관리에서 재원상태를 「재원」 으로 바꿔주세요.`,
+    };
+  }
+  const 요일있는 = 재원.filter((s) => (s.schedule || {})[weekday]);
+  if (!요일있는.length) {
+    const 아무요일도 = 재원.filter((s) => !Object.values(s.schedule || {}).some((v) => String(v || "").trim())).length;
+    return {
+      kind: "요일없음",
+      message: `재원 학생 ${재원.length}명 중 ${weekday}요일에 수업이 있는 학생이 없습니다. 고장난 게 아닙니다.` +
+        (아무요일도
+          ? ` 다만 ${아무요일도}명은 **어느 요일에도** 등원시간이 비어 있어서 어떤 날짜에도 안 나옵니다 — 학생 관리에서 요일별 등원시간을 채워주세요.`
+          : " 다른 날짜를 골라보세요."),
+    };
+  }
+  return null;   // 요일에 학생이 있는데 비었다면 그건 다른 문제입니다
+}
+
 async function ensureTodayRow(studentId, date) {
   const sid = String(studentId ?? "").trim();
   if (BAD_ID.test(sid) || !SAFE_ID.test(sid)) {
@@ -242,7 +279,8 @@ export default async function handler(req, res) {
         결석: count("결석"),
         하원완료: count("하원"),
       };
-      return res.status(200).json({ date, weekday, students: list, stats });
+      const empty = list.length ? null : await 왜비었나(weekday);
+      return res.status(200).json({ date, weekday, students: list, stats, empty });
     }
 
     // ── 데일리 리포트 작성용: 그날 학생별 행 + 직전 진도 ──────────
@@ -355,7 +393,9 @@ export default async function handler(req, res) {
           link: linkStatus(rec.progress, s.books, toc),
         });
       }
-      return res.status(200).json({ date, weekday, rows });
+      // 비었으면 **왜** 비었는지 같이 보냅니다 (화면은 그걸 그대로 띄웁니다)
+      const empty = rows.length ? null : await 왜비었나(weekday);
+      return res.status(200).json({ date, weekday, rows, empty });
     }
 
     // ── 보강/누락: 특정 학생의 그날 행을 수동 생성 (정규 수업일이 아니어도) ──
