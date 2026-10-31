@@ -167,7 +167,19 @@ for order in "test_5_demo_students test_1_today test_3_month" "test_3_month test
       where s.status='재원' and coalesce(s.schedule->>d,'') <> '' group by d) t
     where n < 4")
   [ -z "$THIN" ] || bad "수업 예정이 너무 적은 요일이 있습니다 ($THIN) — 그날 설치하면 화면이 휑합니다"
-  note "오늘 행: 유령 없음 · 요일마다 학생 충분"
+  # ── ★ **자료가 예시로 드는 학생**은 어느 요일에 설치해도 수업이 있어야 합니다.
+  #    핸드아웃·교재·키오스크 안내가 전부 demo01(1111)·demo02·demo03 을 예시로 듭니다.
+  #    세미나 당일이 일요일인데 demo01 이 월~금만이면, 그날 「로그인해서 과제를
+  #    체크해 보세요」 가 **빈 화면**으로 끝납니다 (리허설에서 발견).
+  #    (키오스크는 수업일이 아니어도 등원이 되니 demo02·03 은 괜찮고,
+  #     **학생앱 과제 체크 데모**를 하는 demo01 만 요일이 다 있으면 됩니다)
+  #    ⚠️ bash 는 한글 변수명을 못 씁니다 — 여기서 세 번째로 데었습니다.
+  MISSDAY=$($PS -d ${DB}2 -tAc "
+    select coalesce(string_agg(d, ', '), '') from
+      unnest(array['월','화','수','목','금','토','일']) d
+    where coalesce((select s.schedule ->> d from students s where s.student_code = 'demo01'), '') = ''")
+  [ -z "$MISSDAY" ] || bad "학생앱 데모용 학생(demo01)이 $MISSDAY 요일엔 수업이 없습니다 — 그날 설치하면 「로그인해서 과제 체크」 가 빈 화면입니다"
+  note "오늘 행: 유령 없음 · 요일마다 학생 충분 · 예시 학생은 요일 전부 있음"
 done
 
 (fuser -k 4331/tcp >/dev/null 2>&1 || true)
