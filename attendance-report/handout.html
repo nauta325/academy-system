@@ -480,8 +480,9 @@ CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
       영상이 많이 나옵니다. 그건 <b>개발자가 자기 컴퓨터에서 쓰는 방식</b>이에요.
       <b>우리는 그 길로 안 갑니다.</b> 브라우저에서 <code>claude.ai/code</code> 만 열면 끝입니다 —
       내려받을 것도, 검은 창에 명령어 칠 일도 없습니다.
-      <br><br>⚠️ 다만 아래 <b>A-3</b> 에서 깃허브 화면에 <b>Install</b> 이라는 버튼이 나옵니다.
-      그건 프로그램을 깐다는 뜻이 <b>아니라</b>, 깃허브 안에서 <b>「이 저장소를 봐도 된다」고 권한을 주는</b> 버튼입니다.</div>
+      <br><br>⚠️ 다만 아래 <b>A-3</b> 에 <b>Install</b> 이라는 버튼이 나오고, <b>그건 꼭 눌러야 합니다.</b>
+      프로그램을 깐다는 뜻이 <b>아니라</b> 깃허브 안에서 <b>저장소 권한을 주는</b> 버튼이에요 —
+      내 컴퓨터에는 여전히 아무것도 안 깔립니다.</div>
 
     <div class="card-title"><div class="num">A</div> 들어가서 깃허브 연결</div>
     <ul class="step-list">
@@ -492,12 +493,15 @@ CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
         <br><span style="color:#888">claude.ai 설정의 <b>커넥터(Connectors)</b> 에 먼저 들어갈 필요 없습니다 —
         여기서 누르면 그게 커넥터 연결입니다. (나중에 끊고 싶을 때만 설정 → 커넥터로 갑니다.)
         회사·팀 요금제면 <b>관리자가 조직 설정에서 GitHub 커넥터를 먼저 켜줘야</b> 합니다.</span></li>
-      <li>저장소가 <b>Private</b> 이면 깃허브에서 <b>「이 저장소를 봐도 된다」는 권한</b>을 한 번 더 줘야 목록에 뜹니다.
-        화면에 안 나오면 <b><a href="https://github.com/apps/claude/installations/new" target="_blank" rel="noopener">github.com/apps/claude/installations/new</a></b> 로 가서
-        <b>01단계에서 만든 내 저장소만</b> 고르고 초록 버튼을 누르세요. (전부 열어줄 필요 없습니다)
+      <li>🔴 <b>깃허브에서 저장소 권한 주기 — 이건 꼭 해야 합니다.</b>
+        <b><a href="https://github.com/apps/claude/installations/select_target" target="_blank" rel="noopener">github.com/apps/claude/installations/select_target</a></b>
+        → 내 계정 → <b>Only select repositories</b> → <b>01단계에서 만든 저장소</b> 체크 → 초록 버튼.
+        (이미 한 적 있으면 버튼이 <b>Configure</b> 로 보입니다 → 저장소 체크하고 <b>Save</b>)
         <br><span style="color:#888">버튼에 <b>Install</b> 이라고 쓰여 있지만 <b>내려받는 게 아닙니다</b> —
-        깃허브 안에서 권한을 주는 것뿐이고 내 컴퓨터에는 아무것도 안 깔립니다.
-        Public 저장소면 이 단계 자체가 없습니다.</span></li>
+        깃허브 안에서 권한을 주는 것뿐이고, 내 컴퓨터에는 아무것도 안 깔립니다. 1분이면 끝나요.
+        <br><b>Public 저장소라도 해야 합니다.</b> 공개면 <b>읽기</b>는 그냥 되지만,
+        클로드가 <b>고친 걸 올리려면(쓰기)</b> 이 권한이 있어야 합니다.
+        안 하면 클로드가 코드를 읽고 고치기는 하는데 <b>올리는 데서 막힙니다</b>.</span></li>
       <li>입력창 아래 <b>저장소 선택기</b>에서 내 저장소를 고릅니다.</li>
     </ul>
 
