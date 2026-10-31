@@ -16,7 +16,32 @@
 @media print{
   .card,.sec-header,.hl-box,.two-col,.prep-box,.copy-wrap,table,tr{page-break-inside:avoid;break-inside:avoid}
   .nav-bar,.copy-btn{display:none}
+  .pdf-btn{display:none !important}
+
+  /* ★ 브라우저는 **배경을 안 찍는 게 기본**입니다 (인쇄창의 「배경 그래픽」이 꺼져 있음).
+     그래서 초록 머리말의 흰 글씨가 **흰 종이에 흰 글씨**가 되어 통째로 사라졌습니다.
+     인쇄에서는 밝게 뒤집고, 작은 배지만 색을 강제로 찍습니다. */
+  body{background:#fff}
+  .hero{background:#fff !important;border-bottom:2px solid var(--accent)}
+  .hero h1,.hero-sub,.hero-desc,.hero-meta-item{color:var(--accent) !important}
+  /* ⚠️ 굵은 글씨가 **인라인 `style="color:#fff"`** 라 클래스 규칙으로는 못 이깁니다.
+     한 군데씩 쫓지 않고 통째로 잡습니다 — `inherit` 이라 자기 블록 색을 물려받습니다. */
+  [style*="color:#fff"], [style*="color: #fff"],
+  [style*="color:rgba(255,255,255"], [style*="color: rgba(255,255,255"] { color: inherit !important; }
+  .hero::before{display:none}            /* 글자 위에 겹치는 거대한 'VERCEL' */
+  .hero-tag{background:var(--accent) !important;color:#fff !important}
+  /* 본문이 「이 버튼을 누르세요」 라고 가리키는 칩들 — 색이 빠지면 글자가 사라집니다 */
+  .hero-tag,.card-title .num,.copy-label,.btn{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  a{text-decoration:none;color:inherit}
 }
+
+/* 📥 PDF 로 저장 — 인쇄창을 엽니다 (인쇄에서는 숨겨집니다).
+   Ctrl+P 를 떠올리는 분이 많지 않고, 폰에는 아예 그 키가 없습니다. */
+.pdf-btn{position:fixed;right:20px;bottom:20px;z-index:200;border:none;cursor:pointer;
+  background:var(--accent);color:#fff;font-family:'Noto Sans KR',sans-serif;font-size:13.5px;font-weight:700;
+  padding:12px 18px;border-radius:999px;box-shadow:0 6px 20px rgba(31,122,112,.3)}
+.pdf-btn:hover{background:#17625a}
+@media (max-width:560px){.pdf-btn{right:14px;bottom:14px;padding:11px 15px;font-size:12.5px}}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;min-height:100vh;padding-bottom:80px}
 
@@ -1223,6 +1248,8 @@ lib/claude.js 의 reportGuideline() 을 고치면 될 거야.</div>
   </div>
   <div class="footer-right">막히면 클로드에게 물어보세요.<br>에러 메시지를 그대로 붙여넣는 게 가장 빠릅니다.</div>
 </div>
+
+<button class="pdf-btn" onclick="window.print()" title="인쇄창에서 「PDF로 저장」을 고르세요">📥 PDF로 저장</button>
 
 <script>
 // 프롬프트 찾기 — 낱말이 들어간 것만 남깁니다
