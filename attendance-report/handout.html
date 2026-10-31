@@ -474,16 +474,29 @@ CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
       구독이 없으시면 <b>설치는 끝까지 같이 하세요.</b> 시스템은 구독 없이도 그대로 돌아갑니다 —
       말로 고치는 것만 나중에 하시면 됩니다.</div>
 
+    <div class="hl-box teal"><strong>💻 깃(Git)·터미널·VS Code — 하나도 안 깝니다</strong><br>
+      유튜브에서 「클로드 코드 설치」 를 찾아보면 <b>git-scm.com 에서 Git 을 받아 터미널에 까는</b>
+      영상이 많이 나옵니다. 그건 <b>개발자가 자기 컴퓨터에서 쓰는 방식</b>이에요.
+      <b>우리는 그 길로 안 갑니다.</b> 브라우저에서 <code>claude.ai/code</code> 만 열면 끝입니다 —
+      내려받을 것도, 검은 창에 명령어 칠 일도 없습니다.
+      <br><br>⚠️ 다만 아래 <b>A-3</b> 에서 깃허브 화면에 <b>Install</b> 이라는 버튼이 나옵니다.
+      그건 프로그램을 깐다는 뜻이 <b>아니라</b>, 깃허브 안에서 <b>「이 저장소를 봐도 된다」고 권한을 주는</b> 버튼입니다.</div>
+
     <div class="card-title"><div class="num">A</div> 들어가서 깃허브 연결</div>
     <ul class="step-list">
       <li><b><a href="https://claude.ai/code" target="_blank" rel="noopener">claude.ai/code</a></b> 접속
         (claude.ai 왼쪽 메뉴의 <b>Code</b> 를 눌러도 같습니다).
         <br><span style="color:#888">주소를 <code>code.claude.com</code> 으로 치지 마세요 — 그건 <b>설명서 사이트</b>입니다.</span></li>
-      <li><b>Sign in with GitHub</b> → 깃허브 권한 승인 화면에서 <b>허용</b>.</li>
-      <li>저장소가 <b>Private</b> 이면 <b>Claude GitHub App 설치</b>를 한 번 더 해야 목록에 뜹니다.
+      <li><b>Sign in with GitHub</b> → 깃허브 권한 승인 화면에서 <b>허용</b>.
+        <br><span style="color:#888">claude.ai 설정의 <b>커넥터(Connectors)</b> 에 먼저 들어갈 필요 없습니다 —
+        여기서 누르면 그게 커넥터 연결입니다. (나중에 끊고 싶을 때만 설정 → 커넥터로 갑니다.)
+        회사·팀 요금제면 <b>관리자가 조직 설정에서 GitHub 커넥터를 먼저 켜줘야</b> 합니다.</span></li>
+      <li>저장소가 <b>Private</b> 이면 깃허브에서 <b>「이 저장소를 봐도 된다」는 권한</b>을 한 번 더 줘야 목록에 뜹니다.
         화면에 안 나오면 <b><a href="https://github.com/apps/claude/installations/new" target="_blank" rel="noopener">github.com/apps/claude/installations/new</a></b> 로 가서
-        <b>01단계에서 만든 내 저장소만</b> 골라 설치하세요. (전부 열어줄 필요 없습니다)
-        <br><span style="color:#888">Public 저장소면 이 단계 없이 바로 보입니다.</span></li>
+        <b>01단계에서 만든 내 저장소만</b> 고르고 초록 버튼을 누르세요. (전부 열어줄 필요 없습니다)
+        <br><span style="color:#888">버튼에 <b>Install</b> 이라고 쓰여 있지만 <b>내려받는 게 아닙니다</b> —
+        깃허브 안에서 권한을 주는 것뿐이고 내 컴퓨터에는 아무것도 안 깔립니다.
+        Public 저장소면 이 단계 자체가 없습니다.</span></li>
       <li>입력창 아래 <b>저장소 선택기</b>에서 내 저장소를 고릅니다.</li>
     </ul>
 
@@ -494,19 +507,24 @@ CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
     </div>
     <p style="margin-top:8px;color:#888">보내고 1~2분 기다리면 클로드가 어디를 어떻게 고쳤는지 보여줍니다.</p>
 
-    <div class="card-title" style="margin-top:20px"><div class="num">C</div> 🔴 내 사이트에 올리기 — 여기서 제일 많이 막힙니다</div>
-    <div class="hl-box red"><strong>클로드가 고쳤다고 내 주소가 바로 바뀌지 않습니다.</strong>
-      클로드는 <b>가지(branch)</b> 에만 올려둡니다. 버튼을 두 번 더 눌러야 내 사이트에 반영됩니다.</div>
+    <div class="card-title" style="margin-top:20px"><div class="num">C</div> 시키면 끝 — 내 사이트에 저절로 올라갑니다</div>
+    <div class="hl-box green"><strong>✅ 손으로 누를 게 없습니다.</strong>
+      템플릿에 <b>자동 반영</b>이 들어 있어서, 클로드가 고치면 <b>1~2분 뒤 내 주소에 그대로 반영</b>됩니다.</div>
     <table class="tb">
-      <tr><th>순서</th><th>할 일</th><th>어디서</th></tr>
-      <tr><td>1</td><td>클로드가 <code>claude/…</code> 가지에 <b>자동으로</b> 올려둡니다</td><td>자동 — 할 일 없음</td></tr>
-      <tr><td>2</td><td><b>Create PR</b> 누르기</td><td>클로드 화면 (Changes 카드의 <code>+42 -18</code> 을 누르면 바뀐 곳이 보입니다)</td></tr>
-      <tr><td>3</td><td><b>Merge pull request</b> → <b>Confirm merge</b></td><td>GitHub 으로 넘어갑니다</td></tr>
-      <tr><td>4</td><td>Vercel 이 알아서 다시 배포 — <b>1~2분</b></td><td>자동. 내 주소를 새로고침</td></tr>
+      <tr><th>순서</th><th>무슨 일</th><th>내가 할 일</th></tr>
+      <tr><td>1</td><td>클로드가 <code>claude/…</code> 가지에 올립니다</td><td>없음</td></tr>
+      <tr><td>2</td><td>깃허브가 <b>자동으로 합칩니다</b> (<code>.github/workflows/claude-auto-merge.yml</code>)</td><td>없음</td></tr>
+      <tr><td>3</td><td>Vercel 이 다시 배포 — <b>1~2분</b></td><td>내 주소 <b>새로고침</b></td></tr>
     </table>
-    <div class="hl-box teal"><strong>💡 왜 바로 안 덮어쓰나요?</strong><br>
-      고친 걸 <b>한 번 보여준 뒤</b> 올리는 구조라서 그렇습니다. 마음에 안 들면 Merge 를 안 누르면 그만이고,
-      그러면 내 사이트는 하나도 안 바뀝니다. <b>망가뜨릴 걱정 없이 마음껏 시켜보세요.</b></div>
+    <div class="hl-box red"><strong>⚠️ 대신 「한 번 보고 올리는」 단계가 없습니다</strong><br>
+      클로드가 고친 게 <b>바로 내 사이트에 올라갑니다.</b> 이상해졌으면
+      <b>Vercel → Deployments → 이전 배포 → Promote to Production</b> 으로 <b>즉시 되돌립니다.</b>
+      (코드는 깃허브에 그대로 남으니 없어지지 않습니다.)<br>
+      한 번 보고 올리고 싶으시면 <code>.github/workflows/claude-auto-merge.yml</code> 를 <b>지우세요.</b>
+      그러면 클로드 화면에서 <b>Create PR</b> → 깃허브에서 <b>Merge</b> 를 손으로 누르게 됩니다.</div>
+    <div class="hl-box teal"><strong>💡 망가뜨릴 걱정은 안 하셔도 됩니다</strong><br>
+      되돌리는 버튼이 늘 있습니다(위의 Promote to Production). <b>마음껏 시켜보세요</b> —
+      오늘 후반부는 그러라고 있는 시간입니다.</div>
 
     <div class="card-title" style="margin-top:20px"><div class="num">D</div> 안 될 때</div>
     <table class="tb">
@@ -514,8 +532,10 @@ CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
       <tr><td>로그인 버튼만 보이고 저장소가 없음</td><td>깃허브를 아직 연결 안 함</td><td>A-2 번 <b>Sign in with GitHub</b></td></tr>
       <tr><td>연결은 됐는데 <b>내 저장소만 목록에 없음</b></td><td>Private 저장소인데 Claude GitHub App 이 그 저장소에 설치 안 됨</td><td>A-3 번 링크에서 <b>그 저장소</b>를 골라 설치</td></tr>
       <tr><td>Code 메뉴 자체가 없음 / 안 열림</td><td>무료 계정</td><td>Pro 이상 구독. 오늘은 설치만 끝내고 나중에</td></tr>
-      <tr><td>고쳤다는데 내 주소는 그대로</td><td>C 의 2·3번을 안 누름</td><td><b>Create PR → Merge</b></td></tr>
-      <tr><td>Merge 했는데도 그대로</td><td>Vercel 재배포가 아직</td><td>1~2분 뒤 새로고침. Vercel <b>Deployments</b> 에서 진행 중인지 확인</td></tr>
+      <tr><td>고쳤다는데 내 주소는 그대로</td><td>아직 반영 전</td><td><b>1~2분</b> 뒤 새로고침. Vercel <b>Deployments</b> 에 새 배포가 떴는지 확인</td></tr>
+      <tr><td>3분이 지나도 그대로</td><td>자동 합치기가 멈췄을 수 있음</td><td>깃허브 저장소 → <b>Actions</b> 탭 → 빨간 ✗ 를 눌러 메시지 확인 (보통 <b>충돌</b>)</td></tr>
+      <tr><td>Actions 에 「충돌」</td><td>같은 곳을 두 군데서 고침</td><td>클로드에게 <b>「main 최신 내용으로 rebase 해줘」</b> 라고 말하고 다시 시도</td></tr>
+      <tr><td>고친 게 마음에 안 듦</td><td>—</td><td>Vercel <b>Deployments</b> → 이전 배포 → <b>Promote to Production</b></td></tr>
     </table>
     <div class="hl-box teal"><strong>📱 폰에서도 됩니다</strong><br>
       Claude 앱(iOS·안드로이드)에서 같은 계정으로 로그인하면 <b>Code</b> 탭이 있습니다.
