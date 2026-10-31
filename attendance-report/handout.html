@@ -330,15 +330,16 @@ NOTION_COMMENTS_DB</div>
   <div class="card">
     <p><code>/students.html</code> — <b>+ 학생 추가</b>로 한 명씩, 또는 <b>붙여넣기 일괄등록</b>으로 엑셀에서 통째로.</p>
     <ul class="step-list">
-      <li>학생마다 <b>이름 · 학생ID · PIN(4자리) · 학년 · 담당 · 연락처 · 요일별 등원시간 · 교재</b> 입력.<br><span style="color:#888">⚠️ <b>학생ID + PIN</b> 이 학생앱 로그인입니다. 학생ID가 비면 그 학생은 학생앱에 못 들어가요.</span></li>
+      <li>학생마다 <b>이름 · 학생ID · PIN(4자리) · 학년 · 학교 · 담당 · 연락처 · 요일별 등원시간 · 교재</b> 입력.<br><span style="color:#888">⚠️ <b>학생ID + PIN</b> 이 학생앱 로그인입니다. 학생ID가 비면 그 학생은 학생앱에 못 들어가요.<br>🔴 <b>PIN 은 학생마다 달라야 합니다</b> — 키오스크는 PIN 만으로 학생을 찾아서, 겹치면 그 학생들은 등원·하원이 아예 안 됩니다 (겹치면 화면이 막아줍니다).<br><b>학년 · 학교 · 담당</b> 은 <b>골라서</b> 넣습니다. 처음 쓰는 학교·선생님은 맨 아래 <b>+ 직접 입력…</b> 으로 한 번만 치면 다음부터 목록에 나옵니다.</span></li>
       <li>요일별 등원시간은 <b>수업 있는 날만</b> 채우세요 (빈 날 = 그날 수업 없음 → 현황판·자동생성에서 제외).</li>
-      <li>일괄등록: 엑셀/시트에서 <b>이름·학생ID·PIN·학년·담당·연락처</b> 열을 복사 → 붙여넣기 창에 Ctrl+V → 등록.</li>
+      <li>일괄등록: 엑셀/시트에서 <b>이름·학생ID·PIN·학년·학교·담당·연락처</b> 열을 복사 → 붙여넣기 창에 Ctrl+V → 등록.<br><span style="color:#888">제목 줄까지 같이 복사하시면 <b>열 순서가 달라도</b> 알아서 맞춥니다. 📄 <b>시트 양식 받기</b> 버튼으로 빈 양식을 받으실 수도 있어요.<br>⚠️ 예시의 <b>학생ID·PIN</b> 은 샘플 학생과 안 겹치게 골라둔 값입니다. 본인 학생을 넣으실 땐 <b>PIN 이 서로 겹치지 않게</b>만 해주세요.</span></li>
     </ul>
     <div class="copy-wrap">
-      <div class="copy-head"><span class="copy-label">일괄등록 붙여넣기 예시 (이름 · 학생ID · PIN · 학년 · 담당 · 연락처)</span><button class="copy-btn" onclick="cp(this,'bulk')">복사</button></div>
-      <div class="copy-body" id="bulk">김민준	demo01	1111	중2	이선생	01000000001
-이서연	demo02	2222	중3	이선생	01000000002
-박도윤	demo03	3333	초6	박선생	01000000003</div>
+      <div class="copy-head"><span class="copy-label">일괄등록 붙여넣기 예시 — 제목 줄까지 그대로 복사하세요</span><button class="copy-btn" onclick="cp(this,'bulk')">복사</button></div>
+      <div class="copy-body" id="bulk">이름	학생ID	출결PIN	학년	학교	담당	연락처	월	화	수	목	금
+강태오	new01	5101	중2	새봄중학교	이선생	01000000001	17:00		17:00		17:00
+서윤아	new02	5102	중3	푸른중학교	이선생	01000000002	18:00	18:00		18:00	
+민재희	new03	5103	초6	샛별초등학교	박선생	01000000003		16:00		16:00	</div>
     </div>
     <div class="hl-box red"><strong>⚠️ 실제 학생 정보는 신중히</strong><br>연습 중엔 위 같은 <b>가짜 이름·번호</b>로 하세요. 실제 학생 실명·연락처는 우리 학원 실제 배포에서만, 그리고 학부모 동의 하에.</div>
   </div>
