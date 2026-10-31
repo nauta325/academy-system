@@ -373,12 +373,24 @@ ck("★ 담당 학생만 보임 (박도윤 O / 김민준 X)", body.includes("박
 }
 
 // 학생앱 로그인
+//   ★ 학생을 박아두면 안 됩니다. demo01(김민준) 을 박아뒀는데 그 학생은 토요일 수업이
+//     없어서, 「그날 수업 있는 학생에게만 행을 깐다」 로 고친 뒤 과제가 0개로 나왔습니다.
+//     **오늘 수업이 있는 학생**을 찾아서 들어갑니다 (무슨 요일에 돌려도 되게).
+const 오늘학생 = await (async () => {
+  const 요일 = "일월화수목금토"[new Date(Date.now() + 9 * 3600 * 1000).getUTCDay()];
+  const d = await (await fetch(`${B}/api/attendance?action=students`)).json();
+  return (d.students || []).find((x) => x.status === "재원" && x.student_code && x.pin
+    && String((x.schedule || {})[요일] || "").trim());
+})();
+ck("오늘 수업인 샘플 학생이 있다", Boolean(오늘학생), "없음 — 어느 요일에 돌려도 최소 몇 명은 있어야 합니다");
 await pg.goto(B + "/student.html", { waitUntil: "networkidle" });
-await pg.fill("#code", "demo01"); await pg.fill("#pin", "1111");
+await pg.fill("#code", 오늘학생?.student_code || "demo01");
+await pg.fill("#pin", 오늘학생?.pin || "1111");
 await pg.click("button.btn");
 await pg.waitForTimeout(1500);
 ck("★ 학생앱 로그인 성공", (await pg.locator("#home").isVisible()), await pg.locator("#err").innerText());
-ck("학생앱 과제 보임", (await pg.locator(".task").count()) >= 1, { n: await pg.locator(".task").count() });
+ck(`학생앱 과제 보임 (${오늘학생?.name || "?"})`, (await pg.locator(".task").count()) >= 1,
+   { 학생: 오늘학생?.name, n: await pg.locator(".task").count() });
   // 날짜가 "10-27T00:00:00.000Z" 처럼 새면 아이가 보는 화면이 망가집니다.
   //   학생카드에는 이 점검이 있었는데 학생앱에는 없어서, 스크린샷 찍다가 발견했습니다.
   {

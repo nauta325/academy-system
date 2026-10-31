@@ -38,7 +38,11 @@ join (values
   ('이서연','18:20', '20:50',            '지각','중','상','불통과', '13/20', cast(null as text)),
   ('박도윤', cast(null as text), cast(null as text), cast(null as text), '상','상', cast(null as text), cast(null as text), cast(null as text))
 ) as v(name, check_in, check_out, lateness, attitude, homework, voca_test, voca_score, parent_note)
-  on v.name = s.name;
+  on v.name = s.name
+-- ★ 그날 수업이 있는 학생에게만. 요일을 안 보면 **유령 수업일**이 생겨
+--   월말 총수업일수가 부풀고, 정시·지각·결석 어디에도 안 들어갑니다.
+where coalesce(s.schedule ->> substr('일월화수목금토',
+    extract(dow from (now() at time zone 'Asia/Seoul')::date)::int + 1, 1), '') <> '';
 
 -- ── 오늘 진도를 '직전 수업의 다음 목차'로 바로잡기 ────────────────────────────
 -- 위에서 오늘 기록을 넣을 때 진도를 목차의 고정 위치(4번째)로 박아 넣었습니다.

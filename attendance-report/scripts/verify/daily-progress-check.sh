@@ -148,6 +148,26 @@ for order in "test_5_demo_students test_1_today test_3_month" "test_3_month test
   NOPIN=$($PS -d ${DB}2 -tAc "select count(*) from students where status='재원' and coalesce(pin,'')=''")
   [ "$NOPIN" = "0" ] || bad "출결PIN 이 빈 샘플 학생이 $NOPIN 명 — 그 학생은 키오스크·학생앱이 안 됩니다"
   note "출결PIN: 겹침 없음 · 빈 학생 없음"
+
+  # ── ★ **유령 수업일** — 그날 수업이 없는 학생에게 행을 깔면 안 됩니다.
+  #    setup.sql 이 요일을 안 보고 전원에게 오늘 행을 깔아서, 토요일에 수업이 없는
+  #    학생의 월말 **총수업일수가 1** 로 나왔습니다 (정시·지각·결석 어디에도 안 들어감).
+  #    앱은 미래 날짜에 대해 막아뒀는데 정작 샘플 SQL 이 만들고 있었습니다.
+  GHOST=$($PS -d ${DB}2 -tAc "
+    select count(*) from daily_records r join students s on s.id = r.student_id
+    where r.date = (now() at time zone 'Asia/Seoul')::date
+      and coalesce(s.schedule ->> substr('일월화수목금토',
+            extract(dow from r.date)::int + 1, 1), '') = ''")
+  [ "$GHOST" = "0" ] || bad "그날 수업이 없는 학생에게 오늘 행이 $GHOST 개 깔렸습니다 — 월말 수업일수가 부풀어 학부모에게 틀린 숫자가 나갑니다"
+
+  # 그리고 **어느 요일에 설치해도 화면이 비면 안 됩니다** (세미나 당일이 일요일입니다)
+  THIN=$($PS -d ${DB}2 -tAc "
+    select coalesce(string_agg(d || '요일 ' || n || '명', ', '), '') from (
+      select d, count(*) n from students s, unnest(array['월','화','수','목','금','토','일']) d
+      where s.status='재원' and coalesce(s.schedule->>d,'') <> '' group by d) t
+    where n < 4")
+  [ -z "$THIN" ] || bad "수업 예정이 너무 적은 요일이 있습니다 ($THIN) — 그날 설치하면 화면이 휑합니다"
+  note "오늘 행: 유령 없음 · 요일마다 학생 충분"
 done
 
 (fuser -k 4331/tcp >/dev/null 2>&1 || true)

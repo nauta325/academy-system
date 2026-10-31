@@ -71,7 +71,10 @@ select s.id, (now() at time zone 'Asia/Seoul')::date,
 from students s
 cross join kst k
 join lateral (select (s.pin::int - 1000) as g) gg on true
-where s.pin in (select lpad((1000+x)::text, 4, '0') from generate_series(1,13) x);
+where s.pin in (select lpad((1000+x)::text, 4, '0') from generate_series(1,13) x)
+-- ★ 그날 수업이 있는 학생에게만 (유령 수업일 방지 — setup.sql 과 같은 규칙)
+and coalesce(s.schedule ->> substr('일월화수목금토',
+    extract(dow from (now() at time zone 'Asia/Seoul')::date)::int + 1, 1), '') <> '';
 
 -- ── 오늘 진도를 '직전 수업의 다음 목차'로 바로잡기 ────────────────────────────
 -- 위에서 오늘 기록을 넣을 때 진도를 목차의 고정 위치(4번째)로 박아 넣었습니다.

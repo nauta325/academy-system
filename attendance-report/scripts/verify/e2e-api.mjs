@@ -62,14 +62,27 @@ ck("tasks", r.s === 200 && r.d.tasks.length > 0, r.d.tasks?.length);
 {
   const t = r.d.tasks || [];
   const 학생수 = new Set(t.map((x) => x.student_id)).size;
-  ck("★ 설치 직후부터 전원에게 과제가 있다 (학생앱이 안 비어 있다)", 학생수 >= 12, { 학생수, 과제: t.length });
+  // ★ 「전원」 을 박으면 안 됩니다 — **그날 수업이 있는 학생**에게만 과제가 생깁니다.
+  //   예전에는 setup.sql 이 요일을 안 보고 전원에게 오늘 행을 깔아서 전원에게 과제가
+  //   있었는데, 그게 **유령 수업일**(월말 총수업일수가 부풀던 것)의 원인이었습니다.
+  //   고치고 나니 이 점검이 멀쩡한 걸 실패로 잡았습니다. 오늘 수업 인원을 세서 비교합니다.
+  const 오늘요일 = "일월화수목금토"[new Date(Date.now() + 9 * 3600 * 1000).getUTCDay()];
+  const 오늘수업 = ((await get("action=students")).d.students || [])
+    .filter((x) => x.status === "재원" && String((x.schedule || {})[오늘요일] || "").trim());
+  ck("★ 오늘 수업인 학생 전원에게 과제가 있다 (학생앱이 안 비어 있다)",
+     오늘수업.length > 0 && 학생수 >= 오늘수업.length,
+     { 오늘수업: 오늘수업.length, 과제받은학생: 학생수, 과제: t.length });
   ck("★ 교재 목차에서 온 자동 과제가 있다", t.some((x) => x.auto), t.filter((x) => x.auto).length);
   ck("★ 손으로 낸 과제도 있다 (진도를 바꿔도 안 지워지는 것)", t.some((x) => !x.auto), t.filter((x) => !x.auto).length);
   // 학생마다 진도가 다르니 과제도 달라야 합니다 — 이 세미나의 간판입니다
   const 묶음 = {};
   t.filter((x) => x.auto).forEach((x) => { (묶음[x.student_id] ||= []).push(x.title); });
   const 가짓수 = new Set(Object.values(묶음).map((v) => v.sort().join("|"))).size;
-  ck("★ 과제가 학생마다 다르다", 가짓수 >= 8, { 가짓수, 학생: Object.keys(묶음).length });
+  // 가짓수도 숫자를 박지 않습니다 — 오늘 수업 인원만큼만 나올 수 있습니다.
+  //   「거의 다 다른가」 를 봅니다 (같은 진도인 아이가 둘쯤 있는 건 정상입니다).
+  const 학생들 = Object.keys(묶음).length;
+  ck("★ 과제가 학생마다 다르다", 가짓수 >= Math.max(3, Math.ceil(학생들 * 0.7)),
+     { 가짓수, 학생: 학생들 });
 }
 // 과제 목록은 **학생별로 묶여** 있어야 합니다. 예전에는 집/학원 으로만 줄을 세워서
 //   한 아이 과제가 목록 네 군데에 흩어졌고, 선생님이 "민준이 건 어디 있지" 를 하게 됐습니다.
@@ -161,16 +174,27 @@ r = await post("/api/attendance", { action: "notify-absent" });
 ck("미등원 알림(솔라피 없음 → 조용히)", r.s === 200, r.d);
 
 // ── 학생앱 ──
-r = await post("/api/student", { action: "login", code: byName["김민준"].student_code, pin: byName["김민준"].pin });
-ck("학생 로그인", r.s === 200 && r.d.me.name === "김민준", r.d);
-r = await post("/api/student", { action: "home", code: byName["김민준"].student_code, pin: byName["김민준"].pin });
+// ★ 학생 이름을 박으면 안 됩니다. 「김민준」 을 박아뒀는데 그 학생은 토요일 수업이
+//   없어서, 오늘 행이 없으면 과제도 없고 `tasks[0]` 에서 통째로 터졌습니다.
+//   **오늘 수업이 있는 학생**과 **다른 학생** 둘을 골라 씁니다.
+const 오늘요일2 = "일월화수목금토"[new Date(Date.now() + 9 * 3600 * 1000).getUTCDay()];
+const 수업중인 = Object.values(byName).filter((x) =>
+  x.status === "재원" && x.student_code && x.pin && String((x.schedule || {})[오늘요일2] || "").trim());
+ck("오늘 수업인 샘플 학생이 둘 이상 있다", 수업중인.length >= 2, 수업중인.length);
+const 나 = 수업중인[0], 남 = 수업중인[1];
+r = await post("/api/student", { action: "login", code: 나.student_code, pin: 나.pin });
+ck("학생 로그인", r.s === 200 && r.d.me.name === 나.name, r.d);
+r = await post("/api/student", { action: "home", code: 나.student_code, pin: 나.pin });
 ck("학생 홈", r.s === 200 && Array.isArray(r.d.tasks) && Array.isArray(r.d.progress), r.d);
-const t0 = r.d.tasks[0];
-r = await post("/api/student", { action: "toggle-task", code: byName["김민준"].student_code, pin: byName["김민준"].pin, task_id: t0.id, done: true });
-ck("과제 체크", r.s === 200 && r.d.task.done === true, r.d);
-r = await post("/api/student", { action: "toggle-task", code: byName["박도윤"].student_code, pin: byName["박도윤"].pin, task_id: t0.id, done: false });
-ck("★ 남의 과제 차단", r.s === 404, r.d);
-r = await post("/api/student", { action: "login", code: byName["김민준"].student_code, pin: "9999" });
+ck(`★ 오늘 수업인 학생(${나.name})에게 과제가 있다`, (r.d.tasks || []).length > 0, r.d.tasks?.length);
+const t0 = (r.d.tasks || [])[0];
+if (t0) {
+  r = await post("/api/student", { action: "toggle-task", code: 나.student_code, pin: 나.pin, task_id: t0.id, done: true });
+  ck("과제 체크", r.s === 200 && r.d.task.done === true, r.d);
+  r = await post("/api/student", { action: "toggle-task", code: 남.student_code, pin: 남.pin, task_id: t0.id, done: false });
+  ck("★ 남의 과제 차단", r.s === 404, r.d);
+}
+r = await post("/api/student", { action: "login", code: 나.student_code, pin: "9999" });
 ck("틀린 PIN 거절", r.s === 401, r.d);
 
 // ── 월말평가서 ──
