@@ -187,15 +187,12 @@ function resTxt(res, score){
   return `<span class="${cls}">${esc(res||"")}</span>${score ? " " + esc(score) : ""}`;
 }
 
-// 직전 수업이 단어 미통과였으면 「오늘 재시?」 를 묻는다 — 운영의 retestNote.
-// 재시를 놓치면 그 학생은 같은 유닛에서 계속 멈춥니다.
-function retestNote(r){
-  const h = (r.recent || [])[0];
-  const 못넘김 = h && (typeof h.needs_retest === "boolean" ? h.needs_retest : isFail(h.voca_test));
-  if (!못넘김) return "";
-  const unit = unitLabel((h.progress||{})["단어"]);
-  return `<div class="retest">🔁 오늘 재시? — 지난 수업(${esc(md(h.date))}) 단어${unit ? " " + esc(unit) : ""} 미통과</div>`;
-}
+// ⛔ 「🔁 오늘 재시? — 지난 수업 단어 미통과」 띠는 **없앴습니다.**
+//    재시를 보고 **통과했다고 적을 데가 없어서**, 한 번 불통과가 나면 그 띠가
+//    영원히 안 꺼졌습니다. 끌 수 없는 알림은 며칠만 지나면 아무도 안 봅니다.
+//    지난 수업의 단어테스트 결과(불통과·점수)는 아래 📜 최근 수업 표에 그대로 있고,
+//    **오늘** 불통과면 점수칸 밑 한 줄과 위쪽 「🔁 재시 안내 (n)」 버튼이 알려줍니다.
+//    (「재시 통과」 를 기록하고 싶어지면 그때 칸을 하나 만들면 됩니다)
 
 function histHtml(r, i){
   const H = r.recent || [];
@@ -385,7 +382,7 @@ function cardHtml(i){
       <button class="btn" style="padding:5px 10px;font-size:12px" onclick="sendOne(${i})">📨 이 학생</button>
       <span class="savemsg" id="save-${i}"></span>
     </div>
-    ${retestNote(r)}${histHtml(r, i)}
+    ${histHtml(r, i)}
     <div class="prog">${prog}</div>
     <div class="grid">
       <div class="fld"><label>지각/결석</label>${segHtml(i,"lateness",[{v:"정시",t:"정시"},{v:"지각",t:"지각"},{v:"결석",t:"결석"}],rec.lateness||"정시")}</div>

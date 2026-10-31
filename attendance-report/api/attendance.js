@@ -386,8 +386,6 @@ export default async function handler(req, res) {
             homework: h.homework || null,
             lateness: h.lateness || null,
             note: h.note || null,
-            // 「🔁 오늘 재시?」 를 띄울지 — 지난 수업도 같은 규칙으로 서버가 판정
-            needs_retest: isFail(h.voca_test, h.voca_score),
           })),
           // 진도가 교재 목차와 연결됐는지 — 화면에서 "왜 안 넘어가지?" 를 바로 보여주려고.
           link: linkStatus(rec.progress, s.books, toc),

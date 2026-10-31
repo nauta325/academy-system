@@ -11,23 +11,32 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
   header { padding:16px 20px; border-bottom:1px solid var(--line); background:#fff; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
   h1 { margin:0; font-size:19px; } nav a { font-size:13px; color:var(--muted); text-decoration:none; margin-left:12px; }
-  main { max-width:960px; margin:0 auto; padding:20px; }
+  /* 학교 칸이 늘면서 960px 로는 가로 스크롤이 생겼습니다. 화면만큼 넓게 쓰되
+     너무 퍼지지 않게 1400px 까지만 (노트북 1280 에서도 한 화면에 들어옵니다). */
+  main { max-width:1400px; margin:0 auto; padding:20px; }
   .bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
   button { padding:8px 14px; border:1px solid var(--green); background:var(--green); color:#fff; border-radius:8px; cursor:pointer; font-size:14px; }
   button.ghost { background:#fff; color:var(--green); }
   table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
-  th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); font-size:14px; }
+  th,td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); font-size:13.5px; }
+  /* 등원시간은 제일 긴 칸이라 조금 작게 — 그래야 나머지가 안 밀립니다 */
+  td.times { font-size:12.5px; color:#555; }
   th { background:#f3f1ec; font-size:13px; color:var(--muted); white-space:nowrap; }
   /* 학교 칸이 늘면서 좁아졌습니다 — 칸 제목과 담당 선생님이 두 줄로 쪼개지지 않게 */
   tr:hover td { background:#faf9f6; cursor:pointer; }
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; padding:16px; }
   .overlay.on { display:flex; }
-  .panel { background:#fff; border-radius:14px; padding:20px; width:100%; max-width:480px; max-height:92vh; overflow:auto; }
+  .panel { background:#fff; border-radius:14px; padding:20px; width:100%; max-width:560px; max-height:92vh; overflow:auto; }
   label { display:block; font-size:13px; font-weight:600; margin:10px 0 4px; }
   input, select, textarea { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; font-family:inherit; }
   .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .days { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
-  .days label { text-align:center; margin:0 0 2px; }
+  /* 요일은 **일곱 칸**입니다 — 주말 수업하는 학원이 많고, 붙여넣기·샘플도 토·일을 씁니다.
+     예전엔 월~금만 있어서 **화면으로는 주말을 넣을 수가 없었습니다.** */
+  .days { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .days label { text-align:center; margin:0 0 2px; font-size:12px; }
+  .days input { padding:7px 4px; text-align:center; font-size:13px; }
+  .days > div:nth-child(6) label { color:#2f6f6a; }   /* 토 */
+  .days > div:nth-child(7) label { color:#c0392b; }   /* 일 */
   .actions { display:flex; gap:8px; margin-top:16px; }
   .err { color:#cf6a4a; font-size:13px; }
   .muted { color:var(--muted); font-size:12px; }
@@ -91,13 +100,15 @@
     <div><label>수</label><input data-day="수"></div>
     <div><label>목</label><input data-day="목"></div>
     <div><label>금</label><input data-day="금"></div>
+    <div><label>토</label><input data-day="토"></div>
+    <div><label>일</label><input data-day="일"></div>
   </div>
   <label>교재 <span class="muted" style="font-weight:400">— <b>교재DB에 있는 것</b>에서 고르세요</span></label>
   <div class="row2">
-    <select data-book="문법"></select>
-    <select data-book="리딩"></select>
+    <div><label>문법</label><select data-book="문법"></select></div>
+    <div><label>리딩</label><select data-book="리딩"></select></div>
   </div>
-  <select data-book="단어" style="margin-top:8px"></select>
+  <div style="margin-top:8px"><label>단어</label><select data-book="단어"></select></div>
   <div id="bookWarn" class="bookwarn"></div>
   <div class="actions">
     <button id="save">저장</button>
@@ -197,7 +208,9 @@ function 교재칸그리기(){
     const rest = [...ALLBOOKS].filter(n => !mine.includes(n));   // 과목을 안 적어둔 교재도 고를 수 있게
     const 목록 = [...mine, ...rest];
     const 없는값 = 지금 && !ALLBOOKS.has(지금);
-    el.innerHTML = `<option value="">- 교재 없음 -</option>`
+    // 빈 칸 글자에 **과목**을 넣습니다 — 셋이 나란히 있으면 어느 게 어느 과목인지
+    //   「- 교재 없음 -」 만 보고는 알 수가 없습니다 (라벨이 가려지는 좁은 화면에서도).
+    el.innerHTML = `<option value="">- ${sub} 교재 없음 -</option>`
       + (없는값 ? `<option value="${esc(지금)}" selected>${esc(지금)} (교재DB에 없음)</option>` : "")
       + 목록.map(n => `<option value="${esc(n)}"${n===지금?" selected":""}>${esc(n)}</option>`).join("")
       + `<option value="__new__">+ 직접 입력…</option>`;
@@ -271,7 +284,7 @@ async function load(){
     const times = DAYORD.filter(d0 => (s.schedule||{})[d0]).map(d0 => `${d0} ${s.schedule[d0]}`).join(" · ");
     const quit = s.status && s.status !== "재원" ? ' <span style="font-size:11px;color:#cf6a4a">(퇴원)</span>' : "";
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td style="white-space:nowrap"><b>${esc(s.name)}</b>${quit}</td><td>${esc(s.student_code||"")}</td><td>${esc(s.grade||"")}</td><td style="white-space:nowrap">${esc(s.school||"")}</td><td>${겹친핀.has(String(s.pin||"").trim()) && s.status!=="퇴원" ? `<span style="color:#c0392b;font-weight:700" title="다른 학생과 겹칩니다 — 키오스크 등원이 안 됩니다">${esc(s.pin)} ⚠️</span>` : esc(s.pin||"")}</td><td style="white-space:nowrap">${esc(s.teacher||"")}</td><td style="white-space:nowrap">${esc(times)||'<span style="color:#9aa">-</span>'}</td><td>${esc(s.phone||"")}</td><td style="white-space:nowrap"><a href="/student_card.html?student_id=${encodeURIComponent(s.id)}" target="_blank" onclick="event.stopPropagation()" title="학생 카드 — 지난 진도 쭉 보기">📋</a></td>`;
+    tr.innerHTML = `<td style="white-space:nowrap"><b>${esc(s.name)}</b>${quit}</td><td>${esc(s.student_code||"")}</td><td>${esc(s.grade||"")}</td><td style="white-space:nowrap">${esc(s.school||"")}</td><td>${겹친핀.has(String(s.pin||"").trim()) && s.status!=="퇴원" ? `<span style="color:#c0392b;font-weight:700" title="다른 학생과 겹칩니다 — 키오스크 등원이 안 됩니다">${esc(s.pin)} ⚠️</span>` : esc(s.pin||"")}</td><td style="white-space:nowrap">${esc(s.teacher||"")}</td><td class="times" style="white-space:nowrap">${esc(times)||'<span style="color:#9aa">-</span>'}</td><td>${esc(s.phone||"")}</td><td style="white-space:nowrap"><a href="/student_card.html?student_id=${encodeURIComponent(s.id)}" target="_blank" onclick="event.stopPropagation()" title="학생 카드 — 지난 진도 쭉 보기">📋</a></td>`;
     tr.onclick = () => openForm(s);
     body.appendChild(tr);
   }
