@@ -556,7 +556,7 @@ export default async function handler(req, res) {
       const row = {
         name: s.name, student_code: s.student_code || null,
         pin: s.pin || null, phone: s.phone || null,
-        grade: s.grade || null, teacher: s.teacher || null,
+        grade: s.grade || null, school: s.school || null, teacher: s.teacher || null,
         class_minutes: Number(s.class_minutes) || 120,
         status: s.status || "재원",
         schedule: s.schedule || {}, books: s.books || {},
@@ -582,7 +582,7 @@ export default async function handler(req, res) {
         .map((r) => ({
           name: r.name, student_code: r.student_code || null,
           pin: r.pin || null, phone: r.phone || null,
-          grade: r.grade || null, teacher: r.teacher || null,
+          grade: r.grade || null, school: r.school || null, teacher: r.teacher || null,
           class_minutes: Number(r.class_minutes) || 120,
           schedule: r.schedule || {}, books: r.books || {},
         }));
@@ -847,7 +847,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         days, from, to: now.date,
         student: {
-          id: s.id, name: s.name, grade: s.grade, teacher: s.teacher,
+          id: s.id, name: s.name, grade: s.grade, school: s.school || null, teacher: s.teacher,
           student_code: s.student_code, books: s.books || {}, schedule: s.schedule || {},
         },
         subjects,
@@ -876,9 +876,17 @@ export default async function handler(req, res) {
 
     // ── 담당 선생님 목록 (선생님앱 첫 화면에서 고른다) ──
     if (action === "teachers") {
-      const rows = await select("students", "status=eq.재원&select=teacher");
-      const teachers = [...new Set(rows.map((r) => (r.teacher || "").trim()).filter(Boolean))].sort();
-      return res.status(200).json({ teachers });
+      // 담당 선생님 · 학교 · 학년 — **지금 쓰고 있는 값**들을 모아서 돌려줍니다.
+      //   학생 추가 화면의 고르는 칸(select)을 이걸로 채웁니다. 손으로 칠 때마다
+      //   「이선생 / 이 선생 / 이선생님」 처럼 조금씩 달라지면 담당별 보기가 갈라집니다.
+      //   목록에 없는 건 그 화면에서 「+ 직접 입력」 으로 새로 넣을 수 있습니다.
+      //   학교 칸이 아직 없는 DB(쓰던 DB)에서도 화면이 열려야 하므로 따로 물어봅니다.
+      const rows = await select("students", "status=eq.재원&select=teacher,grade");
+      const 모으기 = (키) => [...new Set(rows.map((r) => String(r[키] || "").trim()).filter(Boolean))].sort();
+      const schools = await select("students", "status=eq.재원&select=school")
+        .then((r) => [...new Set(r.map((x) => String(x.school || "").trim()).filter(Boolean))].sort())
+        .catch(() => []);   // migrate_school.sql 을 아직 안 돌린 분
+      return res.status(200).json({ teachers: 모으기("teacher"), grades: 모으기("grade"), schools });
     }
 
     // ── 과제 현황 (선생님앱) — 그날 낸 과제와 학생 체크 여부 ──

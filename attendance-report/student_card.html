@@ -166,6 +166,7 @@ function profileHtml(){
   return `<div class="card"><div class="profile">
       <span class="nm">${esc(s.name)}</span>
       ${s.grade?`<span class="kv">학년 <b>${esc(s.grade)}</b></span>`:""}
+      ${s.school?`<span class="kv">학교 <b>${esc(s.school)}</b></span>`:""}
       ${s.teacher?`<span class="kv">담당 <b>${esc(s.teacher)}</b></span>`:""}
       ${sch?`<span class="kv">수업 요일 <b>${esc(sch)}</b></span>`:""}
       ${s.student_code?`<span class="kv">학생ID <b>${esc(s.student_code)}</b></span>`:""}

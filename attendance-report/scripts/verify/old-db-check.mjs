@@ -67,6 +67,9 @@ const 길 = [
   ["재시 안내 미리보기", () => call(attendance, { action: "send-retest", date: KST, dryRun: true })],
   ["과제 현황", () => call(attendance, { action: "tasks", date: KST }, "GET")],
   ["학생앱 홈", () => call(student, { action: "home", code: stu.student_code, pin: stu.pin })],
+  // 학교 칸이 없는 DB 에서 학생을 저장하는 자리 — 여기서 영어 날코드가 떴습니다
+  ["학생 저장 (학교 칸)", () => call(attendance, { action: "save-student",
+    student: { name: "옛DB점검학생", pin: "7799", grade: "중2", school: "새봄중학교" } })],
 ];
 
 console.log(`\n${MODE === "before" ? "① 칸을 지운 DB — 화면이 고치는 법을 말해주나" : "② migrate 를 돌린 뒤 — 실제로 고쳐졌나"}\n${"─".repeat(56)}`);

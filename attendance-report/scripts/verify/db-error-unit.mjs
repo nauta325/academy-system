@@ -133,5 +133,29 @@ const RAW = /PGRST\d+|schema cache|permission denied for table|Invalid API key/;
     m?.includes("alter table students add column if not exists wibble"), m);
 }
 
+{
+  // ★ **쓸 때** 나는 꼴 — 읽을 때와 글자가 다릅니다.
+  //   읽을 때: column tasks.auto does not exist
+  //   쓸 때  : column "school" of relation "students" does not exist
+  //   게다가 원문이 JSON 이라 따옴표가 \" 로 **역슬래시와 함께** 옵니다.
+  //   이 둘 때문에 학교 칸이 없는 DB 에서 학생을 저장하면 영어 날코드가 그대로 떴습니다.
+  const m = await messageFor(400, JSON.stringify({
+    code: "42703", message: `column "school" of relation "students" does not exist`,
+  }));
+  check("★ 쓸 때 꼴(of relation) — 어느 칸인지 말해준다", m?.includes("school"), m);
+  check("★ 쓸 때 꼴 — 붙여넣을 SQL 을 그대로 준다",
+    m?.includes("alter table students add column if not exists school text"), m);
+  check("★ 쓸 때 꼴 — 고칠 파일도 알려준다", m?.includes("migrate_school.sql"), m);
+  check("★ 쓸 때 꼴 — 영어 원문이 안 보인다", !m?.includes("does not exist"), m);
+}
+{
+  // 모르는 칸이어도 (of relation 꼴로) 쓸 수 있는 문장을 만들어 줘야 합니다
+  const m = await messageFor(400, JSON.stringify({
+    code: "42703", message: `column "wibble" of relation "students" does not exist`,
+  }));
+  check("★ 쓸 때 꼴 — 모르는 칸도 문장을 만들어 준다",
+    m?.includes("alter table students add column if not exists wibble"), m);
+}
+
 console.log(fail ? `\n❌ 실패 ${fail}건` : "\n✅ 전부 통과");
 process.exit(fail ? 1 : 0);

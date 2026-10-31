@@ -26,15 +26,16 @@ $PS -d $DB -v ON_ERROR_STOP=1 -q -f "$APP/sql/setup.sql" >/dev/null 2>&1 || { ec
 # 1·2차 수강생 DB 에 **없는 것들** (6차에서 더해진 칸·표)
 $PS -d $DB -q \
   -c "alter table daily_records drop column if exists retest_sent" \
+  -c "alter table students drop column if exists school" \
   -c "drop table if exists tasks cascade" >/dev/null 2>&1
-echo "   retest_sent 칸 · tasks 표를 지웠습니다"
+echo "   retest_sent 칸 · students.school 칸 · tasks 표를 지웠습니다"
 
 echo
 MODE=before TESTDB=$DB node old-db-check.mjs; A=$?
 
 echo
 echo "── migrate 를 돌립니다 (수강생이 안내대로 하는 것) ──"
-for f in migrate_retest.sql migrate_tasks.sql migrate_auto_tasks.sql; do
+for f in migrate_retest.sql migrate_tasks.sql migrate_auto_tasks.sql migrate_school.sql; do
   if [ -f "$APP/sql/$f" ]; then
     ERR=$($PS -d $DB -q -f "$APP/sql/$f" 2>&1 | grep -iE "^ERROR" | head -1)
     [ -n "$ERR" ] && echo "   ❌ $f — $ERR" || echo "   ✅ $f"

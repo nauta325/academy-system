@@ -21,13 +21,17 @@ with base as (
          else '15:00' end as tm
   from generate_series(1,20) g
 )
-insert into students (name, pin, phone, grade, teacher, class_minutes, status, schedule, books)
+insert into students (name, pin, phone, grade, school, teacher, class_minutes, status, schedule, books)
 select
   (array['서지우','한도현','김하린','이준우','박서아','최민재','정예린','강시우','조하은','윤지호',
          '임수아','오재원','신유나','권태오','황지안','안소율','배현우','문채아','노건우','류지민'])[g],
   lpad((1000+g)::text, 4, '0'),
   '010-2000-' || lpad(g::text, 4, '0'),
   (array['초5','초6','중1','중2','중3'])[1 + (g % 5)],
+  -- 학교 — 학년에 맞춰 초/중으로 (전부 가짜 학교 이름, setup.sql 의 샘플과 같은 곳들)
+  case when (array['초5','초6','중1','중2','중3'])[1 + (g % 5)] like '초%'
+       then (array['샛별초등학교','한빛초등학교'])[1 + (g % 2)]
+       else (array['새봄중학교','푸른중학교'])[1 + (g % 2)] end,
   (array['김선생','이선생','박선생'])[1 + (g % 3)],
   (array[90,120,135,150])[1 + (g % 4)],
   '재원',

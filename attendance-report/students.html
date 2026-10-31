@@ -17,7 +17,8 @@
   button.ghost { background:#fff; color:var(--green); }
   table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
   th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); font-size:14px; }
-  th { background:#f3f1ec; font-size:13px; color:var(--muted); }
+  th { background:#f3f1ec; font-size:13px; color:var(--muted); white-space:nowrap; }
+  /* 학교 칸이 늘면서 좁아졌습니다 — 칸 제목과 담당 선생님이 두 줄로 쪼개지지 않게 */
   tr:hover td { background:#faf9f6; cursor:pointer; }
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; padding:16px; }
   .overlay.on { display:flex; }
@@ -53,7 +54,7 @@
   <!-- 출결PIN 중복 알림 — 키오스크가 PIN 만으로 학생을 찾기 때문에 겹치면 등원이 안 됩니다 -->
   <div id="pinDup" style="display:none;margin:10px 0;padding:12px 14px;border:1px solid #e3b7a8;background:#fdf3ef;border-radius:8px;line-height:1.7;font-size:13px"></div>
   <div style="overflow-x:auto">
-  <table><thead><tr><th>이름</th><th>학생ID</th><th>학년</th><th>PIN</th><th>담당</th><th>등원시간</th><th>연락처</th><th>이력</th></tr></thead>
+  <table><thead><tr><th>이름</th><th>학생ID</th><th>학년</th><th>학교</th><th>PIN</th><th>담당</th><th>등원시간</th><th>연락처</th><th>이력</th></tr></thead>
   <tbody id="rows"></tbody></table>
   </div>
 </main>
@@ -65,17 +66,24 @@
     <div><label>학생ID <span class="muted">(노션 이관용, 선택)</span></label><input id="f_code" placeholder="예: nauta01"></div>
   </div>
   <div class="row2">
-    <div><label>학년</label><input id="f_grade" placeholder="중2"></div>
+    <div><label>학년</label>
+      <select id="f_grade_sel"></select>
+      <input id="f_grade" class="직접칸" placeholder="직접 입력 (예: 중2)" style="display:none;margin-top:6px"></div>
+    <div><label>학교</label>
+      <select id="f_school_sel"></select>
+      <input id="f_school" class="직접칸" placeholder="직접 입력 (예: 새봄중학교)" style="display:none;margin-top:6px"></div>
+  </div>
+  <div class="row2">
+    <div><label>담당 선생님</label>
+      <select id="f_teacher_sel"></select>
+      <input id="f_teacher" class="직접칸" placeholder="직접 입력" style="display:none;margin-top:6px"></div>
     <div><label>출결 PIN</label><input id="f_pin" inputmode="numeric" placeholder="4자리"></div>
   </div>
   <div class="row2">
-    <div><label>담당 선생님</label><input id="f_teacher"></div>
     <div><label>재원상태</label><select id="f_status"><option value="재원">재원</option><option value="퇴원">퇴원</option></select></div>
-  </div>
-  <div class="row2">
-    <div><label>학부모 연락처</label><input id="f_phone" placeholder="01000000000"></div>
     <div><label>수업시간(분)</label><input id="f_min" inputmode="numeric" placeholder="120"></div>
   </div>
+  <label>학부모 연락처</label><input id="f_phone" placeholder="01000000000">
   <label>요일별 등원시간 (없는 날은 비움)</label>
   <div class="days">
     <div><label>월</label><input data-day="월" placeholder="17:00"></div>
@@ -139,6 +147,46 @@ async function loadBooks(){
   }catch(e){ /* 교재를 못 불러와도 학생 관리는 돌아가야 합니다 */ }
 }
 
+// ── 고르는 칸: 학년 · 학교 · 담당 선생님 ──────────────────────────
+// 왜 고르게 하나: 손으로 칠 때마다 「이선생 / 이 선생 / 이선생님」 처럼 조금씩
+//   달라지면 담당별 보기가 갈라지고, 학교도 「새봄중 / 새봄중학교」 로 흩어집니다.
+//   그래서 **이미 쓰고 있는 값**을 모아 고르게 하고, 없는 건 「+ 직접 입력」 으로 넣습니다.
+//
+// ★ 지금 값이 목록에 없어도 **지우지 않습니다** — 노션에서 옮겨왔거나 예전에 손으로
+//   친 값이 저장만 눌렀다고 날아가면 안 됩니다 (교재 칸과 같은 규칙).
+const 직접 = "__직접__";
+// 학년은 학원마다 같습니다 — DB 에 있는 것과 합쳐서 보여줍니다.
+const 기본학년 = ["초1","초2","초3","초4","초5","초6","중1","중2","중3","고1","고2","고3"];
+let 고를것 = { grades: [], schools: [], teachers: [] };
+
+async function 고를것불러오기(){
+  try{
+    const r = await fetch("/api/attendance?action=teachers");
+    const d = await r.json(); if(!r.ok) return;
+    고를것 = { grades: d.grades||[], schools: d.schools||[], teachers: d.teachers||[] };
+  }catch(e){ /* 못 불러와도 「직접 입력」 으로 넣을 수 있어야 합니다 */ }
+}
+
+// sel = <select>, inp = 직접 입력칸, 목록 = 고를 값들, 지금 = 저장돼 있던 값
+function 고르는칸그리기(selId, inpId, 목록, 지금, 없음라벨){
+  const sel = $(selId), inp = $(inpId);
+  const 값들 = [...new Set([...목록, ...(지금 ? [지금] : [])])].filter(Boolean);
+  sel.innerHTML = `<option value="">${없음라벨}</option>`
+    + 값들.map(v=>`<option value="${esc(v)}"${v===지금?" selected":""}>${esc(v)}</option>`).join("")
+    + `<option value="${직접}">+ 직접 입력…</option>`;
+  inp.value = ""; inp.style.display = "none";
+  sel.onchange = () => {
+    const 직접인가 = sel.value === 직접;
+    inp.style.display = 직접인가 ? "" : "none";
+    if (직접인가) inp.focus();
+  };
+}
+// 저장할 때 — 「직접 입력」 을 골랐으면 적은 값을, 아니면 고른 값을
+function 고른값(selId, inpId){
+  const v = $(selId).value;
+  return (v === 직접 ? $(inpId).value.trim() : v);
+}
+
 // 교재 드롭다운을 그립니다. **지금 값**은 교재DB에 없어도 고른 채로 남겨둡니다
 //   (노션에서 옮겨왔거나 교재를 아직 안 만든 분의 값이 지워지면 안 되니까요)
 function 교재칸그리기(){
@@ -189,7 +237,7 @@ function checkBooks(){
 
 async function load(){
   $("#msg").textContent="";
-  await loadBooks();
+  await Promise.all([loadBooks(), 고를것불러오기()]);
   const r = await fetch("/api/attendance?action=students"); const d = await r.json();
   if(!r.ok){ $("#msg").textContent=d.error; return; }
   // ★ 같은 출결PIN 을 쓰는 학생이 있으면 **제일 위에** 띄웁니다.
@@ -223,7 +271,7 @@ async function load(){
     const times = DAYORD.filter(d0 => (s.schedule||{})[d0]).map(d0 => `${d0} ${s.schedule[d0]}`).join(" · ");
     const quit = s.status && s.status !== "재원" ? ' <span style="font-size:11px;color:#cf6a4a">(퇴원)</span>' : "";
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td><b>${esc(s.name)}</b>${quit}</td><td>${esc(s.student_code||"")}</td><td>${esc(s.grade||"")}</td><td>${겹친핀.has(String(s.pin||"").trim()) && s.status!=="퇴원" ? `<span style="color:#c0392b;font-weight:700" title="다른 학생과 겹칩니다 — 키오스크 등원이 안 됩니다">${esc(s.pin)} ⚠️</span>` : esc(s.pin||"")}</td><td>${esc(s.teacher||"")}</td><td style="white-space:nowrap">${esc(times)||'<span style="color:#9aa">-</span>'}</td><td>${esc(s.phone||"")}</td><td style="white-space:nowrap"><a href="/student_card.html?student_id=${encodeURIComponent(s.id)}" target="_blank" onclick="event.stopPropagation()" title="학생 카드 — 지난 진도 쭉 보기">📋</a></td>`;
+    tr.innerHTML = `<td style="white-space:nowrap"><b>${esc(s.name)}</b>${quit}</td><td>${esc(s.student_code||"")}</td><td>${esc(s.grade||"")}</td><td style="white-space:nowrap">${esc(s.school||"")}</td><td>${겹친핀.has(String(s.pin||"").trim()) && s.status!=="퇴원" ? `<span style="color:#c0392b;font-weight:700" title="다른 학생과 겹칩니다 — 키오스크 등원이 안 됩니다">${esc(s.pin)} ⚠️</span>` : esc(s.pin||"")}</td><td style="white-space:nowrap">${esc(s.teacher||"")}</td><td style="white-space:nowrap">${esc(times)||'<span style="color:#9aa">-</span>'}</td><td>${esc(s.phone||"")}</td><td style="white-space:nowrap"><a href="/student_card.html?student_id=${encodeURIComponent(s.id)}" target="_blank" onclick="event.stopPropagation()" title="학생 카드 — 지난 진도 쭉 보기">📋</a></td>`;
     tr.onclick = () => openForm(s);
     body.appendChild(tr);
   }
@@ -232,8 +280,11 @@ async function load(){
 function openForm(s){
   editing = s || null;
   $("#title").textContent = s ? "학생 수정" : "학생 추가";
-  $("#f_name").value=s?.name||""; $("#f_code").value=s?.student_code||""; $("#f_grade").value=s?.grade||""; $("#f_pin").value=s?.pin||"";
-  $("#f_teacher").value=s?.teacher||""; $("#f_status").value=s?.status||"재원"; $("#f_phone").value=s?.phone||""; $("#f_min").value=s?.class_minutes||"";
+  $("#f_name").value=s?.name||""; $("#f_code").value=s?.student_code||""; $("#f_pin").value=s?.pin||"";
+  $("#f_status").value=s?.status||"재원"; $("#f_phone").value=s?.phone||""; $("#f_min").value=s?.class_minutes||"";
+  고르는칸그리기("#f_grade_sel","#f_grade", [...기본학년, ...고를것.grades], s?.grade||"", "- 학년 고르기 -");
+  고르는칸그리기("#f_school_sel","#f_school", 고를것.schools, s?.school||"", "- 학교 고르기 -");
+  고르는칸그리기("#f_teacher_sel","#f_teacher", 고를것.teachers, s?.teacher||"", "- 담당 고르기 -");
   document.querySelectorAll("[data-day]").forEach(i=> i.value=(s?.schedule||{})[i.dataset.day]||"");
   document.querySelectorAll("[data-book]").forEach(i=> i.dataset.cur=(s?.books||{})[i.dataset.book]||"");
   교재칸그리기();
@@ -246,7 +297,9 @@ $("#save").onclick = async () => {
   const schedule={}; document.querySelectorAll("[data-day]").forEach(i=>{ if(i.value.trim()) schedule[i.dataset.day]=i.value.trim(); });
   const books={}; document.querySelectorAll("[data-book]").forEach(i=>{ const v=(i.dataset.cur||"").trim(); if(v) books[i.dataset.book]=v; });
   const student = { id:editing?.id, name:$("#f_name").value.trim(), student_code:$("#f_code").value.trim(),
-    grade:$("#f_grade").value.trim(), pin:$("#f_pin").value.trim(), teacher:$("#f_teacher").value.trim(),
+    grade:고른값("#f_grade_sel","#f_grade"), school:고른값("#f_school_sel","#f_school"),
+    teacher:고른값("#f_teacher_sel","#f_teacher"),
+    pin:$("#f_pin").value.trim(),
     status:$("#f_status").value, phone:$("#f_phone").value.trim(), class_minutes:$("#f_min").value.trim(), schedule, books };
   try{ await api({action:"save-student", student}); $("#overlay").classList.remove("on"); load(); }catch(e){ alert(e.message); }
 };
@@ -266,6 +319,7 @@ const HEAD = [
   ["student_code",["학생id","학생아이디","아이디","id","학생코드"]],
   ["pin",         ["출결pin","pin","핀","출결번호","출결"]],
   ["grade",       ["학년"]],
+  ["school",      ["학교","학교명","재학중인학교","출신학교"]],
   ["teacher",     ["담당","담당선생님","선생님","담당강사","강사"]],
   ["phone",       ["연락처","전화번호","학부모연락처","학부모","휴대폰","전화"]],
   ["class_minutes",["수업시간","수업분","수업시간(분)"]],
@@ -290,6 +344,8 @@ function parseBulk(text){
   // 제목 줄로 보려면 「이름」이 잡히고, 알아본 칸이 2개 이상이어야 합니다
   const headed = keys.includes("name") && keys.filter(Boolean).length >= 2;
   const body = headed ? lines.slice(1) : lines;
+  // 제목 줄이 없을 때의 순서는 **예전 그대로** 둡니다 — 여기에 학교를 끼워 넣으면
+  //   이미 그 순서로 쓰시던 분들의 칸이 통째로 밀립니다. 학교는 제목 줄로만 받습니다.
   const order = headed ? keys : ["name","student_code","pin","grade","teacher","phone"];
   const rows = body.map(line=>{
     const c = line.split("\t").map(x=>(x||"").trim());
@@ -319,10 +375,10 @@ $("#bulkText").addEventListener("input", ()=>{
 
 // 📄 시트 양식 받기 — 구글시트에 올려 채우고 다시 복사해 오시면 됩니다
 $("#tplCsv").onclick = () => {
-  const head = ["이름","학생ID","출결PIN","학년","담당","연락처",...DAYS_KO,"문법교재","리딩교재","단어교재"];
+  const head = ["이름","학생ID","출결PIN","학년","학교","담당","연락처",...DAYS_KO,"문법교재","리딩교재","단어교재"];
   const sample = [
-    ["김민준","demo01","1111","중2","이선생","010-0000-0001","17:00","","17:00","","17:00","","","그래머 인사이드 1","리딩튜터 주니어 1","능률 VOCA 입문"],
-    ["이서연","demo02","2222","중3","이선생","010-0000-0002","18:00","18:00","","18:00","","","","그래머 인사이드 2","리딩튜터 주니어 2","능률 VOCA 실력"],
+    ["김민준","demo01","1111","중2","새봄중학교","이선생","010-0000-0001","17:00","","17:00","","17:00","","","그래머 인사이드 1","리딩튜터 주니어 1","능률 VOCA 입문"],
+    ["이서연","demo02","2222","중3","푸른중학교","이선생","010-0000-0002","18:00","18:00","","18:00","","","","그래머 인사이드 2","리딩튜터 주니어 2","능률 VOCA 실력"],
   ];
   const csv = [head, ...sample].map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\r\n");
   const blob = new Blob(["\uFEFF"+csv], { type:"text/csv;charset=utf-8" });  // BOM — 엑셀에서 한글이 안 깨지게

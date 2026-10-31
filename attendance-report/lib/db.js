@@ -108,6 +108,7 @@ const 칸고치기 = {
   books:         { sql: "alter table daily_records add column if not exists books jsonb not null default '{}'::jsonb;", file: "migrate_daily_report.sql" },
   student_code:  { sql: "alter table students add column if not exists student_code text;", file: "migrate_daily_report.sql" },
   middle_school: { sql: "alter table students add column if not exists middle_school boolean not null default false;", file: "migrate_daily_report.sql" },
+  school:        { sql: "alter table students add column if not exists school text;", file: "migrate_school.sql" },
   step:          { sql: "alter table textbooks add column if not exists step int not null default 1;", file: "migrate_daily_report.sql" },
   price:         { sql: "alter table textbooks add column if not exists price int;", file: "migrate_daily_report.sql" },
   stock_total:   { sql: "alter table textbooks add column if not exists stock_total int;", file: "migrate_daily_report.sql" },
@@ -145,12 +146,17 @@ function friendlyDbError(op, table, status, text) {
     );
   }
   // 칸이 없다 — 표는 있는데 setup.sql 이 옛것
-  //   두 가지 꼴로 옵니다. PostgREST 가 걸러내면 PGRST204 + "Could not find the 'x' column",
-  //   PostgreSQL 까지 가서 걸리면 42703 + "column tasks.auto does not exist".
-  //   ★ 뒤엣것을 안 잡아서, 원장님 화면에 영어 날코드가 그대로 떴습니다.
-  if (has("42703") || /column\s+[\w.]+\s+does not exist/i.test(t)) {
-    const m = /column\s+(?:([\w]+)\.)?"?([\w]+)"?\s+does not exist/i.exec(t);
-    const 표 = m?.[1] || table, 칸 = m?.[2] || "";
+  //   ★ **세 가지 꼴**로 옵니다. 하나씩 데면서 알았습니다 —
+  //     ① PostgREST 가 걸러낼 때   PGRST204  "Could not find the 'retest_sent' column"
+  //     ② 읽다가 걸릴 때(42703)    "column tasks.auto does not exist"
+  //     ③ **쓰다가** 걸릴 때(42703) "column \"school\" of relation \"students\" does not exist"
+  //   ③ 을 안 잡아서, 학교 칸이 없는 DB 에서 학생을 저장하면 영어 날코드가 그대로 떴습니다.
+  //   ⚠️ 원문은 **JSON** 이라 따옴표가 \" 처럼 역슬래시와 함께 옵니다.
+  //      "? 로만 받으면 그 역슬래시에 걸려 안 맞습니다 — 여기서 한 번 더 데었습니다.
+  if (has("42703") || /column\s+[\\"]*[\w.]+[\\"]*\s+(?:of\s+relation\s+[\\"]*[\w]+[\\"]*\s+)?does not exist/i.test(t)) {
+    const m = /column\s+[\\"]*(?:([\w]+)\.)?([\w]+)[\\"]*(?:\s+of\s+relation\s+[\\"]*([\w]+)[\\"]*)?\s+does not exist/i.exec(t);
+    const 칸 = m?.[2] || "";
+    const 표 = m?.[3] || m?.[1] || table;
     const 고침 = 칸고치기[칸];
     if (고침) {
       return (
