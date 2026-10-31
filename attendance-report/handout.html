@@ -531,7 +531,37 @@ CH1-2 | 일반동사 | 워크북 CH1-2, 단어 30개 | 본문 2회 읽기
       되돌리는 버튼이 늘 있습니다(위의 Promote to Production). <b>마음껏 시켜보세요</b> —
       오늘 후반부는 그러라고 있는 시간입니다.</div>
 
-    <div class="card-title" style="margin-top:20px"><div class="num">D</div> 안 될 때</div>
+        <div class="card-title" style="margin-top:20px"><div class="num">D</div> 🔁 저장소를 <b>새로</b> 만들었을 때 (다시 설치·연습용 새 프로젝트)</div>
+    <div class="hl-box red"><strong>⚠️ 깃허브 권한은 「계정」 이 아니라 「저장소」 마다 입니다.</strong><br>
+      예전 저장소에 줬던 권한은 <b>새 저장소에는 소용이 없습니다.</b>
+      연결은 그대로니 <b>읽기는 되는데</b> 클로드가 고친 걸 <b>올리는 데서만</b> 막혀서,
+      「왜 아무 일도 안 일어나지?」 하고 한참 헤매게 됩니다.</div>
+    <ul class="step-list">
+      <li><b>새 저장소에 권한 주기</b> —
+        <b><a href="https://github.com/apps/claude/installations/select_target" target="_blank" rel="noopener">github.com/apps/claude/installations/select_target</a></b>
+        → 내 계정 (이미 한 적 있으면 <b>Configure</b> 로 보입니다)
+        → <b>새로 만든 저장소</b>를 체크 → <b>Save</b>.
+        <br><span style="color:#888">옛 저장소는 체크를 빼셔도 됩니다. 「All repositories」 로 두면 앞으로 안 물어봅니다.</span></li>
+      <li><b>클로드 코드에서 새 대화 시작</b> — <code>claude.ai/code</code> 에서
+        <b>새 세션</b>을 열고 저장소 선택기에서 <b>새 저장소</b>를 고르세요.
+        <br><span style="color:#888">🔴 <b>예전 대화창을 그대로 쓰면 안 됩니다.</b> 그 창은 계속 <b>옛 저장소</b>를 보고 있어서,
+        시키면 엉뚱한 저장소가 바뀝니다. 「고쳤다는데 내 사이트는 그대로」 의 숨은 원인이에요.</span></li>
+      <li><b>자동 반영이 들어 있는지 확인</b> — 새 저장소에서
+        <code>.github/workflows/claude-auto-merge.yml</code> 파일이 보이면 됩니다.
+        <br><span style="color:#888">템플릿에서 <b>Use this template</b> 로 만들면 자동으로 들어옵니다.
+        안 보이면 그 저장소는 <b>예전 템플릿</b>으로 만든 것 — 다시 만드시는 게 빠릅니다.</span></li>
+      <li><b>Supabase·Vercel 도 새로 하셨다면</b> — Vercel 환경변수(<code>SUPABASE_URL</code>·
+        <code>SUPABASE_SERVICE_KEY</code>)를 <b>새 프로젝트 값</b>으로 바꾸고 <b>Redeploy</b>.
+        <br><span style="color:#888">옛 값이 남아 있으면 <b>옛 데이터베이스</b>를 보게 됩니다 —
+        화면은 멀쩡한데 학생이 안 맞아서 제일 찾기 어려운 경우입니다.</span></li>
+      <li><b>안 쓰는 건 지우기</b> — 옛 Vercel 프로젝트·옛 저장소를 지우거나 이름에 <code>-old</code> 를
+        붙여두세요. 주소가 비슷해서 나중에 <b>어느 게 진짜인지</b> 헷갈립니다.</li>
+    </ul>
+    <div class="hl-box teal"><strong>✅ 다 됐는지 30초 확인</strong><br>
+      클로드에게 <b>"지금 어느 저장소를 보고 있어? 파일 하나만 고쳐서 올려봐"</b> 라고 해보세요.
+      저장소 이름이 맞게 나오고 <b>깃허브 Actions 에 초록 체크</b>가 뜨면 끝입니다.</div>
+
+<div class="card-title" style="margin-top:20px"><div class="num">E</div> 안 될 때</div>
     <table class="tb">
       <tr><th>이런 화면</th><th>이유</th><th>할 일</th></tr>
       <tr><td>로그인 버튼만 보이고 저장소가 없음</td><td>깃허브를 아직 연결 안 함</td><td>A-2 번 <b>Sign in with GitHub</b></td></tr>
